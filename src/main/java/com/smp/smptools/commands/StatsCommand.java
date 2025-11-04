@@ -1,0 +1,149 @@
+package com.smp.smptools.commands;
+
+import com.smp.smptools.SMPTools;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.SkullMeta;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+public class StatsCommand implements CommandExecutor {
+
+    private final SMPTools plugin;
+
+    public StatsCommand(SMPTools plugin) {
+        this.plugin = plugin;
+    }
+
+    @Override
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (args.length == 0) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage(ChatColor.RED + "You must specify a player to view their stats.");
+                return true;
+            }
+            showStatsGUI((Player) sender, (Player) sender);
+        } else {
+            OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
+            if (!target.hasPlayedBefore() && !target.isOnline()) {
+                sender.sendMessage(ChatColor.RED + "Player not found.");
+                return true;
+            }
+            showStatsGUI((Player) sender, target);
+        }
+        return true;
+    }
+
+    private void showStatsGUI(Player viewer, OfflinePlayer target) {
+        String playerUUID = target.getUniqueId().toString();
+        ConfigurationSection statsSection = plugin.getStatsConfig().getConfigurationSection("stats." + playerUUID);
+
+        Inventory statsGUI = Bukkit.createInventory(null, 54, ChatColor.DARK_AQUA + target.getName() + "'s Stats");
+
+        // General Stats
+        ItemStack playerHead = new ItemStack(Material.PLAYER_HEAD);
+        SkullMeta headMeta = (SkullMeta) playerHead.getItemMeta();
+        headMeta.setOwningPlayer(target);
+        playerHead.setItemMeta(headMeta);
+
+        createDisplayItem(statsGUI, playerHead, 4, ChatColor.GOLD + "General Stats",
+                ChatColor.YELLOW + "Deaths: " + ChatColor.WHITE + (statsSection != null ? statsSection.getInt("deaths", 0) : 0),
+                ChatColor.YELLOW + "Player Kills: " + ChatColor.WHITE + (statsSection != null ? statsSection.getInt("player_kills", 0) : 0));
+
+        // Peaceful Mobs
+        List<String> peacefulMobs = Arrays.asList("cow", "sheep", "pig", "chicken");
+        int peacefulMobSlot = 13;
+        for (String mobName : peacefulMobs) {
+            int mobKills = (statsSection != null && statsSection.contains("mob_kills." + mobName)) ? statsSection.getInt("mob_kills." + mobName) : 0;
+            Material mobMaterial = getMaterialForMob(mobName);
+            createDisplayItem(statsGUI, mobMaterial, peacefulMobSlot++, ChatColor.GREEN + mobName.substring(0, 1).toUpperCase() + mobName.substring(1),
+                    ChatColor.WHITE + "Kills: " + mobKills);
+        }
+
+        // Hostile Mobs
+        List<String> hostileMobs = Arrays.asList("zombie", "skeleton", "creeper", "enderman");
+        int hostileMobSlot = 22;
+        for (String mobName : hostileMobs) {
+            int mobKills = (statsSection != null && statsSection.contains("mob_kills." + mobName)) ? statsSection.getInt("mob_kills." + mobName) : 0;
+            Material mobMaterial = getMaterialForMob(mobName);
+            createDisplayItem(statsGUI, mobMaterial, hostileMobSlot++, ChatColor.RED + mobName.substring(0, 1).toUpperCase() + mobName.substring(1),
+                    ChatColor.WHITE + "Kills: " + mobKills);
+        }
+
+        // Ores Mined
+        List<String> trackedOres = Arrays.asList("diamond", "gold", "iron", "redstone", "lapis", "coal", "emerald");
+        int oreSlot = 38;
+        for (String oreName : trackedOres) {
+            int oreMined = (statsSection != null && statsSection.contains("ores_mined." + oreName)) ? statsSection.getInt("ores_mined." + oreName) : 0;
+            Material oreMaterial = getMaterialForOre(oreName);
+            createDisplayItem(statsGUI, oreMaterial, oreSlot++, ChatColor.AQUA + oreName.substring(0, 1).toUpperCase() + oreName.substring(1),
+                    ChatColor.WHITE + "Mined: " + oreMined);
+        }
+
+        viewer.openInventory(statsGUI);
+    }
+
+    private void createDisplayItem(Inventory inv, Material material, int slot, String name, String... lore) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(name);
+        List<String> loreList = new ArrayList<>();
+        for (String s : lore) {
+            loreList.add(s);
+        }
+        meta.setLore(loreList);
+        item.setItemMeta(meta);
+        inv.setItem(slot, item);
+    }
+    
+    private void createDisplayItem(Inventory inv, ItemStack item, int slot, String name, String... lore) {
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(name);
+        List<String> loreList = new ArrayList<>();
+        for (String s : lore) {
+            loreList.add(s);
+        }
+        meta.setLore(loreList);
+        item.setItemMeta(meta);
+        inv.setItem(slot, item);
+    }
+
+    private Material getMaterialForMob(String mobName) {
+        switch (mobName.toLowerCase()) {
+            case "cow": return Material.BEEF;
+            case "sheep": return Material.WHITE_WOOL;
+            case "pig": return Material.PORKCHOP;
+            case "chicken": return Material.FEATHER;
+            case "zombie": return Material.ROTTEN_FLESH;
+            case "skeleton": return Material.BONE;
+            case "creeper": return Material.GUNPOWDER;
+            case "enderman": return Material.ENDER_PEARL;
+            default: return Material.STONE;
+        }
+    }
+
+    private Material getMaterialForOre(String oreName) {
+        switch (oreName.toLowerCase()) {
+            case "diamond": return Material.DIAMOND;
+            case "gold": return Material.GOLD_INGOT;
+            case "iron": return Material.IRON_INGOT;
+            case "redstone": return Material.REDSTONE;
+            case "lapis": return Material.LAPIS_LAZULI;
+            case "coal": return Material.COAL;
+            case "emerald": return Material.EMERALD;
+            default: return Material.STONE;
+        }
+    }
+}

@@ -1,0 +1,45 @@
+name: SMPTools
+version: 1.0-SNAPSHOT
+main: com.smp.smptools.SMPTools
+api-version: '1.21'
+author: Berna
+description: A simple SMP plugin with some useful features.
+commands:
+  fly:
+    description: Toggles flight mode.
+    usage: /fly
+    permission: smptools.fly
+    permission-message: You don't have permission to use this command.
+  pv:
+    description: Opens your private vault.
+    usage: /pv
+    permission: smptools.privatevault
+    permission-message: You don't have permission to use this command.
+  sethome:
+    description: Sets your home location.
+    usage: /sethome <name>
+  home:
+    description: Teleports you to your home location.
+    usage: /home <name>
+  delhome:
+    description: Deletes a home location.
+    usage: /delhome <name>
+  homes:
+    description: Lists all your homes.
+    usage: /homes
+  msg:
+    description: Sends a private message to another player.
+    usage: /msg <player> <message>
+  stats:
+    description: Shows your or another player's statistics.
+    usage: /stats [player]
+  clearstats:
+    description: Clears a player's statistics.
+    usage: /clearstats <player>
+    permission-message: You don't have permission to use this command.
+  prefix:
+    description: Opens the prefix selection GUI.
+    usage: /prefix
+  color:
+    description: Opens the color selection GUI.
+    usage: /color
