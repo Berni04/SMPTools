@@ -46,6 +46,8 @@ public class StatsListener implements Listener {
         for (ItemStack item : player.getInventory().getContents()) {
             if (item != null) {
                 inventory.add(item.serialize());
+            } else {
+                inventory.add(null);
             }
         }
         death.put("inventory", inventory);

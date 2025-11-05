@@ -22,12 +22,14 @@ import java.io.IOException;
 
 public class SMPTools extends JavaPlugin {
 
+    private static SMPTools instance;
     private File statsFile;
     private FileConfiguration statsConfig;
     private LeaderboardCommand leaderboardCommand;
 
     @Override
     public void onEnable() {
+        instance = this;
         getLogger().info("SMPTools has been enabled!");
 
         // Setup configs
@@ -92,6 +94,10 @@ public class SMPTools extends JavaPlugin {
         } catch (IOException e) {
             getLogger().severe("Could not save stats.yml file!");
         }
+    }
+
+    public static SMPTools getInstance() {
+        return instance;
     }
 }
 

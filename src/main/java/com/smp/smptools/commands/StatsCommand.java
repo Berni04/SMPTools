@@ -83,15 +83,14 @@ public class StatsCommand implements CommandExecutor {
                     ChatColor.WHITE + "Kills: " + mobKills);
         }
 
-        // Ores Mined
-        List<String> trackedOres = Arrays.asList("diamond", "gold", "iron", "redstone", "lapis", "coal", "emerald", "netherite");
-        int oreSlot = 28;
-        for (String oreName : trackedOres) {
-            int oreMined = (statsSection != null && statsSection.contains("ores_mined." + oreName)) ? statsSection.getInt("ores_mined." + oreName) : 0;
-            Material oreMaterial = getMaterialForOre(oreName);
-            createDisplayItem(statsGUI, oreMaterial, oreSlot++, ChatColor.AQUA + oreName.substring(0, 1).toUpperCase() + oreName.substring(1),
-                    ChatColor.WHITE + "Mined: " + oreMined);
-        }
+        // Ores
+        createDisplayItem(statsGUI, getMaterialForOre("coal"), 37, ChatColor.GOLD + "Coal Ore", String.valueOf(plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.coal_ore")));
+        createDisplayItem(statsGUI, getMaterialForOre("iron"), 38, ChatColor.GOLD + "Iron Ore", String.valueOf(plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.iron_ore")));
+        createDisplayItem(statsGUI, getMaterialForOre("gold"), 39, ChatColor.GOLD + "Gold Ore", String.valueOf(plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.gold_ore")));
+        createDisplayItem(statsGUI, getMaterialForOre("diamond"), 40, ChatColor.GOLD + "Diamond Ore", String.valueOf(plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.diamond_ore")));
+        createDisplayItem(statsGUI, getMaterialForOre("netherite"), 41, ChatColor.GOLD + "Netherite", String.valueOf(plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.netherite_scrap")));
+        createDisplayItem(statsGUI, getMaterialForOre("lapis"), 42, ChatColor.GOLD + "Lapis Ore", String.valueOf(plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.lapis_ore")));
+        createDisplayItem(statsGUI, getMaterialForOre("redstone"), 43, ChatColor.GOLD + "Redstone Ore", String.valueOf(plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.redstone_ore")));
 
         viewer.openInventory(statsGUI);
     }
@@ -209,9 +208,42 @@ public class StatsCommand implements CommandExecutor {
 
         List<Map<String, Object>> inventory = (List<Map<String, Object>>) death.get("inventory");
         if (inventory != null) {
-            for (Map<String, Object> itemMap : inventory) {
-                ItemStack item = ItemStack.deserialize(itemMap);
-                deathInventoryGUI.addItem(item);
+            // Hotbar and main inventory
+            for (int i = 0; i < 36 && i < inventory.size(); i++) {
+                Map<String, Object> itemMap = inventory.get(i);
+                if (itemMap != null) {
+                    ItemStack item = ItemStack.deserialize(itemMap);
+                    deathInventoryGUI.setItem(i, item);
+                }
+            }
+
+            // Armor
+            if (inventory.size() > 39) {
+                Map<String, Object> bootsMap = inventory.get(36);
+                if (bootsMap != null) {
+                    deathInventoryGUI.setItem(48, ItemStack.deserialize(bootsMap));
+                }
+                Map<String, Object> leggingsMap = inventory.get(37);
+                if (leggingsMap != null) {
+                    deathInventoryGUI.setItem(47, ItemStack.deserialize(leggingsMap));
+                }
+                Map<String, Object> chestplateMap = inventory.get(38);
+                if (chestplateMap != null) {
+                    deathInventoryGUI.setItem(46, ItemStack.deserialize(chestplateMap));
+                }
+                Map<String, Object> helmetMap = inventory.get(39);
+                if (helmetMap != null) {
+                    deathInventoryGUI.setItem(45, ItemStack.deserialize(helmetMap));
+                }
+            }
+
+
+            // Off-hand
+            if (inventory.size() > 40) {
+                Map<String, Object> offhandMap = inventory.get(40);
+                if (offhandMap != null) {
+                    deathInventoryGUI.setItem(53, ItemStack.deserialize(offhandMap));
+                }
             }
         }
 
