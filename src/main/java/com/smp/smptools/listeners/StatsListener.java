@@ -39,6 +39,11 @@ public class StatsListener implements Listener {
             plugin.getStatsConfig().set("stats." + killer.getUniqueId() + ".player_kills", plugin.getStatsConfig().getInt("stats." + killer.getUniqueId() + ".player_kills", 0) + 1);
         }
         plugin.saveStatsConfig();
+
+        String deathMessage = event.getDeathMessage();
+        if (deathMessage != null) {
+            event.setDeathMessage(player.getDisplayName() + " " + org.bukkit.ChatColor.WHITE + deathMessage.substring(player.getName().length()));
+        }
     }
 
     @EventHandler

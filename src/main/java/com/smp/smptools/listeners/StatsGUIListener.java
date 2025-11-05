@@ -20,20 +20,18 @@ public class StatsGUIListener implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!event.getView().getTitle().contains("'s Stats")) {
-            return;
+        String title = event.getView().getTitle();
+        if (title.contains("'s Stats")) {
+            event.setCancelled(true);
+
+            if (event.getCurrentItem() != null && event.getCurrentItem().getType() == Material.PLAYER_HEAD) {
+                Player player = (Player) event.getWhoClicked();
+                String targetName = ChatColor.stripColor(title).replace("'s Stats", "");
+                OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
+                statsCommand.showDeathInfoGUI(player, target);
+            }
+        } else if (title.contains("'s Deaths")) {
+            event.setCancelled(true);
         }
-
-        event.setCancelled(true);
-
-        if (event.getCurrentItem() == null || event.getCurrentItem().getType() != Material.PLAYER_HEAD) {
-            return;
-        }
-
-        Player player = (Player) event.getWhoClicked();
-        String targetName = ChatColor.stripColor(event.getView().getTitle()).replace("'s Stats", "");
-        OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
-
-        statsCommand.showDeathInfoGUI(player, target);
     }
 }

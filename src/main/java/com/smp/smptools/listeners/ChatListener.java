@@ -10,6 +10,6 @@ public class ChatListener implements Listener {
     public void onPlayerChat(AsyncPlayerChatEvent event) {
         String message = event.getMessage();
         String playerName = event.getPlayer().getDisplayName();
-        event.setFormat(playerName + ": " + message);
+        event.setFormat(playerName + ": " + org.bukkit.ChatColor.WHITE + message);
     }
 }
