@@ -43,3 +43,6 @@ commands:
   color:
     description: Opens the color selection GUI.
     usage: /color
+  leaderboard:
+    description: Shows the server leaderboard.
+    usage: /leaderboard

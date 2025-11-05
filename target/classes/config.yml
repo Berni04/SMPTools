@@ -1,18 +1,6 @@
 # The size of the private vault. Must be a multiple of 9 (e.g., 9, 18, 27, 36, 45, 54).
 private-vault-size: 54
 
-# Nametags are applied to players based on permissions.
-# The first nametag a player has permission for will be applied.
-nametags:
-  admin:
-    prefix: "Admin"
-    color: "RED"
-    permission: "smptools.nametag.admin"
-  vip:
-    prefix: "VIP"
-    color: "GOLD"
-    permission: "smptools.nametag.vip"
-
 # Home limits are based on permissions.
 # The permission will be smptools.homes.<group>
 home-limits:

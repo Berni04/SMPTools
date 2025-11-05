@@ -36,5 +36,13 @@ commands:
   clearstats:
     description: Clears a player's statistics.
     usage: /clearstats <player>
-    permission: smptools.clearstats
     permission-message: You don't have permission to use this command.
+  prefix:
+    description: Opens the prefix selection GUI.
+    usage: /prefix
+  color:
+    description: Opens the color selection GUI.
+    usage: /color
+  leaderboard:
+    description: Shows the server leaderboard.
+    usage: /leaderboard

@@ -24,7 +24,15 @@ public class StatsListener implements Listener {
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
-        plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".deaths", plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".deaths", 0) + 1);
+        String uuid = player.getUniqueId().toString();
+
+        // Increment death count
+        plugin.getStatsConfig().set("stats." + uuid + ".deaths", plugin.getStatsConfig().getInt("stats." + uuid + ".deaths", 0) + 1);
+
+        // Save death info
+        List<String> deathInfo = plugin.getStatsConfig().getStringList("stats." + uuid + ".death_info");
+        deathInfo.add("Time: " + java.time.LocalDateTime.now() + ", Coords: " + player.getLocation().getBlockX() + ", " + player.getLocation().getBlockY() + ", " + player.getLocation().getBlockZ() + ", Cause: " + event.getDeathMessage());
+        plugin.getStatsConfig().set("stats." + uuid + ".death_info", deathInfo);
 
         if (player.getKiller() != null) {
             Player killer = player.getKiller();
@@ -40,8 +48,8 @@ public class StatsListener implements Listener {
             EntityType entityType = event.getEntityType();
 
             List<EntityType> trackedMobs = Arrays.asList(
-                    EntityType.COW, EntityType.SHEEP, EntityType.PIG, EntityType.CHICKEN,
-                    EntityType.ZOMBIE, EntityType.SKELETON, EntityType.CREEPER, EntityType.ENDERMAN
+                    EntityType.COW, EntityType.SHEEP, EntityType.PIG, EntityType.CHICKEN, EntityType.TURTLE, EntityType.LLAMA, EntityType.RABBIT,
+                    EntityType.ZOMBIE, EntityType.SKELETON, EntityType.CREEPER, EntityType.ENDERMAN, EntityType.WITCH, EntityType.BLAZE, EntityType.SPIDER, EntityType.CAVE_SPIDER, EntityType.PHANTOM, EntityType.SLIME, EntityType.WITHER_SKELETON, EntityType.WARDEN
             );
 
             if (trackedMobs.contains(entityType)) {

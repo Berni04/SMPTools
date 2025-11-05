@@ -7,6 +7,11 @@ import com.smp.smptools.listeners.StatsListener;
 import com.smp.smptools.listeners.StatsGUIListener;
 import com.smp.smptools.listeners.VaultListener;
 import com.smp.smptools.listeners.JoinLeaveListener;
+import com.smp.smptools.listeners.PrefixGUIListener;
+import com.smp.smptools.listeners.ColorGUIListener;
+import com.smp.smptools.listeners.ChatListener;
+import com.smp.smptools.listeners.TabHealthListener;
+import com.smp.smptools.listeners.LeaderboardGUIListener;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -19,6 +24,7 @@ public class SMPTools extends JavaPlugin {
 
     private File statsFile;
     private FileConfiguration statsConfig;
+    private LeaderboardCommand leaderboardCommand;
 
     @Override
     public void onEnable() {
@@ -33,10 +39,14 @@ public class SMPTools extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new VaultListener(this), this);
         Bukkit.getPluginManager().registerEvents(new NameTagListener(this), this);
         Bukkit.getPluginManager().registerEvents(new StatsListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new StatsGUIListener(), this);
+        StatsCommand statsCommand = new StatsCommand(this);
+        this.getCommand("stats").setExecutor(statsCommand);
+        Bukkit.getPluginManager().registerEvents(new StatsGUIListener(statsCommand), this);
         Bukkit.getPluginManager().registerEvents(new JoinLeaveListener(this), this);
         Bukkit.getPluginManager().registerEvents(new PrefixGUIListener(this), this);
         Bukkit.getPluginManager().registerEvents(new ColorGUIListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new ChatListener(), this);
+        Bukkit.getPluginManager().registerEvents(new TabHealthListener(this), this);
 
         // Register Commands
         this.getCommand("fly").setExecutor(new FlyCommand());
@@ -50,6 +60,9 @@ public class SMPTools extends JavaPlugin {
         this.getCommand("clearstats").setExecutor(new ClearStatsCommand(this));
         this.getCommand("prefix").setExecutor(new PrefixCommand());
         this.getCommand("color").setExecutor(new ColorCommand());
+        this.leaderboardCommand = new LeaderboardCommand(this);
+        this.getCommand("leaderboard").setExecutor(leaderboardCommand);
+        Bukkit.getPluginManager().registerEvents(new LeaderboardGUIListener(leaderboardCommand), this);
     }
 
     @Override

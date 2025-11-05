@@ -63,7 +63,7 @@ public class StatsCommand implements CommandExecutor {
                 ChatColor.YELLOW + "Player Kills: " + ChatColor.WHITE + (statsSection != null ? statsSection.getInt("player_kills", 0) : 0));
 
         // Peaceful Mobs
-        List<String> peacefulMobs = Arrays.asList("cow", "sheep", "pig", "chicken");
+        List<String> peacefulMobs = Arrays.asList("cow", "sheep", "pig", "chicken", "turtle", "llama", "rabbit");
         int peacefulMobSlot = 13;
         for (String mobName : peacefulMobs) {
             int mobKills = (statsSection != null && statsSection.contains("mob_kills." + mobName)) ? statsSection.getInt("mob_kills." + mobName) : 0;
@@ -73,7 +73,7 @@ public class StatsCommand implements CommandExecutor {
         }
 
         // Hostile Mobs
-        List<String> hostileMobs = Arrays.asList("zombie", "skeleton", "creeper", "enderman");
+        List<String> hostileMobs = Arrays.asList("zombie", "skeleton", "creeper", "enderman", "witch", "blaze", "spider", "cave_spider", "phantom", "slime", "wither_skeleton", "warden");
         int hostileMobSlot = 22;
         for (String mobName : hostileMobs) {
             int mobKills = (statsSection != null && statsSection.contains("mob_kills." + mobName)) ? statsSection.getInt("mob_kills." + mobName) : 0;
@@ -120,16 +120,40 @@ public class StatsCommand implements CommandExecutor {
         inv.setItem(slot, item);
     }
 
+    public void showDeathInfoGUI(Player viewer, OfflinePlayer target) {
+        String playerUUID = target.getUniqueId().toString();
+        List<String> deathInfo = plugin.getStatsConfig().getStringList("stats." + playerUUID + ".death_info");
+
+        Inventory deathInfoGUI = Bukkit.createInventory(null, 54, ChatColor.DARK_AQUA + target.getName() + "'s Deaths");
+
+        for (int i = 0; i < deathInfo.size(); i++) {
+            createDisplayItem(deathInfoGUI, Material.PAPER, i, ChatColor.RED + "Death #" + (i + 1), deathInfo.get(i).split(", "));
+        }
+
+        viewer.openInventory(deathInfoGUI);
+    }
+
     private Material getMaterialForMob(String mobName) {
         switch (mobName.toLowerCase()) {
             case "cow": return Material.BEEF;
             case "sheep": return Material.WHITE_WOOL;
             case "pig": return Material.PORKCHOP;
             case "chicken": return Material.FEATHER;
+            case "turtle": return Material.TURTLE_HELMET;
+            case "llama": return Material.LEATHER;
+            case "rabbit": return Material.RABBIT_FOOT;
             case "zombie": return Material.ROTTEN_FLESH;
             case "skeleton": return Material.BONE;
             case "creeper": return Material.GUNPOWDER;
             case "enderman": return Material.ENDER_PEARL;
+            case "witch": return Material.GLASS_BOTTLE;
+            case "blaze": return Material.BLAZE_ROD;
+            case "spider": return Material.SPIDER_EYE;
+            case "cave_spider": return Material.SPIDER_EYE;
+            case "phantom": return Material.PHANTOM_MEMBRANE;
+            case "slime": return Material.SLIME_BALL;
+            case "wither_skeleton": return Material.WITHER_SKELETON_SKULL;
+            case "warden": return Material.ECHO_SHARD;
             default: return Material.STONE;
         }
     }
