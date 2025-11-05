@@ -32,17 +32,26 @@ public class TabHealthListener implements Listener {
 
     private void updatePlayerHealth(Player player) {
         double health = player.getHealth();
-        String healthIcon = getHealthIcon(health);
-        player.setPlayerListName(player.getDisplayName() + " " + healthIcon);
+        String healthDisplay = getHealthDisplay(health);
+        player.setPlayerListName(player.getDisplayName() + " " + healthDisplay);
     }
 
-    private String getHealthIcon(double health) {
-        if (health >= 18) {
-            return ChatColor.GREEN + "❤"; // Full heart
-        } else if (health >= 10) {
-            return ChatColor.YELLOW + "❤"; // Half heart
+    private String getHealthDisplay(double health) {
+        ChatColor healthColor;
+        if (health < 6) {
+            healthColor = ChatColor.RED;
+        } else if (health < 14) {
+            healthColor = ChatColor.YELLOW;
         } else {
-            return ChatColor.RED + "❤"; // Empty heart
+            healthColor = ChatColor.GREEN;
         }
+
+        int hearts = (int) Math.round(health / 2.0);
+        StringBuilder heartString = new StringBuilder();
+        for (int i = 0; i < hearts; i++) {
+            heartString.append("❤");
+        }
+
+        return healthColor + heartString.toString();
     }
 }
