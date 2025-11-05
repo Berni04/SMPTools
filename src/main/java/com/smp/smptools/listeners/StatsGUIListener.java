@@ -32,6 +32,16 @@ public class StatsGUIListener implements Listener {
             }
         } else if (title.contains("'s Deaths")) {
             event.setCancelled(true);
+
+            if (event.getCurrentItem() != null && event.getCurrentItem().getType() == Material.PAPER) {
+                Player player = (Player) event.getWhoClicked();
+                String targetName = ChatColor.stripColor(title).replace("'s Deaths", "");
+                OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
+                int deathIndex = event.getSlot();
+                statsCommand.showDetailedDeathInfoGUI(player, target, deathIndex);
+            }
+        } else if (title.startsWith(ChatColor.DARK_RED + "Death #")) {
+            event.setCancelled(true);
         }
     }
 }

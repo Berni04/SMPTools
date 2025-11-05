@@ -12,6 +12,8 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 public class StatsListener implements Listener {
 
@@ -30,9 +32,15 @@ public class StatsListener implements Listener {
         plugin.getStatsConfig().set("stats." + uuid + ".deaths", plugin.getStatsConfig().getInt("stats." + uuid + ".deaths", 0) + 1);
 
         // Save death info
-        List<String> deathInfo = plugin.getStatsConfig().getStringList("stats." + uuid + ".death_info");
-        deathInfo.add("Time: " + java.time.LocalDateTime.now() + ", Coords: " + player.getLocation().getBlockX() + ", " + player.getLocation().getBlockY() + ", " + player.getLocation().getBlockZ() + ", Cause: " + event.getDeathMessage());
-        plugin.getStatsConfig().set("stats." + uuid + ".death_info", deathInfo);
+        List<Map<?, ?>> deathInfo = plugin.getStatsConfig().getMapList("stats." + uuid + ".deaths_info");
+        Map<String, Object> death = new HashMap<>();
+        death.put("time", java.time.LocalDateTime.now().toString());
+        death.put("x", player.getLocation().getBlockX());
+        death.put("y", player.getLocation().getBlockY());
+        death.put("z", player.getLocation().getBlockZ());
+        death.put("cause", event.getDeathMessage());
+        deathInfo.add(death);
+        plugin.getStatsConfig().set("stats." + uuid + ".deaths_info", deathInfo);
 
         if (player.getKiller() != null) {
             Player killer = player.getKiller();

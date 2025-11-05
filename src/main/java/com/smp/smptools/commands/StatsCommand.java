@@ -18,6 +18,7 @@ import org.bukkit.inventory.meta.SkullMeta;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public class StatsCommand implements CommandExecutor {
 
@@ -122,12 +123,18 @@ public class StatsCommand implements CommandExecutor {
 
     public void showDeathInfoGUI(Player viewer, OfflinePlayer target) {
         String playerUUID = target.getUniqueId().toString();
-        List<String> deathInfo = plugin.getStatsConfig().getStringList("stats." + playerUUID + ".death_info");
+        List<Map<?, ?>> deathInfo = plugin.getStatsConfig().getMapList("stats." + playerUUID + ".deaths_info");
 
         Inventory deathInfoGUI = Bukkit.createInventory(null, 54, ChatColor.DARK_AQUA + target.getName() + "'s Deaths");
 
         for (int i = 0; i < deathInfo.size(); i++) {
-            createDisplayItem(deathInfoGUI, Material.PAPER, i, ChatColor.RED + "Death #" + (i + 1), deathInfo.get(i).split(", "));
+            Map<?, ?> death = deathInfo.get(i);
+            String time = (String) death.get("time");
+            String cause = (String) death.get("cause");
+            createDisplayItem(deathInfoGUI, Material.PAPER, i, ChatColor.RED + "Death #" + (i + 1),
+                    ChatColor.YELLOW + "Time: " + ChatColor.WHITE + time,
+                    ChatColor.YELLOW + "Cause: " + ChatColor.WHITE + cause,
+                    ChatColor.GRAY + "Click for more info");
         }
 
         viewer.openInventory(deathInfoGUI);
@@ -170,5 +177,25 @@ public class StatsCommand implements CommandExecutor {
             case "netherite": return Material.NETHERITE_INGOT;
             default: return Material.STONE;
         }
+    }
+
+    public void showDetailedDeathInfoGUI(Player viewer, OfflinePlayer target, int deathIndex) {
+        String playerUUID = target.getUniqueId().toString();
+        List<Map<?, ?>> deathInfo = plugin.getStatsConfig().getMapList("stats." + playerUUID + ".deaths_info");
+        Map<?, ?> death = deathInfo.get(deathIndex);
+
+        Inventory detailedDeathInfoGUI = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Death #" + (deathIndex + 1));
+
+        String time = (String) death.get("time");
+        int x = (int) death.get("x");
+        int y = (int) death.get("y");
+        int z = (int) death.get("z");
+        String cause = (String) death.get("cause");
+
+        createDisplayItem(detailedDeathInfoGUI, Material.CLOCK, 10, ChatColor.YELLOW + "Time", ChatColor.WHITE + time);
+        createDisplayItem(detailedDeathInfoGUI, Material.COMPASS, 12, ChatColor.YELLOW + "Coordinates", ChatColor.WHITE + "X: " + x + ", Y: " + y + ", Z: " + z);
+        createDisplayItem(detailedDeathInfoGUI, Material.SKELETON_SKULL, 14, ChatColor.YELLOW + "Cause", ChatColor.WHITE + cause);
+
+        viewer.openInventory(detailedDeathInfoGUI);
     }
 }
