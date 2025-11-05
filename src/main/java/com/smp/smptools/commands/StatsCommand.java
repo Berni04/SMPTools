@@ -50,7 +50,7 @@ public class StatsCommand implements CommandExecutor {
         String playerUUID = target.getUniqueId().toString();
         ConfigurationSection statsSection = plugin.getStatsConfig().getConfigurationSection("stats." + playerUUID);
 
-        Inventory statsGUI = Bukkit.createInventory(null, 54, ChatColor.DARK_AQUA + target.getName() + "'s Stats");
+        Inventory statsGUI = Bukkit.createInventory(null, 45, ChatColor.DARK_AQUA + target.getName() + "'s Stats");
 
         // General Stats
         ItemStack playerHead = new ItemStack(Material.PLAYER_HEAD);
@@ -64,7 +64,7 @@ public class StatsCommand implements CommandExecutor {
 
         // Peaceful Mobs
         List<String> peacefulMobs = Arrays.asList("cow", "sheep", "pig", "chicken", "turtle", "llama", "rabbit");
-        int peacefulMobSlot = 13;
+        int peacefulMobSlot = 10;
         for (String mobName : peacefulMobs) {
             int mobKills = (statsSection != null && statsSection.contains("mob_kills." + mobName)) ? statsSection.getInt("mob_kills." + mobName) : 0;
             Material mobMaterial = getMaterialForMob(mobName);
@@ -73,8 +73,8 @@ public class StatsCommand implements CommandExecutor {
         }
 
         // Hostile Mobs
-        List<String> hostileMobs = Arrays.asList("zombie", "skeleton", "creeper", "enderman", "witch", "blaze", "spider", "cave_spider", "phantom", "slime", "wither_skeleton", "warden");
-        int hostileMobSlot = 22;
+        List<String> hostileMobs = Arrays.asList("zombie", "skeleton", "creeper", "enderman", "witch", "blaze", "spider");
+        int hostileMobSlot = 19;
         for (String mobName : hostileMobs) {
             int mobKills = (statsSection != null && statsSection.contains("mob_kills." + mobName)) ? statsSection.getInt("mob_kills." + mobName) : 0;
             Material mobMaterial = getMaterialForMob(mobName);
@@ -83,8 +83,8 @@ public class StatsCommand implements CommandExecutor {
         }
 
         // Ores Mined
-        List<String> trackedOres = Arrays.asList("diamond", "gold", "iron", "redstone", "lapis", "coal", "emerald");
-        int oreSlot = 38;
+        List<String> trackedOres = Arrays.asList("diamond", "gold", "iron", "redstone", "lapis", "coal", "emerald", "netherite");
+        int oreSlot = 28;
         for (String oreName : trackedOres) {
             int oreMined = (statsSection != null && statsSection.contains("ores_mined." + oreName)) ? statsSection.getInt("ores_mined." + oreName) : 0;
             Material oreMaterial = getMaterialForOre(oreName);
@@ -167,6 +167,7 @@ public class StatsCommand implements CommandExecutor {
             case "lapis": return Material.LAPIS_LAZULI;
             case "coal": return Material.COAL;
             case "emerald": return Material.EMERALD;
+            case "netherite": return Material.NETHERITE_INGOT;
             default: return Material.STONE;
         }
     }
