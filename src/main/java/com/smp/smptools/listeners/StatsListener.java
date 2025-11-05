@@ -9,7 +9,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.inventory.ItemStack;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +41,15 @@ public class StatsListener implements Listener {
         death.put("y", player.getLocation().getBlockY());
         death.put("z", player.getLocation().getBlockZ());
         death.put("cause", event.getDeathMessage());
+
+        List<Map<String, Object>> inventory = new ArrayList<>();
+        for (ItemStack item : player.getInventory().getContents()) {
+            if (item != null) {
+                inventory.add(item.serialize());
+            }
+        }
+        death.put("inventory", inventory);
+
         deathInfo.add(death);
         plugin.getStatsConfig().set("stats." + uuid + ".deaths_info", deathInfo);
 

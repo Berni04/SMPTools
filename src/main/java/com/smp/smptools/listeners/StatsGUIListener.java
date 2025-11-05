@@ -40,7 +40,18 @@ public class StatsGUIListener implements Listener {
                 int deathIndex = event.getSlot();
                 statsCommand.showDetailedDeathInfoGUI(player, target, deathIndex);
             }
-        } else if (title.startsWith(ChatColor.DARK_RED + "Death #")) {
+        } else if (title.contains("'s Death #")) {
+            event.setCancelled(true);
+
+            if (event.getCurrentItem() != null && event.getCurrentItem().getType() == Material.CHEST) {
+                Player player = (Player) event.getWhoClicked();
+                String targetName = ChatColor.stripColor(title).split("'s")[0];
+                OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
+                String deathIndexStr = ChatColor.stripColor(title).split("#")[1];
+                int deathIndex = Integer.parseInt(deathIndexStr) - 1;
+                statsCommand.showDeathInventoryGUI(player, target, deathIndex);
+            }
+        } else if (title.contains("Inventory")) {
             event.setCancelled(true);
         }
     }

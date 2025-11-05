@@ -184,7 +184,7 @@ public class StatsCommand implements CommandExecutor {
         List<Map<?, ?>> deathInfo = plugin.getStatsConfig().getMapList("stats." + playerUUID + ".deaths_info");
         Map<?, ?> death = deathInfo.get(deathIndex);
 
-        Inventory detailedDeathInfoGUI = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + "Death #" + (deathIndex + 1));
+        Inventory detailedDeathInfoGUI = Bukkit.createInventory(null, 27, ChatColor.DARK_RED + target.getName() + "'s Death #" + (deathIndex + 1));
 
         String time = (String) death.get("time");
         int x = (int) death.get("x");
@@ -195,7 +195,26 @@ public class StatsCommand implements CommandExecutor {
         createDisplayItem(detailedDeathInfoGUI, Material.CLOCK, 10, ChatColor.YELLOW + "Time", ChatColor.WHITE + time);
         createDisplayItem(detailedDeathInfoGUI, Material.COMPASS, 12, ChatColor.YELLOW + "Coordinates", ChatColor.WHITE + "X: " + x + ", Y: " + y + ", Z: " + z);
         createDisplayItem(detailedDeathInfoGUI, Material.SKELETON_SKULL, 14, ChatColor.YELLOW + "Cause", ChatColor.WHITE + cause);
+        createDisplayItem(detailedDeathInfoGUI, Material.CHEST, 16, ChatColor.YELLOW + "Inventory", ChatColor.GRAY + "Click to view");
 
         viewer.openInventory(detailedDeathInfoGUI);
+    }
+
+    public void showDeathInventoryGUI(Player viewer, OfflinePlayer target, int deathIndex) {
+        String playerUUID = target.getUniqueId().toString();
+        List<Map<?, ?>> deathInfo = plugin.getStatsConfig().getMapList("stats." + playerUUID + ".deaths_info");
+        Map<?, ?> death = deathInfo.get(deathIndex);
+
+        Inventory deathInventoryGUI = Bukkit.createInventory(null, 54, ChatColor.DARK_RED + "Death #" + (deathIndex + 1) + " Inventory");
+
+        List<Map<String, Object>> inventory = (List<Map<String, Object>>) death.get("inventory");
+        if (inventory != null) {
+            for (Map<String, Object> itemMap : inventory) {
+                ItemStack item = ItemStack.deserialize(itemMap);
+                deathInventoryGUI.addItem(item);
+            }
+        }
+
+        viewer.openInventory(deathInventoryGUI);
     }
 }
