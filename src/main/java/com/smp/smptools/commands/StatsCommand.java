@@ -84,13 +84,13 @@ public class StatsCommand implements CommandExecutor {
         }
 
         // Ores
-        createDisplayItem(statsGUI, getMaterialForOre("coal"), 37, ChatColor.GOLD + "Coal Ore", String.valueOf(plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.coal_ore")));
-        createDisplayItem(statsGUI, getMaterialForOre("iron"), 38, ChatColor.GOLD + "Iron Ore", String.valueOf(plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.iron_ore")));
-        createDisplayItem(statsGUI, getMaterialForOre("gold"), 39, ChatColor.GOLD + "Gold Ore", String.valueOf(plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.gold_ore")));
-        createDisplayItem(statsGUI, getMaterialForOre("diamond"), 40, ChatColor.GOLD + "Diamond Ore", String.valueOf(plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.diamond_ore")));
-        createDisplayItem(statsGUI, getMaterialForOre("netherite"), 41, ChatColor.GOLD + "Netherite", String.valueOf(plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.netherite_scrap")));
-        createDisplayItem(statsGUI, getMaterialForOre("lapis"), 42, ChatColor.GOLD + "Lapis Ore", String.valueOf(plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.lapis_ore")));
-        createDisplayItem(statsGUI, getMaterialForOre("redstone"), 43, ChatColor.GOLD + "Redstone Ore", String.valueOf(plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.redstone_ore")));
+        createDisplayItem(statsGUI, getMaterialForOre("coal"), 37, ChatColor.GOLD + "Coal Ore", ChatColor.WHITE + "Mined: " + plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.coal_ore"));
+        createDisplayItem(statsGUI, getMaterialForOre("iron"), 38, ChatColor.GOLD + "Iron Ore", ChatColor.WHITE + "Mined: " + plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.iron_ore"));
+        createDisplayItem(statsGUI, getMaterialForOre("gold"), 39, ChatColor.GOLD + "Gold Ore", ChatColor.WHITE + "Mined: " + plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.gold_ore"));
+        createDisplayItem(statsGUI, getMaterialForOre("diamond"), 40, ChatColor.GOLD + "Diamond Ore", ChatColor.WHITE + "Mined: " + plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.diamond_ore"));
+        createDisplayItem(statsGUI, getMaterialForOre("netherite"), 41, ChatColor.GOLD + "Netherite", ChatColor.WHITE + "Mined: " + plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.netherite_scrap"));
+        createDisplayItem(statsGUI, getMaterialForOre("lapis"), 42, ChatColor.GOLD + "Lapis Ore", ChatColor.WHITE + "Mined: " + plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.lapis_ore"));
+        createDisplayItem(statsGUI, getMaterialForOre("redstone"), 43, ChatColor.GOLD + "Redstone Ore", ChatColor.WHITE + "Mined: " + plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.redstone_ore"));
 
         viewer.openInventory(statsGUI);
     }

@@ -25,7 +25,7 @@ public class NameTagListener implements Listener {
 
         try {
             ChatColor chatColor = ChatColor.valueOf(color.toUpperCase());
-            String displayName = chatColor + "[" + prefix + "] " + player.getName();
+            String displayName = chatColor + prefix + " " + player.getName();
             player.setDisplayName(displayName);
             player.setPlayerListName(displayName);
         } catch (IllegalArgumentException e) {

@@ -26,7 +26,7 @@ public class JoinLeaveListener implements Listener {
 
         try {
             ChatColor chatColor = ChatColor.valueOf(color.toUpperCase());
-            String joinMessage = chatColor + "[" + prefix + "] " + player.getName() + ChatColor.WHITE + " joined";
+            String joinMessage = chatColor + prefix + " " + player.getName() + ChatColor.WHITE + " joined";
             event.setJoinMessage(joinMessage);
         } catch (IllegalArgumentException e) {
             String joinMessage = ChatColor.WHITE + "[" + prefix + "] " + player.getName() + ChatColor.WHITE + " joined";
@@ -44,7 +44,7 @@ public class JoinLeaveListener implements Listener {
 
         try {
             ChatColor chatColor = ChatColor.valueOf(color.toUpperCase());
-            String quitMessage = chatColor + "[" + prefix + "] " + player.getName() + ChatColor.WHITE + " left";
+            String quitMessage = chatColor + prefix + " " + player.getName() + ChatColor.WHITE + " left";
             event.setQuitMessage(quitMessage);
         } catch (IllegalArgumentException e) {
             String quitMessage = ChatColor.WHITE + "[" + prefix + "] " + player.getName() + ChatColor.WHITE + " left";
