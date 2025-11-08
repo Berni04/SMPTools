@@ -87,4 +87,17 @@ public class TagManager {
     public List<String> getUnlockedTitles(Player player) {
         return plugin.getTagsConfig().getStringList("unlocked-titles." + player.getUniqueId().toString());
     }
+
+    public String getTagDescription(String title) {
+        ConfigurationSection milestones = plugin.getTagsConfig().getConfigurationSection("milestones");
+        if (milestones != null) {
+            for (String key : milestones.getKeys(false)) {
+                ConfigurationSection milestone = milestones.getConfigurationSection(key);
+                if (milestone.getString("title").equals(title)) {
+                    return milestone.getString("description");
+                }
+            }
+        }
+        return null;
+    }
 }

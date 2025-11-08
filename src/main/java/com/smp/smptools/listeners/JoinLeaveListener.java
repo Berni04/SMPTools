@@ -51,7 +51,7 @@ public class JoinLeaveListener implements Listener {
         Component finalName = prefixComponent.append(nameComponent);
 
         if (playerTitle != null && !playerTitle.isEmpty()) {
-            Component titleComponent = MiniMessage.miniMessage().deserialize((nameColor != null ? nameColor : "") + "<" + playerTitle + ">");
+            Component titleComponent = MiniMessage.miniMessage().deserialize((nameColor != null ? nameColor : "") + "[" + playerTitle + "]");
             finalName = finalName.append(Component.space()).append(titleComponent);
         }
 

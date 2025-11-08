@@ -142,33 +142,51 @@ public class SMPTools extends JavaPlugin {
         // Add default milestones if they don't exist
         if (!tagsConfig.contains("milestones")) {
             ConfigurationSection milestones = tagsConfig.createSection("milestones");
-            
-            ConfigurationSection noviceBuilder = milestones.createSection("novice_builder");
-            noviceBuilder.set("title", "Novice Builder");
-            noviceBuilder.set("description", "Break 1,000 blocks");
-            noviceBuilder.set("statistic", "blocks_broken");
-            noviceBuilder.set("value", 1000);
 
-            ConfigurationSection masterBuilder = milestones.createSection("master_builder");
-            masterBuilder.set("title", "Master Builder");
-            masterBuilder.set("description", "Break 10,000 blocks");
-            masterBuilder.set("statistic", "blocks_broken");
-            masterBuilder.set("value", 10000);
+            // Blocks Broken
+            createMilestone(milestones, "novice_builder", "Novice Builder", "Break 1,000 blocks", "blocks_broken", 1000);
+            createMilestone(milestones, "master_builder", "Master Builder", "Break 100,000 blocks", "blocks_broken", 100000);
 
-            ConfigurationSection brawler = milestones.createSection("brawler");
-            brawler.set("title", "Brawler");
-            brawler.set("description", "Kill 10 players");
-            brawler.set("statistic", "player_kills");
-            brawler.set("value", 10);
+            // Blocks Placed
+            createMilestone(milestones, "architect", "Architect", "Place 10,000 blocks", "blocks_placed", 10000);
 
-            ConfigurationSection warrior = milestones.createSection("warrior");
-            warrior.set("title", "Warrior");
-            warrior.set("description", "Kill 50 players");
-            warrior.set("statistic", "player_kills");
-            warrior.set("value", 50);
+            // Playtime
+            createMilestone(milestones, "addict", "Addict", "Play for 24 hours", "playtime_minutes", 1440);
+            createMilestone(milestones, "no_life", "No-Life", "Play for 7 days", "playtime_minutes", 10080);
+
+            // Deaths
+            createMilestone(milestones, "careless", "Careless", "Die 50 times", "deaths_total", 50);
+            createMilestone(milestones, "cannon_fodder", "Cannon Fodder", "Die 200 times", "deaths_total", 200);
+
+            // Player Kills
+            createMilestone(milestones, "brawler", "Brawler", "Kill 10 players", "player_kills", 10);
+            createMilestone(milestones, "warrior", "Warrior", "Kill 50 players", "player_kills", 50);
+
+            // Boss Kills
+            createMilestone(milestones, "dragon_slayer", "Dragon-Slayer", "Kill the Ender Dragon", "ender_dragon_kills", 1);
+            createMilestone(milestones, "wither_slayer", "Wither-Slayer", "Kill the Wither", "wither_kills", 1);
+            createMilestone(milestones, "deep_dweller", "Deep-Dweller", "Kill the Warden", "warden_kills", 1);
+
+            // Dimension/Item Milestones
+            createMilestone(milestones, "nether_walker", "Nether-Walker", "Enter the Nether", "enter_nether", 1);
+            createMilestone(milestones, "aviator", "Aviator", "Obtain an Elytra", "obtain_elytra", 1);
+            createMilestone(milestones, "ocean_master", "Ocean-Master", "Obtain a Trident", "obtain_trident", 1);
+            createMilestone(milestones, "immortal", "Immortal", "Use a Totem of Undying", "use_totem", 1);
+
+            // Ore Milestones
+            createMilestone(milestones, "diamond_king", "Diamond King", "Mine 500 diamonds", "ores_mined.diamond", 500);
+            createMilestone(milestones, "emerald_mogul", "Emerald Mogul", "Mine 500 emeralds", "ores_mined.emerald", 500);
 
             saveTagsConfig();
         }
+    }
+
+    private void createMilestone(ConfigurationSection parent, String key, String title, String description, String statistic, int value) {
+        ConfigurationSection section = parent.createSection(key);
+        section.set("title", title);
+        section.set("description", description);
+        section.set("statistic", statistic);
+        section.set("value", value);
     }
 
     public FileConfiguration getTagsConfig() {

@@ -89,7 +89,8 @@ public class TagsCommand implements CommandExecutor {
                     ItemMeta meta = titleItem.getItemMeta();
                     meta.setDisplayName(ChatColor.GOLD + title);
                     List<String> lore = new ArrayList<>();
-                    lore.add(ChatColor.GREEN + "Unlocked!");
+                    lore.add(ChatColor.GRAY + description); // Add original description
+                    lore.add(ChatColor.GREEN + "Unlocked!"); // Add "Unlocked!"
                     meta.setLore(lore);
                     titleItem.setItemMeta(meta);
                     tagsGUI.addItem(titleItem);

@@ -3,6 +3,7 @@ package com.smp.smptools.listeners;
 import com.smp.smptools.SMPTools;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -35,13 +36,18 @@ public class ChatListener implements Listener {
 
         Component messageComponent = event.message().color(NamedTextColor.WHITE);
 
-        Component finalMessage = prefixComponent
-                .append(nameComponent)
-                .append(Component.text(": ").colorIfAbsent(nameComponent.color()));
+        Component finalMessage = prefixComponent.append(nameComponent);
 
         String playerTitle = plugin.getTagManager().getPlayerTitle(player);
         if (playerTitle != null && !playerTitle.isEmpty()) {
-            Component titleComponent = MiniMessage.miniMessage().deserialize((nameColor != null ? nameColor : "") + "<" + playerTitle + ">");
+            Component titleComponent = MiniMessage.miniMessage().deserialize((nameColor != null ? nameColor : "") + "[" + playerTitle + "]");
+
+            // Find the description for the title
+            String description = plugin.getTagManager().getTagDescription(playerTitle);
+            if (description != null) {
+                titleComponent = titleComponent.hoverEvent(HoverEvent.showText(Component.text(description)));
+            }
+
             finalMessage = finalMessage.append(Component.space()).append(titleComponent);
         }
         finalMessage = finalMessage.append(Component.space()).append(messageComponent);

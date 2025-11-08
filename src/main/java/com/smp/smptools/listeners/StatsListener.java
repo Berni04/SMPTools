@@ -11,7 +11,10 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.entity.EntityResurrectEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerStatisticIncrementEvent;
+import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
@@ -73,17 +76,26 @@ public class StatsListener implements Listener {
             Player killer = event.getEntity().getKiller();
             EntityType entityType = event.getEntityType();
 
+            // Boss Kills
+            if (entityType == EntityType.ENDER_DRAGON) {
+                plugin.getStatsConfig().set("stats." + killer.getUniqueId() + ".ender_dragon_kills", plugin.getStatsConfig().getInt("stats." + killer.getUniqueId() + ".ender_dragon_kills", 0) + 1);
+            } else if (entityType == EntityType.WITHER) {
+                plugin.getStatsConfig().set("stats." + killer.getUniqueId() + ".wither_kills", plugin.getStatsConfig().getInt("stats." + killer.getUniqueId() + ".wither_kills", 0) + 1);
+            } else if (entityType == EntityType.WARDEN) {
+                plugin.getStatsConfig().set("stats." + killer.getUniqueId() + ".warden_kills", plugin.getStatsConfig().getInt("stats." + killer.getUniqueId() + ".warden_kills", 0) + 1);
+            }
+
             List<EntityType> trackedMobs = Arrays.asList(
                     EntityType.COW, EntityType.SHEEP, EntityType.PIG, EntityType.CHICKEN, EntityType.TURTLE, EntityType.LLAMA, EntityType.RABBIT,
-                    EntityType.ZOMBIE, EntityType.SKELETON, EntityType.CREEPER, EntityType.ENDERMAN, EntityType.WITCH, EntityType.BLAZE, EntityType.SPIDER, EntityType.CAVE_SPIDER, EntityType.PHANTOM, EntityType.SLIME, EntityType.WITHER_SKELETON, EntityType.WARDEN
+                    EntityType.ZOMBIE, EntityType.SKELETON, EntityType.CREEPER, EntityType.ENDERMAN, EntityType.WITCH, EntityType.BLAZE, EntityType.SPIDER, EntityType.CAVE_SPIDER, EntityType.PHANTOM, EntityType.SLIME, EntityType.WITHER_SKELETON
             );
 
             if (trackedMobs.contains(entityType)) {
                 String mobName = entityType.name().toLowerCase();
                 plugin.getStatsConfig().set("stats." + killer.getUniqueId() + ".mob_kills." + mobName, plugin.getStatsConfig().getInt("stats." + killer.getUniqueId() + ".mob_kills." + mobName, 0) + 1);
-                plugin.saveStatsConfig();
-                plugin.getTagManager().checkMilestones(killer);
             }
+            plugin.saveStatsConfig();
+            plugin.getTagManager().checkMilestones(killer);
         }
     }
 
@@ -133,11 +145,47 @@ public class StatsListener implements Listener {
     public void onStatisticIncrement(PlayerStatisticIncrementEvent event) {
         if (event.getStatistic() == Statistic.PLAY_ONE_MINUTE) {
             Player player = event.getPlayer();
-            // The value is in ticks, so we divide by 20 (ticks/sec) and 60 (sec/min) to get minutes.
-            // The event fires every minute, so the new value is the total time played in ticks.
-            long totalTicks = event.getNewValue();
+            long totalTicks = player.getStatistic(Statistic.PLAY_ONE_MINUTE);
             long totalMinutes = totalTicks / (20 * 60);
             plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".playtime_minutes", totalMinutes);
+            plugin.saveStatsConfig();
+            plugin.getTagManager().checkMilestones(player);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerChangedWorld(PlayerChangedWorldEvent event) {
+        Player player = event.getPlayer();
+        if (player.getWorld().getName().equals("world_nether")) {
+            plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".enter_nether", 1);
+            plugin.saveStatsConfig();
+            plugin.getTagManager().checkMilestones(player);
+        }
+    }
+
+    @EventHandler
+    public void onEntityPickupItem(EntityPickupItemEvent event) {
+        if (event.getEntity() instanceof Player) {
+            Player player = (Player) event.getEntity();
+            Material itemType = event.getItem().getItemStack().getType();
+
+            if (itemType == Material.ELYTRA) {
+                plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".obtain_elytra", 1);
+            } else if (itemType == Material.TRIDENT) {
+                plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".obtain_trident", 1);
+            } else {
+                return; // Don't check milestones if the item is not relevant
+            }
+            plugin.saveStatsConfig();
+            plugin.getTagManager().checkMilestones(player);
+        }
+    }
+
+    @EventHandler
+    public void onEntityResurrect(EntityResurrectEvent event) {
+        if (event.getEntity() instanceof Player) {
+            Player player = (Player) event.getEntity();
+            plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".use_totem", plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".use_totem", 0) + 1);
             plugin.saveStatsConfig();
             plugin.getTagManager().checkMilestones(player);
         }
