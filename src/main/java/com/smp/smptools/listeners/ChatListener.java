@@ -37,8 +37,14 @@ public class ChatListener implements Listener {
 
         Component finalMessage = prefixComponent
                 .append(nameComponent)
-                .append(Component.text(": ").colorIfAbsent(nameComponent.color()))
-                .append(messageComponent);
+                .append(Component.text(": ").colorIfAbsent(nameComponent.color()));
+
+        String playerTitle = plugin.getTagManager().getPlayerTitle(player);
+        if (playerTitle != null && !playerTitle.isEmpty()) {
+            Component titleComponent = MiniMessage.miniMessage().deserialize((nameColor != null ? nameColor : "") + "<" + playerTitle + ">");
+            finalMessage = finalMessage.append(Component.space()).append(titleComponent);
+        }
+        finalMessage = finalMessage.append(Component.space()).append(messageComponent);
 
         for (Player onlinePlayer : plugin.getServer().getOnlinePlayers()) {
             onlinePlayer.sendMessage(finalMessage);

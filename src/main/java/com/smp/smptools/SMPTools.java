@@ -2,12 +2,15 @@ package com.smp.smptools;
 
 import com.smp.smptools.commands.*;
 import com.smp.smptools.leaderboard.LeaderboardManager;
+import com.smp.smptools.tags.TagManager;
+import com.smp.smptools.tpa.TpaManager;
 import com.smp.smptools.listeners.HomesGUIListener;
 import com.smp.smptools.listeners.PrefixGUIListener;
 import com.smp.smptools.listeners.LeaderboardGUIListener;
 import com.smp.smptools.listeners.*;
 import com.smp.smptools.listeners.NameTagListener;
 import org.bukkit.Bukkit;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -20,19 +23,28 @@ public class SMPTools extends JavaPlugin {
     private static SMPTools instance;
     private File statsFile;
     private FileConfiguration statsConfig;
+    private File tagsFile;
+    private FileConfiguration tagsConfig;
     private LeaderboardCommand leaderboardCommand;
     private NameTagListener nameTagListener;
     private LeaderboardManager leaderboardManager;
+    private TagManager tagManager;
+    private TpaManager tpaManager;
 
     @Override
     public void onEnable() {
         instance = this;
-        this.leaderboardManager = new LeaderboardManager(this);
         getLogger().info("SMPTools has been enabled!");
 
         // Setup configs
         saveDefaultConfig();
         setupStatsConfig();
+        setupTagsConfig();
+
+        // Instantiate Managers
+        this.leaderboardManager = new LeaderboardManager(this);
+        this.tagManager = new TagManager(this);
+        this.tpaManager = new TpaManager(this);
 
         // Register Listeners
         Bukkit.getPluginManager().registerEvents(new SleepListener(), this);
@@ -48,6 +60,7 @@ public class SMPTools extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new HomesGUIListener(this), this);
         Bukkit.getPluginManager().registerEvents(new PrefixGUIListener(this), this);
         Bukkit.getPluginManager().registerEvents(new LeaderboardGUIListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new TagsGUIListener(this), this);
         Bukkit.getPluginManager().registerEvents(new TabHealthListener(this), this);
 
         // Register Commands
@@ -62,6 +75,12 @@ public class SMPTools extends JavaPlugin {
         this.getCommand("clearstats").setExecutor(new ClearStatsCommand(this));
         this.getCommand("prefix").setExecutor(new PrefixCommand());
         this.getCommand("color").setExecutor(new ColorCommand());
+        this.getCommand("tags").setExecutor(new TagsCommand(this));
+        TpaCommand tpaCommand = new TpaCommand(this);
+        this.getCommand("tpr").setExecutor(tpaCommand);
+        this.getCommand("tpa").setExecutor(tpaCommand);
+        this.getCommand("tpd").setExecutor(tpaCommand);
+        this.getCommand("tptoggle").setExecutor(tpaCommand);
         this.leaderboardCommand = new LeaderboardCommand(this);
         this.getCommand("leaderboard").setExecutor(leaderboardCommand);
 
@@ -108,6 +127,62 @@ public class SMPTools extends JavaPlugin {
         }
     }
 
+    public void setupTagsConfig() {
+        tagsFile = new File(getDataFolder(), "tags.yml");
+        if (!tagsFile.exists()) {
+            try {
+                tagsFile.createNewFile();
+                saveResource("tags.yml", true);
+            } catch (IOException e) {
+                getLogger().severe("Could not create tags.yml file!");
+            }
+        }
+        tagsConfig = YamlConfiguration.loadConfiguration(tagsFile);
+
+        // Add default milestones if they don't exist
+        if (!tagsConfig.contains("milestones")) {
+            ConfigurationSection milestones = tagsConfig.createSection("milestones");
+            
+            ConfigurationSection noviceBuilder = milestones.createSection("novice_builder");
+            noviceBuilder.set("title", "Novice Builder");
+            noviceBuilder.set("description", "Break 1,000 blocks");
+            noviceBuilder.set("statistic", "blocks_broken");
+            noviceBuilder.set("value", 1000);
+
+            ConfigurationSection masterBuilder = milestones.createSection("master_builder");
+            masterBuilder.set("title", "Master Builder");
+            masterBuilder.set("description", "Break 10,000 blocks");
+            masterBuilder.set("statistic", "blocks_broken");
+            masterBuilder.set("value", 10000);
+
+            ConfigurationSection brawler = milestones.createSection("brawler");
+            brawler.set("title", "Brawler");
+            brawler.set("description", "Kill 10 players");
+            brawler.set("statistic", "player_kills");
+            brawler.set("value", 10);
+
+            ConfigurationSection warrior = milestones.createSection("warrior");
+            warrior.set("title", "Warrior");
+            warrior.set("description", "Kill 50 players");
+            warrior.set("statistic", "player_kills");
+            warrior.set("value", 50);
+
+            saveTagsConfig();
+        }
+    }
+
+    public FileConfiguration getTagsConfig() {
+        return tagsConfig;
+    }
+
+    public void saveTagsConfig() {
+        try {
+            tagsConfig.save(tagsFile);
+        } catch (IOException e) {
+            getLogger().severe("Could not save tags.yml file!");
+        }
+    }
+
     public static SMPTools getInstance() {
         return instance;
     }
@@ -118,6 +193,14 @@ public class SMPTools extends JavaPlugin {
 
     public LeaderboardManager getLeaderboardManager() {
         return leaderboardManager;
+    }
+
+    public TagManager getTagManager() {
+        return tagManager;
+    }
+
+    public TpaManager getTpaManager() {
+        return tpaManager;
     }
 }
 

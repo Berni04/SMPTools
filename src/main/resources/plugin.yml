@@ -46,3 +46,20 @@ commands:
   leaderboard:
     description: Shows the server leaderboard.
     usage: /leaderboard
+  tpr:
+    description: Requests to teleport to another player.
+    usage: /tpr <player>
+  tpa:
+    description: Accepts a teleport request.
+    usage: /tpa
+  tpd:
+    description: Denies a teleport request.
+    usage: /tpd
+  tptoggle:
+    description: Toggles teleport request acceptance.
+    usage: /tptoggle
+  tags:
+    description: Manages player titles.
+    usage: /tags [set <player> <title>]
+    permission: smptools.tags.admin
+    permission-message: You don't have permission to use this command.

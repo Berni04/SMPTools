@@ -61,8 +61,10 @@ public class StatsListener implements Listener {
         if (player.getKiller() != null) {
             Player killer = player.getKiller();
             plugin.getStatsConfig().set("stats." + killer.getUniqueId() + ".player_kills", plugin.getStatsConfig().getInt("stats." + killer.getUniqueId() + ".player_kills", 0) + 1);
+            plugin.getTagManager().checkMilestones(killer);
         }
         plugin.saveStatsConfig();
+        plugin.getTagManager().checkMilestones(player);
     }
 
     @EventHandler
@@ -80,6 +82,7 @@ public class StatsListener implements Listener {
                 String mobName = entityType.name().toLowerCase();
                 plugin.getStatsConfig().set("stats." + killer.getUniqueId() + ".mob_kills." + mobName, plugin.getStatsConfig().getInt("stats." + killer.getUniqueId() + ".mob_kills." + mobName, 0) + 1);
                 plugin.saveStatsConfig();
+                plugin.getTagManager().checkMilestones(killer);
             }
         }
     }
@@ -115,6 +118,7 @@ public class StatsListener implements Listener {
             plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".ores_mined." + oreName, plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".ores_mined." + oreName, 0) + 1);
         }
         plugin.saveStatsConfig();
+        plugin.getTagManager().checkMilestones(player);
     }
 
     @EventHandler
@@ -122,6 +126,7 @@ public class StatsListener implements Listener {
         Player player = event.getPlayer();
         plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".blocks_placed", plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".blocks_placed", 0) + 1);
         plugin.saveStatsConfig();
+        plugin.getTagManager().checkMilestones(player);
     }
 
     @EventHandler
@@ -134,6 +139,7 @@ public class StatsListener implements Listener {
             long totalMinutes = totalTicks / (20 * 60);
             plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".playtime_minutes", totalMinutes);
             plugin.saveStatsConfig();
+            plugin.getTagManager().checkMilestones(player);
         }
     }
 }
