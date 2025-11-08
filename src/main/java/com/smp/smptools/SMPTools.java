@@ -4,6 +4,7 @@ import com.smp.smptools.commands.*;
 import com.smp.smptools.leaderboard.LeaderboardManager;
 import com.smp.smptools.listeners.HomesGUIListener;
 import com.smp.smptools.listeners.PrefixGUIListener;
+import com.smp.smptools.listeners.LeaderboardGUIListener;
 import com.smp.smptools.listeners.*;
 import com.smp.smptools.listeners.NameTagListener;
 import org.bukkit.Bukkit;
@@ -46,6 +47,7 @@ public class SMPTools extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new ChatListener(), this);
         Bukkit.getPluginManager().registerEvents(new HomesGUIListener(this), this);
         Bukkit.getPluginManager().registerEvents(new PrefixGUIListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new LeaderboardGUIListener(this), this);
         Bukkit.getPluginManager().registerEvents(new TabHealthListener(this), this);
 
         // Register Commands
@@ -62,6 +64,19 @@ public class SMPTools extends JavaPlugin {
         this.getCommand("color").setExecutor(new ColorCommand());
         this.leaderboardCommand = new LeaderboardCommand(this);
         this.getCommand("leaderboard").setExecutor(leaderboardCommand);
+
+        // Playtime tracker
+        new org.bukkit.scheduler.BukkitRunnable() {
+            @Override
+            public void run() {
+                for (org.bukkit.entity.Player player : Bukkit.getOnlinePlayers()) {
+                    String uuid = player.getUniqueId().toString();
+                    long newTime = getStatsConfig().getLong("stats." + uuid + ".playtime_minutes", 0) + 1;
+                    getStatsConfig().set("stats." + uuid + ".playtime_minutes", newTime);
+                }
+                saveStatsConfig();
+            }
+        }.runTaskTimer(this, 0L, 1200L); // 1200 ticks = 1 minute
     }
 
     @Override

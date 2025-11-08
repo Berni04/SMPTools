@@ -3,6 +3,7 @@ package com.smp.smptools.listeners;
 import com.smp.smptools.SMPTools;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.entity.Player;
@@ -32,11 +33,11 @@ public class ChatListener implements Listener {
             nameComponent = MiniMessage.miniMessage().deserialize(nameColor + player.getName());
         }
 
-        Component messageComponent = event.message();
+        Component messageComponent = event.message().color(NamedTextColor.WHITE);
 
         Component finalMessage = prefixComponent
                 .append(nameComponent)
-                .append(Component.text(": "))
+                .append(Component.text(": ").colorIfAbsent(nameComponent.color()))
                 .append(messageComponent);
 
         for (Player onlinePlayer : plugin.getServer().getOnlinePlayers()) {

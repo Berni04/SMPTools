@@ -2,6 +2,7 @@ package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -20,14 +21,14 @@ public class JoinLeaveListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        Component joinMessage = getFormattedName(player).append(Component.text(" joined"));
+        Component joinMessage = getFormattedName(player).append(Component.text(" joined", NamedTextColor.WHITE));
         event.joinMessage(joinMessage);
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        Component quitMessage = getFormattedName(player).append(Component.text(" left"));
+        Component quitMessage = getFormattedName(player).append(Component.text(" left", NamedTextColor.WHITE));
         event.quitMessage(quitMessage);
     }
 

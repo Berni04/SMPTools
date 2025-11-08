@@ -9,6 +9,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.ItemStack;
 
 public class StatsGUIListener implements Listener {
 
@@ -19,40 +20,22 @@ public class StatsGUIListener implements Listener {
     }
 
     @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
-        String title = event.getView().getTitle();
-        if (title.contains("'s Stats")) {
-            event.setCancelled(true);
+    public void onStatsGUIClick(InventoryClickEvent event) {
+        if (!event.getView().getTitle().contains("'s Stats")) {
+            return;
+        }
 
-            if (event.getCurrentItem() != null && event.getCurrentItem().getType() == Material.PLAYER_HEAD) {
-                Player player = (Player) event.getWhoClicked();
-                String targetName = ChatColor.stripColor(title).replace("'s Stats", "");
-                OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
-                statsCommand.showDeathInfoGUI(player, target);
-            }
-        } else if (title.contains("'s Deaths")) {
-            event.setCancelled(true);
+        event.setCancelled(true);
 
-            if (event.getCurrentItem() != null && event.getCurrentItem().getType() == Material.PAPER) {
-                Player player = (Player) event.getWhoClicked();
-                String targetName = ChatColor.stripColor(title).replace("'s Deaths", "");
-                OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
-                int deathIndex = event.getSlot();
-                statsCommand.showDetailedDeathInfoGUI(player, target, deathIndex);
-            }
-        } else if (title.contains("'s Death #")) {
-            event.setCancelled(true);
+        Player player = (Player) event.getWhoClicked();
+        ItemStack clickedItem = event.getCurrentItem();
 
-            if (event.getCurrentItem() != null && event.getCurrentItem().getType() == Material.CHEST) {
-                Player player = (Player) event.getWhoClicked();
-                String targetName = ChatColor.stripColor(title).split("'s")[0];
-                OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
-                String deathIndexStr = ChatColor.stripColor(title).split("#")[1];
-                int deathIndex = Integer.parseInt(deathIndexStr) - 1;
-                statsCommand.showDeathInventoryGUI(player, target, deathIndex);
-            }
-        } else if (title.contains("Inventory")) {
-            event.setCancelled(true);
+        if (clickedItem == null) {
+            return;
+        }
+
+        if (clickedItem.getType() == Material.PAPER && clickedItem.getItemMeta().getDisplayName().contains("View Deaths")) {
+            statsCommand.showDeathInfoGUI(player, Bukkit.getOfflinePlayer(event.getView().getTitle().split("'")[0].replace(ChatColor.DARK_AQUA.toString(), "")));
         }
     }
 }

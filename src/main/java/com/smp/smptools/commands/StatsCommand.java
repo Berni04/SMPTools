@@ -63,27 +63,25 @@ public class StatsCommand implements CommandExecutor {
 
         // General Stats
         long playtimeMinutes = statsSection != null ? statsSection.getLong("playtime_minutes", 0) : 0;
-        createDisplayItem(statsGUI, Material.CLOCK, 19, ChatColor.GOLD + "Playtime", formatPlaytime(playtimeMinutes));
-        createDisplayItem(statsGUI, Material.DIAMOND_SWORD, 20, ChatColor.GOLD + "Player Kills", "" + (statsSection != null ? statsSection.getInt("player_kills", 0) : 0));
-        createDisplayItem(statsGUI, Material.SKELETON_SKULL, 21, ChatColor.GOLD + "Total Deaths", "" + (statsSection != null ? statsSection.getInt("deaths_total", 0) : 0));
-
-        // Block Stats
-        createDisplayItem(statsGUI, Material.DIAMOND_PICKAXE, 23, ChatColor.GOLD + "Blocks Broken", "" + (statsSection != null ? statsSection.getInt("blocks_broken", 0) : 0));
-        createDisplayItem(statsGUI, Material.GRASS_BLOCK, 24, ChatColor.GOLD + "Blocks Placed", "" + (statsSection != null ? statsSection.getInt("blocks_placed", 0) : 0));
+        createDisplayItem(statsGUI, Material.CLOCK, 20, ChatColor.GOLD + "Playtime", ChatColor.YELLOW + formatPlaytime(playtimeMinutes));
+        createDisplayItem(statsGUI, Material.DIAMOND_SWORD, 21, ChatColor.GOLD + "Player Kills", statsSection != null ? statsSection.getInt("player_kills", 0) : 0);
+        createDisplayItem(statsGUI, Material.SKELETON_SKULL, 22, ChatColor.GOLD + "Total Deaths", statsSection != null ? statsSection.getInt("deaths_total", 0) : 0);
         
-        // Ores Mined
-        createDisplayItem(statsGUI, Material.COAL_ORE, 25, ChatColor.GOLD + "Coal Mined", "" + (statsSection != null ? statsSection.getInt("ores_mined.coal", 0) : 0));
-        createDisplayItem(statsGUI, Material.IRON_ORE, 28, ChatColor.GOLD + "Iron Mined", "" + (statsSection != null ? statsSection.getInt("ores_mined.iron", 0) : 0));
-        createDisplayItem(statsGUI, Material.GOLD_ORE, 29, ChatColor.GOLD + "Gold Mined", "" + (statsSection != null ? statsSection.getInt("ores_mined.gold", 0) : 0));
-        createDisplayItem(statsGUI, Material.LAPIS_LAZULI, 30, ChatColor.GOLD + "Lapis Mined", "" + (statsSection != null ? statsSection.getInt("ores_mined.lapis", 0) : 0));
-        createDisplayItem(statsGUI, Material.REDSTONE, 31, ChatColor.GOLD + "Redstone Mined", "" + (statsSection != null ? statsSection.getInt("ores_mined.redstone", 0) : 0));
-        createDisplayItem(statsGUI, Material.DIAMOND, 32, ChatColor.GOLD + "Diamonds Mined", "" + (statsSection != null ? statsSection.getInt("ores_mined.diamond", 0) : 0));
-        createDisplayItem(statsGUI, Material.EMERALD, 33, ChatColor.GOLD + "Emeralds Mined", "" + (statsSection != null ? statsSection.getInt("ores_mined.emerald", 0) : 0));
-        createDisplayItem(statsGUI, Material.ANCIENT_DEBRIS, 34, ChatColor.GOLD + "Ancient Debris Mined", "" + (statsSection != null ? statsSection.getInt("ores_mined.netherite", 0) : 0));
+        // Block Stats
+        createDisplayItem(statsGUI, Material.DIAMOND_PICKAXE, 23, ChatColor.GOLD + "Blocks Broken", statsSection != null ? statsSection.getInt("blocks_broken", 0) : 0);
+        createDisplayItem(statsGUI, Material.GRASS_BLOCK, 24, ChatColor.GOLD + "Blocks Placed", statsSection != null ? statsSection.getInt("blocks_placed", 0) : 0);
 
+        // Ores Mined
+        createDisplayItem(statsGUI, Material.COAL_ORE, 37, ChatColor.GOLD + "Coal Mined", statsSection != null ? statsSection.getInt("ores_mined.coal", 0) : 0);
+        createDisplayItem(statsGUI, Material.IRON_ORE, 38, ChatColor.GOLD + "Iron Mined", statsSection != null ? statsSection.getInt("ores_mined.iron", 0) : 0);
+        createDisplayItem(statsGUI, Material.GOLD_ORE, 39, ChatColor.GOLD + "Gold Mined", statsSection != null ? statsSection.getInt("ores_mined.gold", 0) : 0);
+        createDisplayItem(statsGUI, Material.LAPIS_LAZULI, 40, ChatColor.GOLD + "Lapis Mined", statsSection != null ? statsSection.getInt("ores_mined.lapis", 0) : 0);
+        createDisplayItem(statsGUI, Material.REDSTONE, 41, ChatColor.GOLD + "Redstone Mined", statsSection != null ? statsSection.getInt("ores_mined.redstone", 0) : 0);
+        createDisplayItem(statsGUI, Material.DIAMOND, 42, ChatColor.GOLD + "Diamonds Mined", statsSection != null ? statsSection.getInt("ores_mined.diamond", 0) : 0);
+        createDisplayItem(statsGUI, Material.EMERALD, 43, ChatColor.GOLD + "Emeralds Mined", statsSection != null ? statsSection.getInt("ores_mined.emerald", 0) : 0);
 
         // Deaths Button
-        createDisplayItem(statsGUI, Material.PAPER, 49, ChatColor.RED + "View Deaths", ChatColor.GRAY + "Click to see detailed death info");
+        createDisplayItem(statsGUI, Material.PAPER, 49, ChatColor.RED + "View Deaths", ChatColor.YELLOW + "Click to see detailed death info");
 
         viewer.openInventory(statsGUI);
     }
@@ -100,17 +98,15 @@ public class StatsCommand implements CommandExecutor {
         return String.format("%dD %dH %dM", days, hours, minutes);
     }
 
-
-    private void createDisplayItem(Inventory inv, Material material, int slot, String name, String... lore) {
+    private void createDisplayItem(Inventory inv, Material material, int slot, String name, int amount) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(name);
-        List<String> loreList = new ArrayList<>();
-        for (String s : lore) {
-            loreList.add(s);
-        }
-        meta.setLore(loreList);
+        List<String> lore = new ArrayList<>();
+        lore.add(ChatColor.YELLOW + "Amount: " + amount);
+        meta.setLore(lore);
         item.setItemMeta(meta);
+        item.setAmount(Math.max(1, Math.min(amount, 64))); // Amount between 1 and 64
         inv.setItem(slot, item);
     }
     
@@ -125,25 +121,57 @@ public class StatsCommand implements CommandExecutor {
         item.setItemMeta(meta);
         inv.setItem(slot, item);
     }
-
-    public void showDeathInfoGUI(Player viewer, OfflinePlayer target) {
-        String playerUUID = target.getUniqueId().toString();
-        List<Map<?, ?>> deathInfo = plugin.getStatsConfig().getMapList("stats." + playerUUID + ".deaths_info");
-
-        Inventory deathInfoGUI = Bukkit.createInventory(null, 54, ChatColor.DARK_AQUA + target.getName() + "'s Deaths");
-
-        for (int i = 0; i < deathInfo.size(); i++) {
-            Map<?, ?> death = deathInfo.get(i);
-            String time = (String) death.get("time");
-            String cause = (String) death.get("cause");
-            createDisplayItem(deathInfoGUI, Material.PAPER, i, ChatColor.RED + "Death #" + (i + 1),
-                    ChatColor.YELLOW + "Time: " + ChatColor.WHITE + time,
-                    ChatColor.YELLOW + "Cause: " + ChatColor.WHITE + cause,
-                    ChatColor.GRAY + "Click for more info");
+    
+    private void createDisplayItem(Inventory inv, Material material, int slot, String name, String... lore) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(name);
+        List<String> loreList = new ArrayList<>();
+        for (String s : lore) {
+            loreList.add(s);
         }
-
-        viewer.openInventory(deathInfoGUI);
+        meta.setLore(loreList);
+        item.setItemMeta(meta);
+        inv.setItem(slot, item);
     }
+
+        
+
+        public void showDeathInfoGUI(Player viewer, OfflinePlayer target) {
+
+            String playerUUID = target.getUniqueId().toString();
+
+            List<Map<?, ?>> deathInfo = plugin.getStatsConfig().getMapList("stats." + playerUUID + ".deaths_info");
+
+    
+
+            Inventory deathInfoGUI = Bukkit.createInventory(null, 54, ChatColor.DARK_AQUA + target.getName() + "'s Deaths");
+
+    
+
+            for (int i = 0; i < deathInfo.size(); i++) {
+
+                Map<?, ?> death = deathInfo.get(i);
+
+                String time = (String) death.get("time");
+
+                String cause = (String) death.get("cause");
+
+                createDisplayItem(deathInfoGUI, Material.PAPER, i, ChatColor.RED + "Death #" + (i + 1),
+
+                        ChatColor.YELLOW + "Time: " + ChatColor.WHITE + time,
+
+                        ChatColor.YELLOW + "Cause: " + ChatColor.WHITE + cause,
+
+                        ChatColor.GRAY + "Click for more info");
+
+            }
+
+    
+
+            viewer.openInventory(deathInfoGUI);
+
+        }
 
     private Material getMaterialForMob(String mobName) {
         switch (mobName.toLowerCase()) {
