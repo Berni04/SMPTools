@@ -1,7 +1,8 @@
 package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -17,19 +18,27 @@ public class NameTagListener implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        Player player = event.getPlayer();
-        String playerUUID = player.getUniqueId().toString();
+        updatePlayerName(event.getPlayer());
+    }
 
-        String prefix = plugin.getStatsConfig().getString("stats." + playerUUID + ".prefix", "");
-        String color = plugin.getStatsConfig().getString("stats." + playerUUID + ".color", "WHITE");
+    public void updatePlayerName(Player player) {
+        String prefix = plugin.getStatsConfig().getString("players." + player.getUniqueId() + ".prefix");
+        String nameColor = plugin.getStatsConfig().getString("players." + player.getUniqueId() + ".name-color");
 
-        try {
-            ChatColor chatColor = ChatColor.valueOf(color.toUpperCase());
-            String displayName = chatColor + prefix + " " + player.getName();
-            player.setDisplayName(displayName);
-            player.setPlayerListName(displayName);
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("Invalid color in stats.yml for player " + player.getName());
+        Component prefixComponent = Component.empty();
+        if (prefix != null && !prefix.isEmpty()) {
+            String coloredPrefix = (nameColor != null ? nameColor : "") + prefix;
+            prefixComponent = MiniMessage.miniMessage().deserialize(coloredPrefix).append(Component.space());
         }
+
+        Component nameComponent = MiniMessage.miniMessage().deserialize(player.getName());
+        if (nameColor != null && !nameColor.isEmpty()) {
+            nameComponent = MiniMessage.miniMessage().deserialize(nameColor + player.getName());
+        }
+
+        Component finalName = prefixComponent.append(nameComponent);
+
+        player.displayName(finalName);
+        player.playerListName(finalName);
     }
 }

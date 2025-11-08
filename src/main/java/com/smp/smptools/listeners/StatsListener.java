@@ -2,13 +2,16 @@ package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
 import org.bukkit.Material;
+import org.bukkit.Statistic;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerStatisticIncrementEvent;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
@@ -30,10 +33,10 @@ public class StatsListener implements Listener {
         Player player = event.getEntity();
         String uuid = player.getUniqueId().toString();
 
-        // Increment death count
-        plugin.getStatsConfig().set("stats." + uuid + ".deaths", plugin.getStatsConfig().getInt("stats." + uuid + ".deaths", 0) + 1);
+        // Increment total death count
+        plugin.getStatsConfig().set("stats." + uuid + ".deaths_total", plugin.getStatsConfig().getInt("stats." + uuid + ".deaths_total", 0) + 1);
 
-        // Save death info
+        // Save detailed death info
         List<Map<?, ?>> deathInfo = plugin.getStatsConfig().getMapList("stats." + uuid + ".deaths_info");
         Map<String, Object> death = new HashMap<>();
         death.put("time", java.time.LocalDateTime.now().toString());
@@ -60,11 +63,6 @@ public class StatsListener implements Listener {
             plugin.getStatsConfig().set("stats." + killer.getUniqueId() + ".player_kills", plugin.getStatsConfig().getInt("stats." + killer.getUniqueId() + ".player_kills", 0) + 1);
         }
         plugin.saveStatsConfig();
-
-        String deathMessage = event.getDeathMessage();
-        if (deathMessage != null) {
-            event.setDeathMessage(player.getDisplayName() + " " + org.bukkit.ChatColor.WHITE + deathMessage.substring(player.getName().length()));
-        }
     }
 
     @EventHandler
@@ -91,6 +89,9 @@ public class StatsListener implements Listener {
         Player player = event.getPlayer();
         Material blockType = event.getBlock().getType();
 
+        // Increment total blocks broken
+        plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".blocks_broken", plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".blocks_broken", 0) + 1);
+
         List<Material> diamondOres = Arrays.asList(Material.DIAMOND_ORE, Material.DEEPSLATE_DIAMOND_ORE);
         List<Material> goldOres = Arrays.asList(Material.GOLD_ORE, Material.DEEPSLATE_GOLD_ORE);
         List<Material> ironOres = Arrays.asList(Material.IRON_ORE, Material.DEEPSLATE_IRON_ORE);
@@ -112,6 +113,26 @@ public class StatsListener implements Listener {
 
         if (oreName != null) {
             plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".ores_mined." + oreName, plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".ores_mined." + oreName, 0) + 1);
+        }
+        plugin.saveStatsConfig();
+    }
+
+    @EventHandler
+    public void onBlockPlace(BlockPlaceEvent event) {
+        Player player = event.getPlayer();
+        plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".blocks_placed", plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".blocks_placed", 0) + 1);
+        plugin.saveStatsConfig();
+    }
+
+    @EventHandler
+    public void onStatisticIncrement(PlayerStatisticIncrementEvent event) {
+        if (event.getStatistic() == Statistic.PLAY_ONE_MINUTE) {
+            Player player = event.getPlayer();
+            // The value is in ticks, so we divide by 20 (ticks/sec) and 60 (sec/min) to get minutes.
+            // The event fires every minute, so the new value is the total time played in ticks.
+            long totalTicks = event.getNewValue();
+            long totalMinutes = totalTicks / (20 * 60);
+            plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".playtime_minutes", totalMinutes);
             plugin.saveStatsConfig();
         }
     }

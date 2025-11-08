@@ -1,17 +1,11 @@
 package com.smp.smptools;
 
 import com.smp.smptools.commands.*;
-import com.smp.smptools.listeners.NameTagListener;
-import com.smp.smptools.listeners.SleepListener;
-import com.smp.smptools.listeners.StatsListener;
-import com.smp.smptools.listeners.StatsGUIListener;
-import com.smp.smptools.listeners.VaultListener;
-import com.smp.smptools.listeners.JoinLeaveListener;
+import com.smp.smptools.leaderboard.LeaderboardManager;
+import com.smp.smptools.listeners.HomesGUIListener;
 import com.smp.smptools.listeners.PrefixGUIListener;
-import com.smp.smptools.listeners.ColorGUIListener;
-import com.smp.smptools.listeners.ChatListener;
-import com.smp.smptools.listeners.TabHealthListener;
-import com.smp.smptools.listeners.LeaderboardGUIListener;
+import com.smp.smptools.listeners.*;
+import com.smp.smptools.listeners.NameTagListener;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -26,10 +20,13 @@ public class SMPTools extends JavaPlugin {
     private File statsFile;
     private FileConfiguration statsConfig;
     private LeaderboardCommand leaderboardCommand;
+    private NameTagListener nameTagListener;
+    private LeaderboardManager leaderboardManager;
 
     @Override
     public void onEnable() {
         instance = this;
+        this.leaderboardManager = new LeaderboardManager(this);
         getLogger().info("SMPTools has been enabled!");
 
         // Setup configs
@@ -39,15 +36,16 @@ public class SMPTools extends JavaPlugin {
         // Register Listeners
         Bukkit.getPluginManager().registerEvents(new SleepListener(), this);
         Bukkit.getPluginManager().registerEvents(new VaultListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new NameTagListener(this), this);
+        this.nameTagListener = new NameTagListener(this);
+        Bukkit.getPluginManager().registerEvents(nameTagListener, this);
         Bukkit.getPluginManager().registerEvents(new StatsListener(this), this);
         StatsCommand statsCommand = new StatsCommand(this);
         this.getCommand("stats").setExecutor(statsCommand);
         Bukkit.getPluginManager().registerEvents(new StatsGUIListener(statsCommand), this);
         Bukkit.getPluginManager().registerEvents(new JoinLeaveListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new PrefixGUIListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new ColorGUIListener(this), this);
         Bukkit.getPluginManager().registerEvents(new ChatListener(), this);
+        Bukkit.getPluginManager().registerEvents(new HomesGUIListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new PrefixGUIListener(this), this);
         Bukkit.getPluginManager().registerEvents(new TabHealthListener(this), this);
 
         // Register Commands
@@ -64,7 +62,6 @@ public class SMPTools extends JavaPlugin {
         this.getCommand("color").setExecutor(new ColorCommand());
         this.leaderboardCommand = new LeaderboardCommand(this);
         this.getCommand("leaderboard").setExecutor(leaderboardCommand);
-        Bukkit.getPluginManager().registerEvents(new LeaderboardGUIListener(leaderboardCommand), this);
     }
 
     @Override
@@ -98,6 +95,14 @@ public class SMPTools extends JavaPlugin {
 
     public static SMPTools getInstance() {
         return instance;
+    }
+
+    public NameTagListener getNameTagListener() {
+        return nameTagListener;
+    }
+
+    public LeaderboardManager getLeaderboardManager() {
+        return leaderboardManager;
     }
 }
 

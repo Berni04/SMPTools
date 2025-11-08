@@ -1,13 +1,20 @@
 package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 public class HomesCommand implements CommandExecutor {
@@ -40,7 +47,29 @@ public class HomesCommand implements CommandExecutor {
             return true;
         }
 
-        player.sendMessage(ChatColor.GOLD + "Your homes: " + String.join(", ", homeNames));
+        Inventory homesGUI = Bukkit.createInventory(null, 54, "Your Homes");
+
+        for (String homeName : homeNames) {
+            ItemStack homeItem = new ItemStack(Material.NAME_TAG);
+            ItemMeta homeMeta = homeItem.getItemMeta();
+            homeMeta.setDisplayName(ChatColor.GOLD + homeName);
+
+            ConfigurationSection home = homesSection.getConfigurationSection(homeName);
+            List<String> lore = new ArrayList<>();
+            lore.add(ChatColor.GRAY + "World: " + home.getString("world"));
+            lore.add(ChatColor.GRAY + "X: " + home.getDouble("x"));
+            lore.add(ChatColor.GRAY + "Y: " + home.getDouble("y"));
+            lore.add(ChatColor.GRAY + "Z: " + home.getDouble("z"));
+            lore.add("");
+            lore.add(ChatColor.GREEN + "Left-click to teleport");
+            lore.add(ChatColor.RED + "Right-click to delete");
+            homeMeta.setLore(lore);
+
+            homeItem.setItemMeta(homeMeta);
+            homesGUI.addItem(homeItem);
+        }
+
+        player.openInventory(homesGUI);
         return true;
     }
 }

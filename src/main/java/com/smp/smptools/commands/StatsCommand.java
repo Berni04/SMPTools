@@ -51,49 +51,55 @@ public class StatsCommand implements CommandExecutor {
         String playerUUID = target.getUniqueId().toString();
         ConfigurationSection statsSection = plugin.getStatsConfig().getConfigurationSection("stats." + playerUUID);
 
-        Inventory statsGUI = Bukkit.createInventory(null, 45, ChatColor.DARK_AQUA + target.getName() + "'s Stats");
+        Inventory statsGUI = Bukkit.createInventory(null, 54, ChatColor.DARK_AQUA + target.getName() + "'s Stats");
 
-        // General Stats
+        // Player Head and General Info
         ItemStack playerHead = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta headMeta = (SkullMeta) playerHead.getItemMeta();
         headMeta.setOwningPlayer(target);
+        headMeta.setDisplayName(ChatColor.GOLD + target.getName());
         playerHead.setItemMeta(headMeta);
+        statsGUI.setItem(4, playerHead);
 
-        createDisplayItem(statsGUI, playerHead, 4, ChatColor.GOLD + "General Stats",
-                ChatColor.YELLOW + "Deaths: " + ChatColor.WHITE + (statsSection != null ? statsSection.getInt("deaths", 0) : 0),
-                ChatColor.YELLOW + "Player Kills: " + ChatColor.WHITE + (statsSection != null ? statsSection.getInt("player_kills", 0) : 0));
+        // General Stats
+        long playtimeMinutes = statsSection != null ? statsSection.getLong("playtime_minutes", 0) : 0;
+        createDisplayItem(statsGUI, Material.CLOCK, 19, ChatColor.GOLD + "Playtime", formatPlaytime(playtimeMinutes));
+        createDisplayItem(statsGUI, Material.DIAMOND_SWORD, 20, ChatColor.GOLD + "Player Kills", "" + (statsSection != null ? statsSection.getInt("player_kills", 0) : 0));
+        createDisplayItem(statsGUI, Material.SKELETON_SKULL, 21, ChatColor.GOLD + "Total Deaths", "" + (statsSection != null ? statsSection.getInt("deaths_total", 0) : 0));
 
-        // Peaceful Mobs
-        List<String> peacefulMobs = Arrays.asList("cow", "sheep", "pig", "chicken", "turtle", "llama", "rabbit");
-        int peacefulMobSlot = 10;
-        for (String mobName : peacefulMobs) {
-            int mobKills = (statsSection != null && statsSection.contains("mob_kills." + mobName)) ? statsSection.getInt("mob_kills." + mobName) : 0;
-            Material mobMaterial = getMaterialForMob(mobName);
-            createDisplayItem(statsGUI, mobMaterial, peacefulMobSlot++, ChatColor.GREEN + mobName.substring(0, 1).toUpperCase() + mobName.substring(1),
-                    ChatColor.WHITE + "Kills: " + mobKills);
-        }
+        // Block Stats
+        createDisplayItem(statsGUI, Material.DIAMOND_PICKAXE, 23, ChatColor.GOLD + "Blocks Broken", "" + (statsSection != null ? statsSection.getInt("blocks_broken", 0) : 0));
+        createDisplayItem(statsGUI, Material.GRASS_BLOCK, 24, ChatColor.GOLD + "Blocks Placed", "" + (statsSection != null ? statsSection.getInt("blocks_placed", 0) : 0));
+        
+        // Ores Mined
+        createDisplayItem(statsGUI, Material.COAL_ORE, 25, ChatColor.GOLD + "Coal Mined", "" + (statsSection != null ? statsSection.getInt("ores_mined.coal", 0) : 0));
+        createDisplayItem(statsGUI, Material.IRON_ORE, 28, ChatColor.GOLD + "Iron Mined", "" + (statsSection != null ? statsSection.getInt("ores_mined.iron", 0) : 0));
+        createDisplayItem(statsGUI, Material.GOLD_ORE, 29, ChatColor.GOLD + "Gold Mined", "" + (statsSection != null ? statsSection.getInt("ores_mined.gold", 0) : 0));
+        createDisplayItem(statsGUI, Material.LAPIS_LAZULI, 30, ChatColor.GOLD + "Lapis Mined", "" + (statsSection != null ? statsSection.getInt("ores_mined.lapis", 0) : 0));
+        createDisplayItem(statsGUI, Material.REDSTONE, 31, ChatColor.GOLD + "Redstone Mined", "" + (statsSection != null ? statsSection.getInt("ores_mined.redstone", 0) : 0));
+        createDisplayItem(statsGUI, Material.DIAMOND, 32, ChatColor.GOLD + "Diamonds Mined", "" + (statsSection != null ? statsSection.getInt("ores_mined.diamond", 0) : 0));
+        createDisplayItem(statsGUI, Material.EMERALD, 33, ChatColor.GOLD + "Emeralds Mined", "" + (statsSection != null ? statsSection.getInt("ores_mined.emerald", 0) : 0));
+        createDisplayItem(statsGUI, Material.ANCIENT_DEBRIS, 34, ChatColor.GOLD + "Ancient Debris Mined", "" + (statsSection != null ? statsSection.getInt("ores_mined.netherite", 0) : 0));
 
-        // Hostile Mobs
-        List<String> hostileMobs = Arrays.asList("zombie", "skeleton", "creeper", "enderman", "witch", "blaze", "spider");
-        int hostileMobSlot = 19;
-        for (String mobName : hostileMobs) {
-            int mobKills = (statsSection != null && statsSection.contains("mob_kills." + mobName)) ? statsSection.getInt("mob_kills." + mobName) : 0;
-            Material mobMaterial = getMaterialForMob(mobName);
-            createDisplayItem(statsGUI, mobMaterial, hostileMobSlot++, ChatColor.RED + mobName.substring(0, 1).toUpperCase() + mobName.substring(1),
-                    ChatColor.WHITE + "Kills: " + mobKills);
-        }
 
-        // Ores
-        createDisplayItem(statsGUI, getMaterialForOre("coal"), 37, ChatColor.GOLD + "Coal Ore", ChatColor.WHITE + "Mined: " + plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.coal_ore"));
-        createDisplayItem(statsGUI, getMaterialForOre("iron"), 38, ChatColor.GOLD + "Iron Ore", ChatColor.WHITE + "Mined: " + plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.iron_ore"));
-        createDisplayItem(statsGUI, getMaterialForOre("gold"), 39, ChatColor.GOLD + "Gold Ore", ChatColor.WHITE + "Mined: " + plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.gold_ore"));
-        createDisplayItem(statsGUI, getMaterialForOre("diamond"), 40, ChatColor.GOLD + "Diamond Ore", ChatColor.WHITE + "Mined: " + plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.diamond_ore"));
-        createDisplayItem(statsGUI, getMaterialForOre("netherite"), 41, ChatColor.GOLD + "Netherite", ChatColor.WHITE + "Mined: " + plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.netherite_scrap"));
-        createDisplayItem(statsGUI, getMaterialForOre("lapis"), 42, ChatColor.GOLD + "Lapis Ore", ChatColor.WHITE + "Mined: " + plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.lapis_ore"));
-        createDisplayItem(statsGUI, getMaterialForOre("redstone"), 43, ChatColor.GOLD + "Redstone Ore", ChatColor.WHITE + "Mined: " + plugin.getStatsConfig().getInt("stats." + playerUUID + ".ores.redstone_ore"));
+        // Deaths Button
+        createDisplayItem(statsGUI, Material.PAPER, 49, ChatColor.RED + "View Deaths", ChatColor.GRAY + "Click to see detailed death info");
 
         viewer.openInventory(statsGUI);
     }
+
+    private String formatPlaytime(long totalMinutes) {
+        if (totalMinutes < 0) {
+            return "N/A";
+        }
+
+        long days = totalMinutes / 1440;
+        long hours = (totalMinutes % 1440) / 60;
+        long minutes = totalMinutes % 60;
+
+        return String.format("%dD %dH %dM", days, hours, minutes);
+    }
+
 
     private void createDisplayItem(Inventory inv, Material material, int slot, String name, String... lore) {
         ItemStack item = new ItemStack(material);

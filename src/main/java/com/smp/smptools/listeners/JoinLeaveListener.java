@@ -1,7 +1,8 @@
 package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -19,36 +20,32 @@ public class JoinLeaveListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        String playerUUID = player.getUniqueId().toString();
-
-        String prefix = plugin.getStatsConfig().getString("stats." + playerUUID + ".prefix", "");
-        String color = plugin.getStatsConfig().getString("stats." + playerUUID + ".color", "WHITE");
-
-        try {
-            ChatColor chatColor = ChatColor.valueOf(color.toUpperCase());
-            String joinMessage = chatColor + prefix + " " + player.getName() + ChatColor.WHITE + " joined";
-            event.setJoinMessage(joinMessage);
-        } catch (IllegalArgumentException e) {
-            String joinMessage = ChatColor.WHITE + "[" + prefix + "] " + player.getName() + ChatColor.WHITE + " joined";
-            event.setJoinMessage(joinMessage);
-        }
+        Component joinMessage = getFormattedName(player).append(Component.text(" joined"));
+        event.joinMessage(joinMessage);
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        String playerUUID = player.getUniqueId().toString();
+        Component quitMessage = getFormattedName(player).append(Component.text(" left"));
+        event.quitMessage(quitMessage);
+    }
 
-        String prefix = plugin.getStatsConfig().getString("stats." + playerUUID + ".prefix", "");
-        String color = plugin.getStatsConfig().getString("stats." + playerUUID + ".color", "WHITE");
+    private Component getFormattedName(Player player) {
+        String prefix = plugin.getStatsConfig().getString("players." + player.getUniqueId() + ".prefix");
+        String nameColor = plugin.getStatsConfig().getString("players." + player.getUniqueId() + ".name-color");
 
-        try {
-            ChatColor chatColor = ChatColor.valueOf(color.toUpperCase());
-            String quitMessage = chatColor + prefix + " " + player.getName() + ChatColor.WHITE + " left";
-            event.setQuitMessage(quitMessage);
-        } catch (IllegalArgumentException e) {
-            String quitMessage = ChatColor.WHITE + "[" + prefix + "] " + player.getName() + ChatColor.WHITE + " left";
-            event.setQuitMessage(quitMessage);
+        Component prefixComponent = Component.empty();
+        if (prefix != null && !prefix.isEmpty()) {
+            String coloredPrefix = (nameColor != null ? nameColor : "") + prefix;
+            prefixComponent = MiniMessage.miniMessage().deserialize(coloredPrefix).append(Component.space());
         }
+
+        Component nameComponent = MiniMessage.miniMessage().deserialize(player.getName());
+        if (nameColor != null && !nameColor.isEmpty()) {
+            nameComponent = MiniMessage.miniMessage().deserialize(nameColor + player.getName());
+        }
+
+        return prefixComponent.append(nameComponent);
     }
 }

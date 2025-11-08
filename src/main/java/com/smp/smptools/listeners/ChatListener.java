@@ -1,22 +1,46 @@
 package com.smp.smptools.listeners;
 
+import com.smp.smptools.SMPTools;
+import io.papermc.paper.event.player.AsyncChatEvent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
 
 public class ChatListener implements Listener {
 
     @EventHandler
-    public void onPlayerChat(AsyncPlayerChatEvent event) {
-        String message = event.getMessage();
-        org.bukkit.entity.Player player = event.getPlayer();
-        String playerName = player.getDisplayName();
-        com.smp.smptools.SMPTools plugin = com.smp.smptools.SMPTools.getInstance();
-        String prefix = plugin.getConfig().getString("player-prefix." + player.getUniqueId());
-        if (prefix != null) {
-            event.setFormat(org.bukkit.ChatColor.translateAlternateColorCodes('&', prefix) + " " + playerName + ": " + org.bukkit.ChatColor.WHITE + message);
-        } else {
-            event.setFormat(playerName + ": " + org.bukkit.ChatColor.WHITE + message);
+    public void onPlayerChat(AsyncChatEvent event) {
+        event.setCancelled(true);
+
+        Player player = event.getPlayer();
+        SMPTools plugin = SMPTools.getInstance();
+
+        String prefix = plugin.getStatsConfig().getString("players." + player.getUniqueId() + ".prefix");
+        String nameColor = plugin.getStatsConfig().getString("players." + player.getUniqueId() + ".name-color");
+
+        Component prefixComponent = Component.empty();
+        if (prefix != null && !prefix.isEmpty()) {
+            String coloredPrefix = (nameColor != null ? nameColor : "") + prefix;
+            prefixComponent = MiniMessage.miniMessage().deserialize(coloredPrefix).append(Component.space());
+        }
+
+        Component nameComponent = MiniMessage.miniMessage().deserialize(player.getName());
+        if (nameColor != null && !nameColor.isEmpty()) {
+            nameComponent = MiniMessage.miniMessage().deserialize(nameColor + player.getName());
+        }
+
+        Component messageComponent = event.message();
+
+        Component finalMessage = prefixComponent
+                .append(nameComponent)
+                .append(Component.text(": "))
+                .append(messageComponent);
+
+        for (Player onlinePlayer : plugin.getServer().getOnlinePlayers()) {
+            onlinePlayer.sendMessage(finalMessage);
         }
     }
 }
