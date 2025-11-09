@@ -46,40 +46,43 @@ public class SMPTools extends JavaPlugin {
         getLogger().info("SMPTools has been enabled!");
 
         // Setup configs
-        saveDefaultConfig();
+        getConfig().addDefault("features.daily-rewards.enabled", true);
+        getConfig().addDefault("features.custom-enchants.enabled", true);
+        getConfig().addDefault("features.mmo-skills.enabled", true);
+
+        // Default Daily Rewards Config
+        getConfig().addDefault("features.daily-rewards.cooldown-hours", 22);
+        List<String> defaultRewards = new ArrayList<>();
+        defaultRewards.add("eco give %player% 100");
+        defaultRewards.add("item:diamond 5");
+        getConfig().addDefault("features.daily-rewards.rewards", defaultRewards);
+
+        // Default MMO-Skills Config
+        getConfig().addDefault("features.mmo-skills.mining.enabled", true);
+        getConfig().addDefault("features.mmo-skills.mining.double-drop-chance", "0.05 * level"); // 5% chance per level
+        getConfig().addDefault("features.mmo-skills.woodcutting.enabled", true);
+        getConfig().addDefault("features.mmo-skills.woodcutting.double-drop-chance", "0.05 * level");
+        getConfig().addDefault("features.mmo-skills.excavation.enabled", true);
+        getConfig().addDefault("features.mmo-skills.excavation.double-drop-chance", "0.05 * level");
+
+        // Default Custom Enchants Config
+        getConfig().addDefault("features.custom-enchants.telekinesis.enabled", true);
+        getConfig().addDefault("features.custom-enchants.telekinesis.description", "Automatically sends block drops to your inventory.");
+        List<String> telekinesisApplicable = new ArrayList<>();
+        telekinesisApplicable.add("PICKAXE");
+        telekinesisApplicable.add("AXE");
+        telekinesisApplicable.add("SHOVEL");
+        telekinesisApplicable.add("HOE");
+        getConfig().addDefault("features.custom-enchants.telekinesis.applicable-items", telekinesisApplicable);
+
+        // Lumberjack Enchant
+        getConfig().addDefault("features.custom-enchants.lumberjack.enabled", true);
+        getConfig().addDefault("features.custom-enchants.lumberjack.description", "Breaks an entire tree at once.");
+        List<String> lumberjackApplicable = new ArrayList<>();
+        lumberjackApplicable.add("AXE");
+        getConfig().addDefault("features.custom-enchants.lumberjack.applicable-items", lumberjackApplicable);
+
         getConfig().options().copyDefaults(true);
-
-        // Add feature toggles if they don't exist
-        if (!getConfig().contains("features")) {
-            getConfig().set("features.daily-rewards.enabled", true);
-            getConfig().set("features.custom-enchants.enabled", true);
-            getConfig().set("features.mmo-skills.enabled", true);
-
-            // Default Daily Rewards Config
-            getConfig().set("features.daily-rewards.cooldown-hours", 22);
-            List<String> defaultRewards = new ArrayList<>();
-            defaultRewards.add("eco give %player% 100");
-            defaultRewards.add("item:diamond 5");
-            getConfig().set("features.daily-rewards.rewards", defaultRewards);
-
-            // Default MMO-Skills Config
-            getConfig().set("features.mmo-skills.mining.enabled", true);
-            getConfig().set("features.mmo-skills.mining.double-drop-chance", "0.05 * level"); // 5% chance per level
-            getConfig().set("features.mmo-skills.woodcutting.enabled", true);
-            getConfig().set("features.mmo-skills.woodcutting.double-drop-chance", "0.05 * level");
-            getConfig().set("features.mmo-skills.excavation.enabled", true);
-            getConfig().set("features.mmo-skills.excavation.double-drop-chance", "0.05 * level");
-
-            // Default Custom Enchants Config
-            getConfig().set("features.custom-enchants.telekinesis.enabled", true);
-            getConfig().set("features.custom-enchants.telekinesis.description", "Automatically sends block drops to your inventory.");
-            List<String> telekinesisApplicable = new ArrayList<>();
-            telekinesisApplicable.add("PICKAXE");
-            telekinesisApplicable.add("AXE");
-            telekinesisApplicable.add("SHOVEL");
-            telekinesisApplicable.add("HOE");
-            getConfig().set("features.custom-enchants.telekinesis.applicable-items", telekinesisApplicable);
-        }
         saveConfig();
 
         setupStatsConfig();

@@ -28,6 +28,10 @@ public class StatsCommand implements CommandExecutor {
         this.plugin = plugin;
     }
 
+    public SMPTools getPlugin() {
+        return plugin;
+    }
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
@@ -238,7 +242,7 @@ public class StatsCommand implements CommandExecutor {
         List<Map<?, ?>> deathInfo = plugin.getStatsConfig().getMapList("stats." + playerUUID + ".deaths_info");
         Map<?, ?> death = deathInfo.get(deathIndex);
 
-        Inventory deathInventoryGUI = Bukkit.createInventory(null, 54, ChatColor.DARK_RED + "Death #" + (deathIndex + 1) + " Inventory");
+        Inventory deathInventoryGUI = Bukkit.createInventory(null, 54, ChatColor.DARK_RED + target.getName() + "'s Death #" + (deathIndex + 1) + " Inventory");
 
         List<Map<String, Object>> inventory = (List<Map<String, Object>>) death.get("inventory");
         if (inventory != null) {
@@ -254,30 +258,28 @@ public class StatsCommand implements CommandExecutor {
             // Armor
             if (inventory.size() > 39) {
                 Map<String, Object> bootsMap = inventory.get(36);
-                if (bootsMap != null) {
-                    deathInventoryGUI.setItem(48, ItemStack.deserialize(bootsMap));
-                }
+                if (bootsMap != null) deathInventoryGUI.setItem(48, ItemStack.deserialize(bootsMap));
                 Map<String, Object> leggingsMap = inventory.get(37);
-                if (leggingsMap != null) {
-                    deathInventoryGUI.setItem(47, ItemStack.deserialize(leggingsMap));
-                }
+                if (leggingsMap != null) deathInventoryGUI.setItem(47, ItemStack.deserialize(leggingsMap));
                 Map<String, Object> chestplateMap = inventory.get(38);
-                if (chestplateMap != null) {
-                    deathInventoryGUI.setItem(46, ItemStack.deserialize(chestplateMap));
-                }
+                if (chestplateMap != null) deathInventoryGUI.setItem(46, ItemStack.deserialize(chestplateMap));
                 Map<String, Object> helmetMap = inventory.get(39);
-                if (helmetMap != null) {
-                    deathInventoryGUI.setItem(45, ItemStack.deserialize(helmetMap));
-                }
+                if (helmetMap != null) deathInventoryGUI.setItem(45, ItemStack.deserialize(helmetMap));
             }
-
 
             // Off-hand
             if (inventory.size() > 40) {
                 Map<String, Object> offhandMap = inventory.get(40);
-                if (offhandMap != null) {
-                    deathInventoryGUI.setItem(53, ItemStack.deserialize(offhandMap));
-                }
+                if (offhandMap != null) deathInventoryGUI.setItem(53, ItemStack.deserialize(offhandMap));
+            }
+        }
+
+        // Add rollback button if viewer has permission
+        if (viewer.hasPermission("smptools.stats.rollback")) {
+            if (death.containsKey("rolled_back") && (Boolean) death.get("rolled_back")) {
+                createDisplayItem(deathInventoryGUI, Material.BARRIER, 50, ChatColor.RED + "Already Rolled Back");
+            } else {
+                createDisplayItem(deathInventoryGUI, Material.TOTEM_OF_UNDYING, 50, ChatColor.GREEN + "Rollback Inventory", ChatColor.GRAY + "Click to restore this inventory", ChatColor.GRAY + "to the player.");
             }
         }
 

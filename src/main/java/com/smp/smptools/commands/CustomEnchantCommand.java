@@ -2,6 +2,7 @@ package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.enchants.CustomEnchantment;
+import com.smp.smptools.enchants.LumberjackEnchant;
 import com.smp.smptools.enchants.TelekinesisEnchant;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -20,6 +21,7 @@ public class CustomEnchantCommand implements CommandExecutor {
     public CustomEnchantCommand(SMPTools plugin) {
         this.plugin = plugin;
         enchantments.put("telekinesis", new TelekinesisEnchant());
+        enchantments.put("lumberjack", new LumberjackEnchant());
     }
 
     @Override
