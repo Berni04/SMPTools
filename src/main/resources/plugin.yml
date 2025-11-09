@@ -56,8 +56,14 @@ commands:
     description: Denies a teleport request.
     usage: /tpd
   tptoggle:
-    description: Toggles teleport request acceptance.
-    usage: /tptoggle
+    description: Toggle teleport requests.
+  daily:
+    description: Claim your daily reward.
+  skills:
+    description: View your skill levels.
+  cenchant:
+    description: Apply a custom enchantment to an item.
+    permission: smptools.customenchant
   tags:
     description: Manages player titles.
     usage: /tags [set <player> <title>]

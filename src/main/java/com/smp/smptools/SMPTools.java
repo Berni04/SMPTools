@@ -1,7 +1,9 @@
 package com.smp.smptools;
 
 import com.smp.smptools.commands.*;
+import com.smp.smptools.enchants.EnchantmentManager;
 import com.smp.smptools.leaderboard.LeaderboardManager;
+import com.smp.smptools.skills.SkillsManager;
 import com.smp.smptools.tags.TagManager;
 import com.smp.smptools.tpa.TpaManager;
 import com.smp.smptools.listeners.HomesGUIListener;
@@ -18,6 +20,9 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.io.IOException;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class SMPTools extends JavaPlugin {
 
     private static SMPTools instance;
@@ -25,11 +30,15 @@ public class SMPTools extends JavaPlugin {
     private FileConfiguration statsConfig;
     private File tagsFile;
     private FileConfiguration tagsConfig;
+    private File rewardsFile;
+    private FileConfiguration rewardsConfig;
     private LeaderboardCommand leaderboardCommand;
     private NameTagListener nameTagListener;
     private LeaderboardManager leaderboardManager;
     private TagManager tagManager;
     private TpaManager tpaManager;
+    private SkillsManager skillsManager;
+    private EnchantmentManager enchantmentManager;
 
     @Override
     public void onEnable() {
@@ -38,13 +47,55 @@ public class SMPTools extends JavaPlugin {
 
         // Setup configs
         saveDefaultConfig();
+        getConfig().options().copyDefaults(true);
+
+        // Add feature toggles if they don't exist
+        if (!getConfig().contains("features")) {
+            getConfig().set("features.daily-rewards.enabled", true);
+            getConfig().set("features.custom-enchants.enabled", true);
+            getConfig().set("features.mmo-skills.enabled", true);
+
+            // Default Daily Rewards Config
+            getConfig().set("features.daily-rewards.cooldown-hours", 22);
+            List<String> defaultRewards = new ArrayList<>();
+            defaultRewards.add("eco give %player% 100");
+            defaultRewards.add("item:diamond 5");
+            getConfig().set("features.daily-rewards.rewards", defaultRewards);
+
+            // Default MMO-Skills Config
+            getConfig().set("features.mmo-skills.mining.enabled", true);
+            getConfig().set("features.mmo-skills.mining.double-drop-chance", "0.05 * level"); // 5% chance per level
+            getConfig().set("features.mmo-skills.woodcutting.enabled", true);
+            getConfig().set("features.mmo-skills.woodcutting.double-drop-chance", "0.05 * level");
+            getConfig().set("features.mmo-skills.excavation.enabled", true);
+            getConfig().set("features.mmo-skills.excavation.double-drop-chance", "0.05 * level");
+
+            // Default Custom Enchants Config
+            getConfig().set("features.custom-enchants.telekinesis.enabled", true);
+            getConfig().set("features.custom-enchants.telekinesis.description", "Automatically sends block drops to your inventory.");
+            List<String> telekinesisApplicable = new ArrayList<>();
+            telekinesisApplicable.add("PICKAXE");
+            telekinesisApplicable.add("AXE");
+            telekinesisApplicable.add("SHOVEL");
+            telekinesisApplicable.add("HOE");
+            getConfig().set("features.custom-enchants.telekinesis.applicable-items", telekinesisApplicable);
+        }
+        saveConfig();
+
         setupStatsConfig();
         setupTagsConfig();
+        setupRewardsConfig();
 
         // Instantiate Managers
         this.leaderboardManager = new LeaderboardManager(this);
         this.tagManager = new TagManager(this);
         this.tpaManager = new TpaManager(this);
+        if (getConfig().getBoolean("features.mmo-skills.enabled")) {
+            this.skillsManager = new SkillsManager(this);
+        }
+        if (getConfig().getBoolean("features.custom-enchants.enabled")) {
+            this.enchantmentManager = new EnchantmentManager(this);
+        }
 
         // Register Listeners
         Bukkit.getPluginManager().registerEvents(new SleepListener(), this);
@@ -83,6 +134,21 @@ public class SMPTools extends JavaPlugin {
         this.getCommand("tptoggle").setExecutor(tpaCommand);
         this.leaderboardCommand = new LeaderboardCommand(this);
         this.getCommand("leaderboard").setExecutor(leaderboardCommand);
+
+        // Register conditional features
+        if (getConfig().getBoolean("features.daily-rewards.enabled")) {
+            this.getCommand("daily").setExecutor(new DailyRewardCommand(this));
+        }
+
+        if (getConfig().getBoolean("features.mmo-skills.enabled")) {
+            Bukkit.getPluginManager().registerEvents(new SkillsListener(this), this);
+            this.getCommand("skills").setExecutor(new SkillsCommand(this));
+        }
+
+        if (getConfig().getBoolean("features.custom-enchants.enabled")) {
+            Bukkit.getPluginManager().registerEvents(new EnchantmentListener(this), this);
+            this.getCommand("cenchant").setExecutor(new CustomEnchantCommand(this));
+        }
 
         // Playtime tracker
         new org.bukkit.scheduler.BukkitRunnable() {
@@ -201,6 +267,30 @@ public class SMPTools extends JavaPlugin {
         }
     }
 
+    public void setupRewardsConfig() {
+        rewardsFile = new File(getDataFolder(), "rewards.yml");
+        if (!rewardsFile.exists()) {
+            try {
+                rewardsFile.createNewFile();
+            } catch (IOException e) {
+                getLogger().severe("Could not create rewards.yml file!");
+            }
+        }
+        rewardsConfig = YamlConfiguration.loadConfiguration(rewardsFile);
+    }
+
+    public FileConfiguration getRewardsConfig() {
+        return rewardsConfig;
+    }
+
+    public void saveRewardsConfig() {
+        try {
+            rewardsConfig.save(rewardsFile);
+        } catch (IOException e) {
+            getLogger().severe("Could not save rewards.yml file!");
+        }
+    }
+
     public static SMPTools getInstance() {
         return instance;
     }
@@ -219,6 +309,14 @@ public class SMPTools extends JavaPlugin {
 
     public TpaManager getTpaManager() {
         return tpaManager;
+    }
+
+    public SkillsManager getSkillsManager() {
+        return skillsManager;
+    }
+
+    public EnchantmentManager getEnchantmentManager() {
+        return enchantmentManager;
     }
 }
 
