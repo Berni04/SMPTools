@@ -21,6 +21,7 @@ public class SkillsListener implements Listener {
     }
 
     private static final List<Material> MINING_BLOCKS = Arrays.asList(
+            Material.STONE, Material.COBBLESTONE, Material.DEEPSLATE,
             Material.COAL_ORE, Material.DEEPSLATE_COAL_ORE,
             Material.IRON_ORE, Material.DEEPSLATE_IRON_ORE,
             Material.COPPER_ORE, Material.DEEPSLATE_COPPER_ORE,
@@ -51,20 +52,28 @@ public class SkillsListener implements Listener {
         Block block = event.getBlock();
         Material type = block.getType();
         SkillType skill = null;
+        int experience = 0;
 
         if (MINING_BLOCKS.contains(type)) {
             skill = SkillType.MINING;
+            experience = plugin.getSkillsManager().getExperienceForBlock(type);
         } else if (WOODCUTTING_BLOCKS.contains(type)) {
             skill = SkillType.WOODCUTTING;
+            experience = plugin.getSkillsManager().getExperienceForWoodcutting(type);
         } else if (EXCAVATION_BLOCKS.contains(type)) {
             skill = SkillType.EXCAVATION;
+            experience = plugin.getSkillsManager().getExperienceForExcavation(type);
         }
 
-        if (skill != null) {
-            plugin.getSkillsManager().addExperience(event.getPlayer(), skill, 1);
+        if (skill != null && experience > 0) {
+            plugin.getSkillsManager().addExperience(event.getPlayer(), skill, experience);
 
             if (plugin.getSkillsManager().attemptDoubleDrop(event.getPlayer(), skill)) {
                 block.getWorld().dropItemNaturally(block.getLocation(), new org.bukkit.inventory.ItemStack(type, 1));
+            }
+
+            if (skill == SkillType.EXCAVATION) {
+                plugin.getSkillsManager().handleTreasureHunt(event.getPlayer());
             }
         }
     }

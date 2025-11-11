@@ -64,6 +64,14 @@ commands:
   cenchant:
     description: Apply a custom enchantment to an item.
     permission: smptools.customenchant
+  tomap:
+    description: Renders an image from a URL onto a map.
+    usage: /tomap <url>
+    permission: smptools.imagemap
+  music:
+    description: Plays a .nbs song file from a URL.
+    usage: /music <play/broadcast/stop> [url]
+    permission: smptools.music
   tags:
     description: Manages player titles.
     usage: /tags [set <player> <title>]

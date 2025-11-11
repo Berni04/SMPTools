@@ -3,7 +3,8 @@ package com.smp.smptools.skills;
 public enum SkillType {
     MINING("Mining"),
     WOODCUTTING("Woodcutting"),
-    EXCAVATION("Excavation");
+    EXCAVATION("Excavation"),
+    COMBAT("Combat");
 
     private final String displayName;
 

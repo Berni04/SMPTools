@@ -6,9 +6,12 @@ import com.smp.smptools.leaderboard.LeaderboardManager;
 import com.smp.smptools.skills.SkillsManager;
 import com.smp.smptools.tags.TagManager;
 import com.smp.smptools.tpa.TpaManager;
+import com.smp.smptools.imagemap.MapManager;
+import com.smp.smptools.listeners.CombatListener;
 import com.smp.smptools.listeners.HomesGUIListener;
 import com.smp.smptools.listeners.PrefixGUIListener;
 import com.smp.smptools.listeners.LeaderboardGUIListener;
+import com.smp.smptools.listeners.SkillsGUIListener;
 import com.smp.smptools.listeners.*;
 import com.smp.smptools.listeners.NameTagListener;
 import org.bukkit.Bukkit;
@@ -32,6 +35,8 @@ public class SMPTools extends JavaPlugin {
     private FileConfiguration tagsConfig;
     private File rewardsFile;
     private FileConfiguration rewardsConfig;
+    private File imageMapsFile;
+    private FileConfiguration imageMapsConfig;
     private LeaderboardCommand leaderboardCommand;
     private NameTagListener nameTagListener;
     private LeaderboardManager leaderboardManager;
@@ -39,6 +44,7 @@ public class SMPTools extends JavaPlugin {
     private TpaManager tpaManager;
     private SkillsManager skillsManager;
     private EnchantmentManager enchantmentManager;
+    private MapManager mapManager;
 
     @Override
     public void onEnable() {
@@ -57,17 +63,34 @@ public class SMPTools extends JavaPlugin {
         defaultRewards.add("item:diamond 5");
         getConfig().addDefault("features.daily-rewards.rewards", defaultRewards);
 
-        // Default MMO-Skills Config
-        getConfig().addDefault("features.mmo-skills.mining.enabled", true);
-        getConfig().addDefault("features.mmo-skills.mining.double-drop-chance", "0.05 * level"); // 5% chance per level
-        getConfig().addDefault("features.mmo-skills.woodcutting.enabled", true);
-        getConfig().addDefault("features.mmo-skills.woodcutting.double-drop-chance", "0.05 * level");
-        getConfig().addDefault("features.mmo-skills.excavation.enabled", true);
-        getConfig().addDefault("features.mmo-skills.excavation.double-drop-chance", "0.05 * level");
-
-        // Default Custom Enchants Config
-        getConfig().addDefault("features.custom-enchants.telekinesis.enabled", true);
-        getConfig().addDefault("features.custom-enchants.telekinesis.description", "Automatically sends block drops to your inventory.");
+                    // Default MMO-Skills Config
+                    getConfig().addDefault("features.mmo-skills.mining.enabled", true);
+                    getConfig().addDefault("features.mmo-skills.mining.double-drop-chance", "0.0015 * level"); // 7.5% at Lvl 50
+                    getConfig().addDefault("features.mmo-skills.woodcutting.enabled", true);
+                    getConfig().addDefault("features.mmo-skills.woodcutting.double-drop-chance", "0.0015 * level");
+                    getConfig().addDefault("features.mmo-skills.excavation.enabled", true);
+                    getConfig().addDefault("features.mmo-skills.excavation.double-drop-chance", "0.0015 * level");
+                    // Treasure Hunter Perk
+                    getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.enabled", true);
+                    getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.chance", "0.0005 * level"); // 2.5% at Lvl 50
+                    getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.loot.common", List.of("IRON_NUGGET 1", "GOLD_NUGGET 1"));
+                    getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.loot.uncommon", List.of("GLOWSTONE_DUST 2", "QUARTZ 1"));
+                                getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.loot.rare", List.of("DIAMOND 1", "NAME_TAG 1"));
+                    
+                                // Default Combat Skill Config
+                                getConfig().addDefault("features.mmo-skills.combat.enabled", true);
+                                getConfig().addDefault("features.mmo-skills.combat.critical-strike.enabled", true);
+                                getConfig().addDefault("features.mmo-skills.combat.critical-strike.chance", "0.002 * level"); // 10% at Lvl 50
+                                        getConfig().addDefault("features.mmo-skills.combat.critical-strike.damage-multiplier", "1.0 + (level / 10.0)"); // 1.0x + 5.0x = 6.0x at Lvl 50
+                                
+                                        // Sit on Stairs
+                                        getConfig().addDefault("features.sit-on-stairs.enabled", true);
+                                
+                                        // Player Graves
+                                        getConfig().addDefault("features.player-graves.enabled", true);
+                                
+                                        // Default Custom Enchants Config
+                                        getConfig().addDefault("features.custom-enchants.telekinesis.enabled", true);        getConfig().addDefault("features.custom-enchants.telekinesis.description", "Automatically sends block drops to your inventory.");
         List<String> telekinesisApplicable = new ArrayList<>();
         telekinesisApplicable.add("PICKAXE");
         telekinesisApplicable.add("AXE");
@@ -82,12 +105,20 @@ public class SMPTools extends JavaPlugin {
         lumberjackApplicable.add("AXE");
         getConfig().addDefault("features.custom-enchants.lumberjack.applicable-items", lumberjackApplicable);
 
+        // Image to Map
+        getConfig().addDefault("features.image-to-map.enabled", true);
+
+        // Music Player
+        getConfig().addDefault("features.music-player.enabled", true);
+        getConfig().addDefault("features.music-player.base-url", "https://raw.githubusercontent.com/YourUser/YourRepo/main/");
+
         getConfig().options().copyDefaults(true);
         saveConfig();
 
         setupStatsConfig();
         setupTagsConfig();
         setupRewardsConfig();
+        setupImageMapsConfig();
 
         // Instantiate Managers
         this.leaderboardManager = new LeaderboardManager(this);
@@ -98,6 +129,10 @@ public class SMPTools extends JavaPlugin {
         }
         if (getConfig().getBoolean("features.custom-enchants.enabled")) {
             this.enchantmentManager = new EnchantmentManager(this);
+        }
+        if (getConfig().getBoolean("features.image-to-map.enabled")) {
+            this.mapManager = new MapManager(this);
+            this.mapManager.loadMaps();
         }
 
         // Register Listeners
@@ -116,6 +151,10 @@ public class SMPTools extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new LeaderboardGUIListener(this), this);
         Bukkit.getPluginManager().registerEvents(new TagsGUIListener(this), this);
         Bukkit.getPluginManager().registerEvents(new TabHealthListener(this), this);
+
+        if (getConfig().getBoolean("features.sit-on-stairs.enabled")) {
+            Bukkit.getPluginManager().registerEvents(new SitListener(this), this);
+        }
 
         // Register Commands
         this.getCommand("fly").setExecutor(new FlyCommand());
@@ -145,12 +184,22 @@ public class SMPTools extends JavaPlugin {
 
         if (getConfig().getBoolean("features.mmo-skills.enabled")) {
             Bukkit.getPluginManager().registerEvents(new SkillsListener(this), this);
+            Bukkit.getPluginManager().registerEvents(new SkillsGUIListener(), this);
+            Bukkit.getPluginManager().registerEvents(new CombatListener(this), this); // Register CombatListener
             this.getCommand("skills").setExecutor(new SkillsCommand(this));
         }
 
         if (getConfig().getBoolean("features.custom-enchants.enabled")) {
             Bukkit.getPluginManager().registerEvents(new EnchantmentListener(this), this);
             this.getCommand("cenchant").setExecutor(new CustomEnchantCommand(this));
+        }
+
+        if (getConfig().getBoolean("features.image-to-map.enabled")) {
+            this.getCommand("tomap").setExecutor(new com.smp.smptools.imagemap.MapCommand(this));
+        }
+
+        if (getConfig().getBoolean("features.music-player.enabled")) {
+            this.getCommand("music").setExecutor(new com.smp.smptools.music.MusicCommand(this));
         }
 
         // Playtime tracker
@@ -294,6 +343,30 @@ public class SMPTools extends JavaPlugin {
         }
     }
 
+    public void setupImageMapsConfig() {
+        imageMapsFile = new File(getDataFolder(), "imagemaps.yml");
+        if (!imageMapsFile.exists()) {
+            try {
+                imageMapsFile.createNewFile();
+            } catch (IOException e) {
+                getLogger().severe("Could not create imagemaps.yml file!");
+            }
+        }
+        imageMapsConfig = YamlConfiguration.loadConfiguration(imageMapsFile);
+    }
+
+    public FileConfiguration getImageMapsConfig() {
+        return imageMapsConfig;
+    }
+
+    public void saveImageMapsConfig() {
+        try {
+            imageMapsConfig.save(imageMapsFile);
+        } catch (IOException e) {
+            getLogger().severe("Could not save imagemaps.yml file!");
+        }
+    }
+
     public static SMPTools getInstance() {
         return instance;
     }
@@ -320,6 +393,10 @@ public class SMPTools extends JavaPlugin {
 
     public EnchantmentManager getEnchantmentManager() {
         return enchantmentManager;
+    }
+
+    public MapManager getMapManager() {
+        return mapManager;
     }
 }
 
