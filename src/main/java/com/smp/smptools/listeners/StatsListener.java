@@ -3,12 +3,16 @@ package com.smp.smptools.listeners;
 import com.smp.smptools.SMPTools;
 import org.bukkit.Material;
 import org.bukkit.Statistic;
+import org.bukkit.ChatColor;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.EntityResurrectEvent;
@@ -22,10 +26,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Random;
 
 public class StatsListener implements Listener {
 
     private final SMPTools plugin;
+    private final Random random = new Random();
 
     public StatsListener(SMPTools plugin) {
         this.plugin = plugin;
@@ -35,6 +41,11 @@ public class StatsListener implements Listener {
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
         String uuid = player.getUniqueId().toString();
+
+        // Funny Death Messages
+        if (plugin.getConfig().getBoolean("features.funny-death-messages.enabled", true)) {
+            handleFunnyDeathMessage(event);
+        }
 
         // Increment total death count
         plugin.getStatsConfig().set("stats." + uuid + ".deaths_total", plugin.getStatsConfig().getInt("stats." + uuid + ".deaths_total", 0) + 1);
@@ -68,6 +79,126 @@ public class StatsListener implements Listener {
         }
         plugin.saveStatsConfig();
         plugin.getTagManager().checkMilestones(player);
+    }
+
+    private void handleFunnyDeathMessage(PlayerDeathEvent event) {
+        Player player = event.getEntity();
+        String playerName = player.getName();
+        String deathMessage;
+
+        EntityDamageEvent lastDamage = player.getLastDamageCause();
+        if (lastDamage == null) {
+            deathMessage = getRandomMessage(Arrays.asList(
+                "%player% ceased to exist.",
+                "%player% went gentle into that good night.",
+                "%player%'s story ends here."
+            ));
+        } else {
+            switch (lastDamage.getCause()) {
+                case ENTITY_ATTACK:
+                    if (lastDamage instanceof EntityDamageByEntityEvent) {
+                        Entity damager = ((EntityDamageByEntityEvent) lastDamage).getDamager();
+                        if (damager instanceof Player) {
+                            deathMessage = getRandomMessage(Arrays.asList(
+                                "%player% was sent back to the lobby by %killer%.",
+                                "%player% learned that %killer% is not their friend.",
+                                "%player% was outplayed by %killer%."
+                            )).replace("%killer%", ((Player) damager).getName());
+                        } else {
+                            deathMessage = getRandomMessage(Arrays.asList(
+                                "%player% was slain by a " + damager.getType().name().toLowerCase() + ".",
+                                "A " + damager.getType().name().toLowerCase() + " had a bone to pick with %player%."
+                            ));
+                        }
+                    } else {
+                        deathMessage = "%player% was killed by something.";
+                    }
+                    break;
+                case ENTITY_EXPLOSION:
+                    deathMessage = getRandomMessage(Arrays.asList(
+                        "%player% got a hug from a Creeper.",
+                        "A Creeper whispered sweet nothings into %player%'s ear. Sssss...",
+                        "%player% learned that some hugs are explosive."
+                    ));
+                    break;
+                case BLOCK_EXPLOSION:
+                    deathMessage = getRandomMessage(Arrays.asList(
+                        "%player% should not have slept in the Nether.",
+                        "%player%'s bed went boom.",
+                        "%player% learned about explosive interior design."
+                    ));
+                    break;
+                case FALL:
+                    deathMessage = getRandomMessage(Arrays.asList(
+                        "%player% thought they were a bird.",
+                        "%player% forgot to deploy their parachute.",
+                        "%player% tested gravity. It still works.",
+                        "It wasn't the fall that killed %player%, it was the sudden stop."
+                    ));
+                    break;
+                case LAVA:
+                    deathMessage = getRandomMessage(Arrays.asList(
+                        "%player% tried to swim in the forbidden soup.",
+                        "%player% thought lava was just spicy water.",
+                        "%player% is now one with the magma."
+                    ));
+                    break;
+                case DROWNING:
+                    deathMessage = getRandomMessage(Arrays.asList(
+                        "%player% forgot how to breathe.",
+                        "%player% is sleeping with the fishes.",
+                        "%player% discovered they are not a submarine."
+                    ));
+                    break;
+                case VOID:
+                    deathMessage = getRandomMessage(Arrays.asList(
+                        "%player% fell out of the world.",
+                        "%player% clipped into the backrooms.",
+                        "%player% has been deleted from the simulation."
+                    ));
+                    break;
+                case FIRE:
+                case FIRE_TICK:
+                    deathMessage = getRandomMessage(Arrays.asList(
+                        "%player% is extra crispy now.",
+                        "%player% forgot to stop, drop, and roll.",
+                        "%player% tried to be a firebender, but failed."
+                    ));
+                    break;
+                case PROJECTILE:
+                     deathMessage = getRandomMessage(Arrays.asList(
+                        "%player% was pincushioned.",
+                        "%player% tried to catch an arrow with their face.",
+                        "%player% was impaled."
+                    ));
+                    break;
+                case SUFFOCATION:
+                    deathMessage = getRandomMessage(Arrays.asList(
+                        "%player% became one with the wall.",
+                        "%player% is experiencing claustrophobia, permanently."
+                    ));
+                    break;
+                case WITHER:
+                    deathMessage = getRandomMessage(Arrays.asList(
+                        "%player% withered away.",
+                        "%player% didn't feel so good."
+                    ));
+                    break;
+                default:
+                    deathMessage = getRandomMessage(Arrays.asList(
+                        "%player% died in a mysterious way.",
+                        "%player% met their end.",
+                        "So long, %player%, and thanks for all the fish."
+                    ));
+                    break;
+            }
+        }
+
+        event.setDeathMessage(ChatColor.RED + deathMessage.replace("%player%", playerName));
+    }
+
+    private String getRandomMessage(List<String> messages) {
+        return messages.get(random.nextInt(messages.size()));
     }
 
     @EventHandler

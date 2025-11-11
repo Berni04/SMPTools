@@ -112,6 +112,21 @@ public class SMPTools extends JavaPlugin {
         getConfig().addDefault("features.music-player.enabled", true);
         getConfig().addDefault("features.music-player.base-url", "https://raw.githubusercontent.com/YourUser/YourRepo/main/");
 
+        // Funny Death Messages
+        getConfig().addDefault("features.funny-death-messages.enabled", true);
+
+        // Ride Command
+        getConfig().addDefault("features.ride.enabled", true);
+
+        // Meme Sounds
+        getConfig().addDefault("features.meme-sounds.enabled", true);
+        getConfig().addDefault("features.meme-sounds.resource-pack-url", "YOUR_RESOURCE_PACK_URL_HERE");
+        if (!getConfig().contains("features.meme-sounds.sounds")) {
+            getConfig().set("features.meme-sounds.sounds.vine_boom", "custom.vine_boom");
+            getConfig().set("features.meme-sounds.sounds.goofy_yell", "custom.goofy_yell");
+            getConfig().set("features.meme-sounds.sounds.crickets", "custom.crickets");
+        }
+
         getConfig().options().copyDefaults(true);
         saveConfig();
 
@@ -200,6 +215,15 @@ public class SMPTools extends JavaPlugin {
 
         if (getConfig().getBoolean("features.music-player.enabled")) {
             this.getCommand("music").setExecutor(new com.smp.smptools.music.MusicCommand(this));
+        }
+
+        if (getConfig().getBoolean("features.ride.enabled")) {
+            this.getCommand("ride").setExecutor(new RideCommand());
+        }
+
+        if (getConfig().getBoolean("features.meme-sounds.enabled")) {
+            this.getCommand("sound").setExecutor(new SoundCommand(this));
+            Bukkit.getPluginManager().registerEvents(new ResourcePackListener(this), this);
         }
 
         // Playtime tracker
