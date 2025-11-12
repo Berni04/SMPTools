@@ -47,6 +47,19 @@ public class StatsListener implements Listener {
         // Funny Death Messages
         if (plugin.getConfig().getBoolean("features.funny-death-messages.enabled", true)) {
             handleFunnyDeathMessage(event);
+        } else {
+            // Handle default death message formatting
+            Component formattedPlayerName = plugin.getChatManager().getFormattedDisplayName(player);
+            Component originalDeathMessage = event.deathMessage();
+
+            if (originalDeathMessage != null) {
+                // Use replaceText to replace the player's raw name with the formatted component
+                Component finalMessage = originalDeathMessage.replaceText(builder -> 
+                    builder.matchLiteral(player.getName())
+                           .replacement(formattedPlayerName)
+                );
+                event.deathMessage(finalMessage);
+            }
         }
 
         // Increment total death count

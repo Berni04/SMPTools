@@ -10,6 +10,7 @@ import com.smp.smptools.teleport.TeleportManager;
 import com.smp.smptools.teleport.TeleportListener;
 import com.smp.smptools.sleep.SleepManager;
 import com.smp.smptools.chat.ChatManager;
+import com.smp.smptools.chunkloaders.ChunkLoaderManager;
 import com.smp.smptools.imagemap.MapManager;
 import com.smp.smptools.listeners.CombatListener;
 import com.smp.smptools.listeners.HomesGUIListener;
@@ -29,6 +30,7 @@ import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class SMPTools extends JavaPlugin {
 
@@ -52,6 +54,7 @@ public class SMPTools extends JavaPlugin {
     private TeleportManager teleportManager;
     private SleepManager sleepManager;
     private ChatManager chatManager;
+    private ChunkLoaderManager chunkLoaderManager;
 
     @Override
     public void onEnable() {
@@ -137,6 +140,15 @@ public class SMPTools extends JavaPlugin {
         // Sleep Voting
         getConfig().addDefault("features.sleep-voting.enabled", true);
 
+        // Chunk Loaders
+        getConfig().addDefault("features.chunk-loaders.enabled", true);
+        getConfig().addDefault("features.chunk-loaders.item.material", "BEACON");
+        getConfig().addDefault("features.chunk-loaders.item.name", "<gold>Chunk Loader</gold>");
+        List<String> chunkLoaderLore = new ArrayList<>();
+        chunkLoaderLore.add("<gray>Place this to keep the chunk loaded.</gray>");
+        chunkLoaderLore.add("<gray>Works even when no players are online!</gray>");
+        getConfig().addDefault("features.chunk-loaders.item.lore", chunkLoaderLore);
+
         getConfig().options().copyDefaults(true);
         saveConfig();
 
@@ -152,6 +164,7 @@ public class SMPTools extends JavaPlugin {
         this.teleportManager = new TeleportManager(this);
         this.sleepManager = new SleepManager(this);
         this.chatManager = new ChatManager(this);
+        this.chunkLoaderManager = new ChunkLoaderManager(this); // Instantiate ChunkLoaderManager
         if (getConfig().getBoolean("features.mmo-skills.enabled")) {
             this.skillsManager = new SkillsManager(this);
         }
@@ -180,6 +193,7 @@ public class SMPTools extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new TabHealthListener(this), this);
         Bukkit.getPluginManager().registerEvents(new TeleportListener(this), this);
         Bukkit.getPluginManager().registerEvents(new AdvancementListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new ChunkLoaderListener(this), this); // Register ChunkLoaderListener
 
         if (getConfig().getBoolean("features.sleep-voting.enabled")) {
             Bukkit.getPluginManager().registerEvents(new SleepListener(this), this);
@@ -210,6 +224,7 @@ public class SMPTools extends JavaPlugin {
         this.getCommand("tptoggle").setExecutor(tpaCommand);
         this.leaderboardCommand = new LeaderboardCommand(this);
         this.getCommand("leaderboard").setExecutor(leaderboardCommand);
+        Objects.requireNonNull(getCommand("givechunkloader")).setExecutor(new ChunkLoaderCommand(this)); // Register ChunkLoaderCommand
 
         // Register conditional features
         if (getConfig().getBoolean("features.daily-rewards.enabled")) {
@@ -262,6 +277,14 @@ public class SMPTools extends JavaPlugin {
     @Override
     public void onDisable() {
         getLogger().info("SMPTools has been disabled!");
+        if (chunkLoaderManager != null) {
+            chunkLoaderManager.unloadAllChunks(); // Unload all force-loaded chunks
+        }
+        // Save configs
+        saveStatsConfig();
+        saveTagsConfig();
+        saveRewardsConfig();
+        saveImageMapsConfig();
     }
 
     public void setupStatsConfig() {
@@ -466,6 +489,10 @@ public class SMPTools extends JavaPlugin {
 
     public ChatManager getChatManager() {
         return chatManager;
+    }
+
+    public ChunkLoaderManager getChunkLoaderManager() {
+        return chunkLoaderManager;
     }
 }
 

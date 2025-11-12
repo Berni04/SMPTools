@@ -79,8 +79,11 @@ commands:
     permission: smptools.sound
   sleepvote:
     description: Used to vote for skipping the night.
+  givechunkloader:
+    description: Gives a chunk loader item to a player.
+    usage: /givechunkloader <player>
+    permission: smptools.chunkloader.give
+    permission-message: You don't have permission to use this command.
   tags:
     description: Manages player titles.
     usage: /tags [set <player> <title>]
-    permission: smptools.tags.admin
-    permission-message: You don't have permission to use this command.
