@@ -6,6 +6,10 @@ import com.smp.smptools.leaderboard.LeaderboardManager;
 import com.smp.smptools.skills.SkillsManager;
 import com.smp.smptools.tags.TagManager;
 import com.smp.smptools.tpa.TpaManager;
+import com.smp.smptools.teleport.TeleportManager;
+import com.smp.smptools.teleport.TeleportListener;
+import com.smp.smptools.sleep.SleepManager;
+import com.smp.smptools.chat.ChatManager;
 import com.smp.smptools.imagemap.MapManager;
 import com.smp.smptools.listeners.CombatListener;
 import com.smp.smptools.listeners.HomesGUIListener;
@@ -45,6 +49,9 @@ public class SMPTools extends JavaPlugin {
     private SkillsManager skillsManager;
     private EnchantmentManager enchantmentManager;
     private MapManager mapManager;
+    private TeleportManager teleportManager;
+    private SleepManager sleepManager;
+    private ChatManager chatManager;
 
     @Override
     public void onEnable() {
@@ -127,6 +134,9 @@ public class SMPTools extends JavaPlugin {
             getConfig().set("features.meme-sounds.sounds.crickets", "custom.crickets");
         }
 
+        // Sleep Voting
+        getConfig().addDefault("features.sleep-voting.enabled", true);
+
         getConfig().options().copyDefaults(true);
         saveConfig();
 
@@ -139,6 +149,9 @@ public class SMPTools extends JavaPlugin {
         this.leaderboardManager = new LeaderboardManager(this);
         this.tagManager = new TagManager(this);
         this.tpaManager = new TpaManager(this);
+        this.teleportManager = new TeleportManager(this);
+        this.sleepManager = new SleepManager(this);
+        this.chatManager = new ChatManager(this);
         if (getConfig().getBoolean("features.mmo-skills.enabled")) {
             this.skillsManager = new SkillsManager(this);
         }
@@ -151,7 +164,6 @@ public class SMPTools extends JavaPlugin {
         }
 
         // Register Listeners
-        Bukkit.getPluginManager().registerEvents(new SleepListener(), this);
         Bukkit.getPluginManager().registerEvents(new VaultListener(this), this);
         this.nameTagListener = new NameTagListener(this);
         Bukkit.getPluginManager().registerEvents(nameTagListener, this);
@@ -160,12 +172,19 @@ public class SMPTools extends JavaPlugin {
         this.getCommand("stats").setExecutor(statsCommand);
         Bukkit.getPluginManager().registerEvents(new StatsGUIListener(statsCommand), this);
         Bukkit.getPluginManager().registerEvents(new JoinLeaveListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new ChatListener(), this);
+        Bukkit.getPluginManager().registerEvents(new ChatListener(this), this);
         Bukkit.getPluginManager().registerEvents(new HomesGUIListener(this), this);
         Bukkit.getPluginManager().registerEvents(new PrefixGUIListener(this), this);
         Bukkit.getPluginManager().registerEvents(new LeaderboardGUIListener(this), this);
         Bukkit.getPluginManager().registerEvents(new TagsGUIListener(this), this);
         Bukkit.getPluginManager().registerEvents(new TabHealthListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new TeleportListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new AdvancementListener(this), this);
+
+        if (getConfig().getBoolean("features.sleep-voting.enabled")) {
+            Bukkit.getPluginManager().registerEvents(new SleepListener(this), this);
+            this.getCommand("sleepvote").setExecutor(new com.smp.smptools.sleep.SleepVoteCommand(this));
+        }
 
         if (getConfig().getBoolean("features.sit-on-stairs.enabled")) {
             Bukkit.getPluginManager().registerEvents(new SitListener(this), this);
@@ -319,6 +338,20 @@ public class SMPTools extends JavaPlugin {
             createMilestone(milestones, "diamond_king", "Diamond King", "Mine 500 diamonds", "ores_mined.diamond", 500);
             createMilestone(milestones, "emerald_mogul", "Emerald Mogul", "Mine 500 emeralds", "ores_mined.emerald", 500);
 
+            // Mob Kills
+            createMilestone(milestones, "zombie_hunter", "Zombie Hunter", "Kill 1,000 zombies", "mob_kills.zombie", 1000);
+            createMilestone(milestones, "skeleton_archer", "Skeleton Archer", "Kill 1,000 skeletons", "mob_kills.skeleton", 1000);
+            createMilestone(milestones, "creeper_destroyer", "Creeper Destroyer", "Kill 500 creepers", "mob_kills.creeper", 500);
+
+            // Crafting
+            createMilestone(milestones, "crafter", "Crafter", "Craft 1,000 items", "items_crafted", 1000);
+            createMilestone(milestones, "master_crafter", "Master Crafter", "Craft 10,000 items", "items_crafted", 10000);
+
+            // Movement
+            createMilestone(milestones, "hiker", "Hiker", "Walk 100,000 blocks", "distance_walked_cm", 10000000); // 100km
+            createMilestone(milestones, "sprinter", "Sprinter", "Sprint 100,000 blocks", "distance_sprinted_cm", 10000000); // 100km
+            createMilestone(milestones, "swimmer", "Swimmer", "Swim 10,000 blocks", "distance_swam_cm", 1000000); // 10km
+
             saveTagsConfig();
         }
     }
@@ -421,6 +454,18 @@ public class SMPTools extends JavaPlugin {
 
     public MapManager getMapManager() {
         return mapManager;
+    }
+
+    public TeleportManager getTeleportManager() {
+        return teleportManager;
+    }
+
+    public SleepManager getSleepManager() {
+        return sleepManager;
+    }
+
+    public ChatManager getChatManager() {
+        return chatManager;
     }
 }
 

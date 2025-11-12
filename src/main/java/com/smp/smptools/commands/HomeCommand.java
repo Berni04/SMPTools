@@ -42,8 +42,7 @@ public class HomeCommand implements CommandExecutor {
             float pitch = (float) plugin.getConfig().getDouble("homes." + playerUUID + "." + homeName + ".pitch");
 
             Location homeLocation = new Location(Bukkit.getWorld(worldName), x, y, z, yaw, pitch);
-            player.teleport(homeLocation);
-            player.sendMessage(ChatColor.GREEN + "Teleported to your home '" + homeName + "'!");
+            plugin.getTeleportManager().startTeleport(player, homeLocation, "'" + homeName + "'");
         } else {
             player.sendMessage(ChatColor.RED + "You don't have a home named '" + homeName + "'.");
         }

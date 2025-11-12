@@ -1,6 +1,8 @@
 package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Sound;
@@ -40,13 +42,26 @@ public class MsgCommand implements CommandExecutor {
         for (int i = 1; i < args.length; i++) {
             messageBuilder.append(args[i]).append(" ");
         }
-        String message = messageBuilder.toString().trim();
+        String messageContent = messageBuilder.toString().trim();
 
-        String senderDisplayName = senderPlayer.getDisplayName();
-        String recipientDisplayName = recipient.getDisplayName();
+        // Get formatted display names
+        Component formattedSenderName = plugin.getChatManager().getFormattedDisplayName(senderPlayer);
+        Component formattedRecipientName = plugin.getChatManager().getFormattedDisplayName(recipient);
 
-        senderPlayer.sendMessage("You -> " + recipientDisplayName + ": " + message);
-        recipient.sendMessage(senderDisplayName + " -> You: " + message);
+        // Message for the recipient (from sender)
+        Component recipientMessage = Component.text("(from ", NamedTextColor.GRAY)
+                .append(formattedSenderName)
+                .append(Component.text(") ", NamedTextColor.GRAY))
+                .append(Component.text(messageContent, NamedTextColor.WHITE));
+        
+        // Message for the sender (to recipient)
+        Component senderMessage = Component.text("(to ", NamedTextColor.GRAY)
+                .append(formattedRecipientName)
+                .append(Component.text(") ", NamedTextColor.GRAY))
+                .append(Component.text(messageContent, NamedTextColor.WHITE));
+
+        senderPlayer.sendMessage(senderMessage);
+        recipient.sendMessage(recipientMessage);
         recipient.playSound(recipient.getLocation(), Sound.ENTITY_ARROW_HIT_PLAYER, 1.0f, 1.0f);
 
         return true;

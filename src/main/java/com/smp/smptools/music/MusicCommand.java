@@ -39,6 +39,13 @@ public class MusicCommand implements CommandExecutor {
 
         String subCommand = args[0].toLowerCase();
 
+        if (subCommand.equals("broadcast")) {
+            if (!player.hasPermission("smptools.music.broadcast")) {
+                player.sendMessage(ChatColor.RED + "You don't have permission to broadcast music.");
+                return true;
+            }
+        }
+
         if (subCommand.equals("stop")) {
             SongPlayer task = playingTasks.remove(player.getUniqueId());
             if (task != null) {

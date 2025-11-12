@@ -67,19 +67,18 @@ commands:
   tomap:
     description: Renders an image from a URL onto a map.
     usage: /tomap <url>
-    permission: smptools.imagemap
   music:
     description: Plays a .nbs song file from a URL.
     usage: /music <play/broadcast/stop> [url]
-    permission: smptools.music
   ride:
     description: Allows you to ride other entities.
     usage: /ride
-    permission: smptools.ride
   sound:
     description: Plays a custom meme sound.
     usage: /sound <sound_name>
     permission: smptools.sound
+  sleepvote:
+    description: Used to vote for skipping the night.
   tags:
     description: Manages player titles.
     usage: /tags [set <player> <title>]

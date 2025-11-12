@@ -1,40 +1,57 @@
 package com.smp.smptools.listeners;
 
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.World;
+import com.smp.smptools.SMPTools;
+import com.smp.smptools.sleep.SleepManager;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerBedEnterEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
 public class SleepListener implements Listener {
 
+    private final SMPTools plugin;
+    private final SleepManager sleepManager;
+
+    public SleepListener(SMPTools plugin) {
+        this.plugin = plugin;
+        this.sleepManager = plugin.getSleepManager();
+    }
+
     @EventHandler
     public void onPlayerBedEnter(PlayerBedEnterEvent event) {
+        if (!plugin.getConfig().getBoolean("features.sleep-voting.enabled", true)) {
+            return;
+        }
+
         if (event.getBedEnterResult() != PlayerBedEnterEvent.BedEnterResult.OK) {
-            return; // Player couldn't enter the bed for some reason
+            return;
         }
 
         Player player = event.getPlayer();
-        World world = player.getWorld();
+        if (player.getWorld().getTime() < 12541) {
+            return; // It's not night
+        }
 
-        // Check if it's night time
-        if (world.getTime() >= 12541 && world.getTime() <= 23458) { // Night time in Minecraft
-            int sleepingPlayers = 0;
-            for (Player p : world.getPlayers()) {
-                if (p.isSleeping()) {
-                    sleepingPlayers++;
-                }
-            }
+        // Prevent starting a vote if one is already in progress by another player
+        if (sleepManager.isVoteInProgress()) {
+             player.sendMessage("A sleep vote is already in progress.");
+            return;
+        }
 
-            // If only one player is sleeping, skip the night
-            if (sleepingPlayers == 1) {
-                world.setTime(0); // Set time to dawn
-                world.setThundering(false);
-                world.setStorm(false);
-                Bukkit.broadcastMessage(ChatColor.GOLD + "One player slept, skipping the night!");
+        // Use a short delay to ensure the player is fully "in" the bed
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            if (player.isSleeping()) {
+                sleepManager.startVote(player);
             }
+        }, 1L);
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        if (sleepManager.isVoteInProgress() && event.getPlayer().equals(sleepManager.getVoteInitiator())) {
+            sleepManager.endVote();
+            plugin.getServer().broadcastMessage("The sleep vote was cancelled because the initiator left.");
         }
     }
 }

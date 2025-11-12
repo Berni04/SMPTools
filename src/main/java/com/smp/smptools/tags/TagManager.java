@@ -1,6 +1,8 @@
 package com.smp.smptools.tags;
 
 import com.smp.smptools.SMPTools;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
@@ -66,7 +68,8 @@ public class TagManager {
 
             if (playerValue >= requiredValue && !hasUnlockedTitle(player, title)) {
                 unlockTitle(player, title);
-                player.sendMessage("§aYou have unlocked the title: §e" + title);
+                Component formattedPlayerName = plugin.getChatManager().getFormattedDisplayName(player);
+                plugin.getServer().broadcast(formattedPlayerName.append(Component.text(" has unlocked the title: " + title, NamedTextColor.GREEN)));
             }
         }
     }

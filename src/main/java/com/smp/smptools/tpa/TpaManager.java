@@ -75,9 +75,8 @@ public class TpaManager {
             return;
         }
 
-        requester.teleport(acceptor.getLocation());
-        requester.sendMessage(Component.text("Teleport successful!", NamedTextColor.GREEN));
-        acceptor.sendMessage(Component.text(requester.getName() + " has teleported to you.", NamedTextColor.GREEN));
+        plugin.getTeleportManager().startTeleport(requester, acceptor.getLocation(), "to " + acceptor.getName());
+        acceptor.sendMessage(Component.text(requester.getName() + " has started teleporting to you.", NamedTextColor.GREEN));
     }
 
     public void denyTeleportRequest(Player denier) {
