@@ -2,7 +2,7 @@ name: SMPTools
 version: 1.0-SNAPSHOT
 main: com.smp.smptools.SMPTools
 api-version: '1.21'
-author: Berna
+author: berni
 description: A simple SMP plugin with some useful features.
 commands:
   fly:
@@ -46,3 +46,121 @@ commands:
   leaderboard:
     description: Shows the server leaderboard.
     usage: /leaderboard
+  tpr:
+    description: Requests to teleport to another player.
+    usage: /tpr <player>
+  tpa:
+    description: Accepts a teleport request.
+    usage: /tpa
+  tpd:
+    description: Denies a teleport request.
+    usage: /tpd
+  tptoggle:
+    description: Toggle teleport requests.
+  daily:
+    description: Claim your daily reward.
+  skills:
+    description: View your skill levels.
+  cenchant:
+    description: Apply a custom enchantment to an item.
+    permission: smptools.customenchant
+  tomap:
+    description: Renders an image from a URL onto a map.
+    usage: /tomap <url>
+  music:
+    description: Plays a .nbs song file from a URL.
+    usage: /music <play/broadcast/stop> [url]
+  ride:
+    description: Allows you to ride other entities.
+    usage: /ride
+  sound:
+    description: Plays a custom meme sound.
+    usage: /sound <sound_name>
+    permission: smptools.sound
+  sleepvote:
+    description: Used to vote for skipping the night.
+  givechunkloader:
+    description: Gives a chunk loader item to a player.
+    usage: /givechunkloader <player>
+    permission: smptools.chunkloader.give
+    permission-message: You don't have permission to use this command.
+  invsee:
+    description: View another player's inventory.
+    usage: /invsee <player>
+    permission: smptools.invsee
+    permission-message: You don't have permission to use this command.
+  troll:
+    description: Troll a player with various options.
+    usage: /troll <player>
+    permission: smptools.troll
+    permission-message: You don't have permission to use this command.
+  tags:
+    description: Manages player titles.
+    usage: /tags [set <player> <title>]
+permissions:
+  smptools.troll:
+    description: Allows access to the /troll command.
+    default: op
+  smptools.troll.fake_op:
+    description: Allows using the Fake OP troll.
+    default: op
+  smptools.troll.fake_ban:
+    description: Allows using the Fake Ban troll.
+    default: op
+  smptools.troll.fake_crash:
+    description: Allows using the Fake Crash troll.
+    default: op
+  smptools.troll.scramble_inv:
+    description: Allows using the Scramble Inventory troll.
+    default: op
+  smptools.troll.drop_inv:
+    description: Allows using the Drop Inventory troll.
+    default: op
+  smptools.troll.blindness:
+    description: Allows using the Blindness troll.
+    default: op
+  smptools.troll.nausea:
+    description: Allows using the Nausea troll.
+    default: op
+  smptools.troll.slowness:
+    description: Allows using the Slowness troll.
+    default: op
+  smptools.troll.levitation:
+    description: Allows using the Levitation troll.
+    default: op
+  smptools.troll.fake_lava:
+    description: Allows using the Fake Lava troll.
+    default: op
+  smptools.troll.fake_water:
+    description: Allows using the Fake Water troll.
+    default: op
+  smptools.troll.lightning:
+    description: Allows using the Lightning Strike troll.
+    default: op
+  smptools.troll.safe_explosion:
+    description: Allows using the Safe Explosion troll.
+    default: op
+  smptools.troll.swap_hotbar:
+    description: Allows using the Swap Hotbar troll.
+    default: op
+  smptools.troll.fake_death:
+    description: Allows using the Fake Death Message troll.
+    default: op
+  smptools.troll.teleport_random:
+    description: Allows using the Teleport Randomly troll.
+    default: op
+  smptools.troll.fake_advancement:
+    description: Allows using the Fake Advancement troll.
+    default: op
+  smptools.troll.sound_spam:
+    description: Allows using the Sound Spam troll.
+    default: op
+  smptools.troll.chat_scramble:
+    description: Allows using the Chat Scramble troll.
+    default: op
+  smptools.troll.force_pov:
+    description: Allows using the Force POV troll.
+    default: op
+  smptools.troll.fake_item_break:
+    description: Allows using the Fake Item Break troll.
+    default: op

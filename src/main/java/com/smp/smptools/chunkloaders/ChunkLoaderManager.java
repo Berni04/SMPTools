@@ -1,6 +1,8 @@
 package com.smp.smptools.chunkloaders;
 
 import com.smp.smptools.SMPTools;
+import com.smp.smptools.chunkloaders.api.FakePlayerAPI;
+import com.smp.smptools.chunkloaders.api.NPC;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
@@ -8,16 +10,20 @@ import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.profile.PlayerProfile;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 public class ChunkLoaderManager {
 
@@ -25,6 +31,7 @@ public class ChunkLoaderManager {
     private File chunkLoadersFile;
     private FileConfiguration chunkLoadersConfig;
     private final List<Location> activeChunkLoaders = new ArrayList<>();
+    private final Map<Location, NPC> fakePlayers = new HashMap<>();
     private static SMPTools staticPluginInstance; // To access config from static method
 
     public ChunkLoaderManager(SMPTools plugin) {
@@ -48,17 +55,20 @@ public class ChunkLoaderManager {
 
     public void loadChunkLoaders() {
         activeChunkLoaders.clear();
+        fakePlayers.values().forEach(NPC::despawn); // Despawn any existing NPCs
+        fakePlayers.clear();
+
         if (chunkLoadersConfig.contains("loaders")) {
             List<String> loaderStrings = chunkLoadersConfig.getStringList("loaders");
             for (String loaderString : loaderStrings) {
                 Location loc = deserializeLocation(loaderString);
                 if (loc != null) {
                     activeChunkLoaders.add(loc);
-                    forceLoadChunk(loc);
+                    forceLoadChunk(loc); // This will now also create and spawn the fake player
                 }
             }
         }
-        plugin.getLogger().info("Loaded " + activeChunkLoaders.size() + " chunk loaders.");
+        plugin.getLogger().info("Loaded " + activeChunkLoaders.size() + " chunk loaders and spawned " + fakePlayers.size() + " fake players.");
     }
 
     public void saveChunkLoaders() {
@@ -96,12 +106,29 @@ public class ChunkLoaderManager {
     private void forceLoadChunk(Location loc) {
         Chunk chunk = loc.getChunk();
         chunk.setForceLoaded(true);
+
+        if (!fakePlayers.containsKey(loc)) {
+            UUID npcUUID = UUID.nameUUIDFromBytes(("ChunkLoaderNPC:" + serializeLocation(loc)).getBytes());
+            PlayerProfile profile = FakePlayerAPI.createPlayerProfile("ChunkLoader", npcUUID);
+            // TODO: Set skin for the NPC if desired
+            NPC npc = FakePlayerAPI.createNPC(npcUUID, loc.clone().add(0.5, 1, 0.5), "ChunkLoader", profile); // Spawn slightly above the block
+            npc.spawn();
+            fakePlayers.put(loc, npc);
+        }
+
         plugin.getLogger().info("Force loaded chunk: " + chunk.getX() + ", " + chunk.getZ() + " in world " + Objects.requireNonNull(chunk.getWorld()).getName());
     }
 
     private void unforceLoadChunk(Location loc) {
         Chunk chunk = loc.getChunk();
         chunk.setForceLoaded(false);
+
+        NPC npc = fakePlayers.remove(loc);
+        if (npc != null) {
+            npc.despawn();
+            FakePlayerAPI.removeNPC(npc.getUniqueId());
+        }
+
         plugin.getLogger().info("Unforce loaded chunk: " + chunk.getX() + ", " + chunk.getZ() + " in world " + Objects.requireNonNull(chunk.getWorld()).getName());
     }
 
@@ -109,8 +136,13 @@ public class ChunkLoaderManager {
         for (Location loc : activeChunkLoaders) {
             unforceLoadChunk(loc);
         }
+        for (NPC npc : fakePlayers.values()) {
+            npc.despawn();
+            FakePlayerAPI.removeNPC(npc.getUniqueId());
+        }
         activeChunkLoaders.clear();
-        plugin.getLogger().info("Unloaded all chunk loaders.");
+        fakePlayers.clear();
+        plugin.getLogger().info("Unloaded all chunk loaders and removed fake players.");
     }
 
     private String serializeLocation(Location loc) {
