@@ -8,8 +8,6 @@ com\smp\smptools\listeners\CombatListener.class
 com\smp\smptools\commands\TagsCommand.class
 com\smp\smptools\listeners\ChatListener.class
 com\smp\smptools\listeners\SkillsGUIListener.class
-com\smp\smptools\chunkloaders\api\FakePlayerAPI.class
-com\smp\smptools\chunkloaders\internal\PacketUtils.class
 com\smp\smptools\commands\DelHomeCommand.class
 com\smp\smptools\listeners\SkillsListener.class
 com\smp\smptools\music\Song.class
@@ -25,7 +23,6 @@ com\smp\smptools\tags\TagManager.class
 com\smp\smptools\commands\ColorCommand.class
 com\smp\smptools\listeners\SleepListener.class
 com\smp\smptools\listeners\StatsGUIListener.class
-com\smp\smptools\chunkloaders\api\NPC.class
 com\smp\smptools\teleport\TeleportManager$1.class
 com\smp\smptools\listeners\LeaderboardGUIListener.class
 com\smp\smptools\commands\TpaCommand.class
@@ -33,7 +30,6 @@ com\smp\smptools\imagemap\ImageProcessor.class
 com\smp\smptools\commands\SetHomeCommand.class
 com\smp\smptools\commands\LeaderboardCommand.class
 com\smp\smptools\music\MusicCommand.class
-com\smp\smptools\chunkloaders\internal\NPCImpl.class
 com\smp\smptools\commands\SoundCommand.class
 com\smp\smptools\commands\StatsCommand.class
 com\smp\smptools\listeners\JoinLeaveListener.class

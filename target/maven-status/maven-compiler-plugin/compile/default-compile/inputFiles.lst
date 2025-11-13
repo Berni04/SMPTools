@@ -13,7 +13,6 @@ C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\c
 C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\listeners\LeaderboardGUIListener.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\commands\HomeCommand.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\commands\MsgCommand.java
-C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\chunkloaders\internal\PacketUtils.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\enchants\EnchantmentManager.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\listeners\NameTagListener.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\listeners\CombatListener.java
@@ -44,10 +43,8 @@ C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\c
 C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\listeners\TrollGUIListener.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\enchants\LumberjackEnchant.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\listeners\SkillsGUIListener.java
-C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\chunkloaders\api\FakePlayerAPI.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\commands\LeaderboardCommand.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\commands\StatsCommand.java
-C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\chunkloaders\internal\NPCImpl.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\music\SongPlayer.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\imagemap\ImageProcessor.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\listeners\SitListener.java
@@ -70,4 +67,3 @@ C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\c
 C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\commands\ChunkLoaderCommand.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\commands\ClearStatsCommand.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\music\MusicCommand.java
-C:\Users\berna\Desktop\Gemini\1\SMPTools - fakeplayerchunkloader\src\main\java\com\smp\smptools\chunkloaders\api\NPC.java
