@@ -194,6 +194,7 @@ public class SMPTools extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new TeleportListener(this), this);
         Bukkit.getPluginManager().registerEvents(new AdvancementListener(this), this);
         Bukkit.getPluginManager().registerEvents(new ChunkLoaderListener(this), this); // Register ChunkLoaderListener
+        Bukkit.getPluginManager().registerEvents(new TrollGUIListener(this), this);
 
         if (getConfig().getBoolean("features.sleep-voting.enabled")) {
             Bukkit.getPluginManager().registerEvents(new SleepListener(this), this);
@@ -225,6 +226,8 @@ public class SMPTools extends JavaPlugin {
         this.leaderboardCommand = new LeaderboardCommand(this);
         this.getCommand("leaderboard").setExecutor(leaderboardCommand);
         Objects.requireNonNull(getCommand("givechunkloader")).setExecutor(new ChunkLoaderCommand(this)); // Register ChunkLoaderCommand
+        Objects.requireNonNull(getCommand("invsee")).setExecutor(new InvseeCommand(this));
+        Objects.requireNonNull(getCommand("troll")).setExecutor(new TrollCommand(this));
 
         // Register conditional features
         if (getConfig().getBoolean("features.daily-rewards.enabled")) {
