@@ -64,6 +64,10 @@ public class MsgCommand implements CommandExecutor {
         recipient.sendMessage(recipientMessage);
         recipient.playSound(recipient.getLocation(), Sound.ENTITY_ARROW_HIT_PLAYER, 1.0f, 1.0f);
 
+        // Set last messengers for /r command
+        plugin.getChatManager().setLastMessenger(senderPlayer.getUniqueId(), recipient.getUniqueId());
+        plugin.getChatManager().setLastMessenger(recipient.getUniqueId(), senderPlayer.getUniqueId());
+
         return true;
     }
 }

@@ -39,6 +39,35 @@ public class TrollGUIListener implements Listener {
 
     public TrollGUIListener(SMPTools plugin) {
         this.plugin = plugin;
+        initializeTrollIdMap(); // Initialize the map when the listener is created
+    }
+
+    private static void initializeTrollIdMap() {
+        trollIdMap.clear(); // Ensure map is clear before repopulating
+        // Populate the map with all troll IDs and their hash codes
+        trollIdMap.put("fake_op".hashCode(), "fake_op");
+        trollIdMap.put("fake_ban".hashCode(), "fake_ban");
+        trollIdMap.put("fake_crash".hashCode(), "fake_crash");
+        trollIdMap.put("scramble_inv".hashCode(), "scramble_inv");
+        trollIdMap.put("drop_inv".hashCode(), "drop_inv");
+        trollIdMap.put("blindness".hashCode(), "blindness");
+        trollIdMap.put("nausea".hashCode(), "nausea");
+        trollIdMap.put("slowness".hashCode(), "slowness");
+        trollIdMap.put("levitation".hashCode(), "levitation");
+        trollIdMap.put("fake_lava".hashCode(), "fake_lava");
+        trollIdMap.put("fake_water".hashCode(), "fake_water");
+        trollIdMap.put("lightning".hashCode(), "lightning");
+        trollIdMap.put("safe_explosion".hashCode(), "safe_explosion");
+        trollIdMap.put("swap_hotbar".hashCode(), "swap_hotbar");
+        trollIdMap.put("fake_death".hashCode(), "fake_death");
+        trollIdMap.put("teleport_random".hashCode(), "teleport_random");
+        trollIdMap.put("fake_advancement".hashCode(), "fake_advancement");
+        trollIdMap.put("sound_spam".hashCode(), "sound_spam");
+        trollIdMap.put("chat_scramble".hashCode(), "chat_scramble");
+        trollIdMap.put("force_pov".hashCode(), "force_pov");
+        trollIdMap.put("fake_item_break".hashCode(), "fake_item_break");
+        trollIdMap.put("close".hashCode(), "close");
+        Bukkit.getLogger().info("TrollGUIListener: trollIdMap initialized with " + trollIdMap.size() + " entries.");
     }
 
     public static void openTrollGUI(Player opener, Player target) {
@@ -86,7 +115,6 @@ public class TrollGUIListener implements Listener {
         meta.lore(Collections.singletonList(MiniMessage.miniMessage().deserialize(lore)));
         meta.setCustomModelData(trollId.hashCode()); // Use hash code for unique identification
         item.setItemMeta(meta);
-        trollIdMap.put(trollId.hashCode(), trollId); // Store mapping
         return item;
     }
 
@@ -119,16 +147,19 @@ public class TrollGUIListener implements Listener {
         }
 
         String trollId = String.valueOf(clickedItem.getItemMeta().getCustomModelData()); // Retrieve troll ID
+        Bukkit.getLogger().info("TrollGUIListener: Clicked item CustomModelData (hash): " + clickedItem.getItemMeta().getCustomModelData());
+        Bukkit.getLogger().info("TrollGUIListener: Derived trollId string from CustomModelData: " + trollId);
 
         if (trollId.equals(String.valueOf("close".hashCode()))) {
             opener.closeInventory();
             return;
         }
 
-        // Permission check for specific troll
         String originalTrollId = trollIdMap.get(Integer.parseInt(trollId));
-        if (originalTrollId == null || !opener.hasPermission("smptools.troll." + originalTrollId)) {
-            opener.sendMessage(MiniMessage.miniMessage().deserialize("<red>You don't have permission to use this troll option!</red>"));
+        Bukkit.getLogger().info("TrollGUIListener: Looked up originalTrollId: " + originalTrollId);
+        if (originalTrollId == null) { // Should not happen if trollIdMap is correctly populated
+            opener.sendMessage(MiniMessage.miniMessage().deserialize("<red>Error: Unknown troll option.</red>"));
+            opener.closeInventory();
             return;
         }
 

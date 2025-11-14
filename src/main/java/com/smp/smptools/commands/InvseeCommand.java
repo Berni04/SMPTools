@@ -7,6 +7,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import com.smp.smptools.listeners.InvseeGUIListener;
 
 public class InvseeCommand implements CommandExecutor {
 
@@ -47,8 +48,8 @@ public class InvseeCommand implements CommandExecutor {
             return true;
         }
 
-        player.openInventory(target.getInventory());
         player.sendMessage(MiniMessage.miniMessage().deserialize("<green>Viewing " + target.getName() + "'s inventory.</green>"));
+        InvseeGUIListener.openInvseeGUI(player, target);
 
         return true;
     }

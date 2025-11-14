@@ -194,6 +194,7 @@ public class SMPTools extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new TeleportListener(this), this);
         Bukkit.getPluginManager().registerEvents(new AdvancementListener(this), this);
         Bukkit.getPluginManager().registerEvents(new ChunkLoaderListener(this), this); // Register ChunkLoaderListener
+        Bukkit.getPluginManager().registerEvents(new InvseeGUIListener(this), this); // Register InvseeGUIListener
         Bukkit.getPluginManager().registerEvents(new TrollGUIListener(this), this);
 
         if (getConfig().getBoolean("features.sleep-voting.enabled")) {
@@ -228,6 +229,8 @@ public class SMPTools extends JavaPlugin {
         Objects.requireNonNull(getCommand("givechunkloader")).setExecutor(new ChunkLoaderCommand(this)); // Register ChunkLoaderCommand
         Objects.requireNonNull(getCommand("invsee")).setExecutor(new InvseeCommand(this));
         Objects.requireNonNull(getCommand("troll")).setExecutor(new TrollCommand(this));
+        Objects.requireNonNull(getCommand("r")).setExecutor(new ReplyCommand(this));
+        Objects.requireNonNull(getCommand("rename")).setExecutor(new RenameCommand(this));
 
         // Register conditional features
         if (getConfig().getBoolean("features.daily-rewards.enabled")) {

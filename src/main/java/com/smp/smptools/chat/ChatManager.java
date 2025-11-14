@@ -6,12 +6,25 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
 public class ChatManager {
 
     private final SMPTools plugin;
+    private final Map<UUID, UUID> lastMessengers = new HashMap<>(); // recipient UUID -> sender UUID
 
     public ChatManager(SMPTools plugin) {
         this.plugin = plugin;
+    }
+
+    public void setLastMessenger(UUID recipient, UUID sender) {
+        lastMessengers.put(recipient, sender);
+    }
+
+    public UUID getLastMessenger(UUID recipient) {
+        return lastMessengers.get(recipient);
     }
 
     public Component getFormattedDisplayName(Player player) {
