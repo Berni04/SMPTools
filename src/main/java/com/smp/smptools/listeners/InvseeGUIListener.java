@@ -25,45 +25,56 @@ public class InvseeGUIListener implements Listener {
     }
 
     public static void openInvseeGUI(Player opener, Player target) {
-        // 54 slots: 4 armor, 36 inventory, 9 hotbar, 5 filler/info
+        // 54 slots: 4 armor, 1 off-hand, 27 inventory, 9 hotbar, plus filler
         Inventory invseeGUI = Bukkit.createInventory(null, 54, GUI_TITLE + target.getName());
 
-        // Fill with gray stained glass panes as filler
+        // Filler item
         ItemStack filler = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
         ItemMeta fillerMeta = filler.getItemMeta();
         fillerMeta.displayName(Component.empty());
         filler.setItemMeta(fillerMeta);
+
+        // Fill all slots with filler initially
         for (int i = 0; i < 54; i++) {
             invseeGUI.setItem(i, filler);
         }
 
-        // Place armor (slots 0-3 in Bukkit PlayerInventory, but we'll map them to specific GUI slots)
-        // Helmet: 4, Chestplate: 13, Leggings: 22, Boots: 31
+        // --- Place Armor (Helmet, Chestplate, Leggings, Boots) ---
+        // PlayerInventory armor slots: 39 (Helmet), 38 (Chestplate), 37 (Leggings), 36 (Boots)
+        // GUI slots: 0 (Helmet), 1 (Chestplate), 2 (Leggings), 3 (Boots)
         ItemStack[] armorContents = target.getInventory().getArmorContents();
         if (armorContents.length >= 4) {
-            invseeGUI.setItem(4, armorContents[3]); // Boots
-            invseeGUI.setItem(13, armorContents[2]); // Leggings
-            invseeGUI.setItem(22, armorContents[1]); // Chestplate
-            invseeGUI.setItem(31, armorContents[0]); // Helmet
+            invseeGUI.setItem(0, armorContents[3]); // Helmet
+            invseeGUI.setItem(1, armorContents[2]); // Chestplate
+            invseeGUI.setItem(2, armorContents[1]); // Leggings
+            invseeGUI.setItem(3, armorContents[0]); // Boots
         }
 
-        // Place main inventory (slots 9-35 in Bukkit PlayerInventory)
-        // Map to GUI slots 36-53 (last two rows)
-        for (int i = 0; i < 27; i++) { // Main inventory (27 slots)
-            invseeGUI.setItem(i + 27, target.getInventory().getItem(i + 9));
+        // --- Place Off-hand ---
+        // PlayerInventory off-hand slot: 40
+        // GUI slot: 8
+        invseeGUI.setItem(8, target.getInventory().getItemInOffHand());
+
+        // --- Place Main Inventory (27 slots) ---
+        // PlayerInventory slots: 9-35
+        // GUI slots: 18-44 (3 rows of 9)
+        for (int i = 0; i < 27; i++) {
+            invseeGUI.setItem(i + 18, target.getInventory().getItem(i + 9));
         }
 
-        // Place hotbar (slots 0-8 in Bukkit PlayerInventory)
-        // Map to GUI slots 45-53 (last row)
+        // --- Place Hotbar (9 slots) ---
+        // PlayerInventory slots: 0-8
+        // GUI slots: 45-53 (last row)
         for (int i = 0; i < 9; i++) {
             invseeGUI.setItem(i + 45, target.getInventory().getItem(i));
         }
 
-        // Add labels for armor slots
-        invseeGUI.setItem(3, createLabel(Material.LEATHER_HELMET, "<gold>Helmet</gold>"));
-        invseeGUI.setItem(12, createLabel(Material.LEATHER_CHESTPLATE, "<gold>Chestplate</gold>"));
-        invseeGUI.setItem(21, createLabel(Material.LEATHER_LEGGINGS, "<gold>Leggings</gold>"));
-        invseeGUI.setItem(30, createLabel(Material.LEATHER_BOOTS, "<gold>Boots</gold>"));
+        // --- Add Labels for Armor and Off-hand ---
+        invseeGUI.setItem(9, createLabel(Material.LEATHER_HELMET, "<gold>Helmet</gold>"));
+        invseeGUI.setItem(10, createLabel(Material.LEATHER_CHESTPLATE, "<gold>Chestplate</gold>"));
+        invseeGUI.setItem(11, createLabel(Material.LEATHER_LEGGINGS, "<gold>Leggings</gold>"));
+        invseeGUI.setItem(12, createLabel(Material.LEATHER_BOOTS, "<gold>Boots</gold>"));
+        invseeGUI.setItem(17, createLabel(Material.SHIELD, "<gold>Off-hand</gold>")); // Label for off-hand
 
         opener.openInventory(invseeGUI);
     }

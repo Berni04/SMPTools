@@ -7,3 +7,8 @@ home-limits:
   default: 1
   vip: 5
   admin: 10
+
+features:
+  accelerated-growth:
+    enabled: true
+    multiplier: 2.0 # Crops grow 2 times faster

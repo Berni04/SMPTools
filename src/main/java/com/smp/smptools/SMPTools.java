@@ -11,6 +11,7 @@ import com.smp.smptools.teleport.TeleportListener;
 import com.smp.smptools.sleep.SleepManager;
 import com.smp.smptools.chat.ChatManager;
 import com.smp.smptools.chunkloaders.ChunkLoaderManager;
+import com.smp.smptools.accelerators.CropAccelerator;
 import com.smp.smptools.imagemap.MapManager;
 import com.smp.smptools.listeners.CombatListener;
 import com.smp.smptools.listeners.HomesGUIListener;
@@ -55,6 +56,7 @@ public class SMPTools extends JavaPlugin {
     private SleepManager sleepManager;
     private ChatManager chatManager;
     private ChunkLoaderManager chunkLoaderManager;
+    private CropAccelerator cropAccelerator; // Declare CropAccelerator
 
     @Override
     public void onEnable() {
@@ -196,6 +198,12 @@ public class SMPTools extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new ChunkLoaderListener(this), this); // Register ChunkLoaderListener
         Bukkit.getPluginManager().registerEvents(new InvseeGUIListener(this), this); // Register InvseeGUIListener
         Bukkit.getPluginManager().registerEvents(new TrollGUIListener(this), this);
+
+        // Register Accelerators
+        if (getConfig().getBoolean("features.accelerated-growth.enabled", true)) {
+            this.cropAccelerator = new CropAccelerator(this, getConfig().getDouble("features.accelerated-growth.multiplier", 2.0));
+            this.cropAccelerator.runTaskTimer(this, 0L, 20L); // Run every second
+        }
 
         if (getConfig().getBoolean("features.sleep-voting.enabled")) {
             Bukkit.getPluginManager().registerEvents(new SleepListener(this), this);
