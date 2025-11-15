@@ -285,7 +285,7 @@ public class SMPTools extends JavaPlugin {
                 }
                 saveStatsConfig();
             }
-        }.runTaskTimer(this, 0L, 1200L); // 1200 ticks = 1 minute
+        }.runTaskTimer(this, 0L, 6000L); // 6000 ticks = 5 minutes
     }
 
     @Override
