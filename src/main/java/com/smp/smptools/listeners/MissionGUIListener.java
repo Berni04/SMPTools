@@ -1,0 +1,333 @@
+package com.smp.smptools.listeners;
+
+import com.smp.smptools.SMPTools;
+import com.smp.smptools.missions.Mission;
+import com.smp.smptools.missions.MissionManager;
+import com.smp.smptools.missions.RewardManager;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class MissionGUIListener implements Listener {
+
+    private static final String MAIN_GUI_TITLE = "Mission Control";
+    private static final String AVAILABLE_MISSIONS_TITLE = "Available Missions";
+    private static final String IN_PROGRESS_MISSIONS_TITLE = "In Progress Missions";
+    private static final String COMPLETED_MISSIONS_TITLE = "Completed Missions";
+    private static final String CONFIRM_ACCEPT_TITLE = "Confirm Mission Acceptance";
+    private static final String COLOR_GUI_TITLE = "Choose a Trail Color";
+
+    private static MissionManager missionManager;
+
+    public MissionGUIListener(SMPTools plugin) {
+        missionManager = plugin.getMissionManager();
+    }
+
+    @EventHandler
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player)) return;
+        if (event.getCurrentItem() == null) return;
+
+        Player player = (Player) event.getWhoClicked();
+        String title = event.getView().getTitle();
+
+        // The correct pattern: Check the title, and if it's one of ours, cancel the event immediately.
+        if (title.equals(MAIN_GUI_TITLE) || title.equals(AVAILABLE_MISSIONS_TITLE) ||
+            title.equals(IN_PROGRESS_MISSIONS_TITLE) || title.equals(COMPLETED_MISSIONS_TITLE) ||
+            title.equals(CONFIRM_ACCEPT_TITLE) || title.equals(COLOR_GUI_TITLE)) {
+            
+            event.setCancelled(true);
+
+            // Now, process the action based on the title and the item clicked.
+            switch (title) {
+                case MAIN_GUI_TITLE:
+                    handleMainMenuClick(event, player);
+                    break;
+                case AVAILABLE_MISSIONS_TITLE:
+                    handleAvailableMissionsClick(event, player);
+                    break;
+                case IN_PROGRESS_MISSIONS_TITLE:
+                    handleInProgressMissionsClick(event, player);
+                    break;
+                case COMPLETED_MISSIONS_TITLE:
+                    handleCompletedMissionsClick(event, player);
+                    break;
+                case CONFIRM_ACCEPT_TITLE:
+                    handleConfirmationClick(event, player);
+                    break;
+                case COLOR_GUI_TITLE:
+                    handleColorGUIClick(event, player);
+                    break;
+            }
+        }
+    }
+
+    private void handleMainMenuClick(InventoryClickEvent event, Player player) {
+        switch (event.getCurrentItem().getType()) {
+            case BOOK:
+                openAvailableMissionsGUI(player);
+                break;
+            case COMPASS:
+                openInProgressMissionsGUI(player);
+                break;
+            case BEACON:
+                openCompletedMissionsGUI(player);
+                break;
+        }
+    }
+
+    private void handleAvailableMissionsClick(InventoryClickEvent event, Player player) {
+        if (isBackButton(event.getCurrentItem())) {
+            openMissionGUI(player);
+            return;
+        }
+
+        Mission clickedMission = getMissionFromItem(event.getCurrentItem());
+        if (clickedMission != null) {
+            openConfirmationGUI(player, clickedMission);
+        }
+    }
+
+    private void handleInProgressMissionsClick(InventoryClickEvent event, Player player) {
+        if (isBackButton(event.getCurrentItem())) {
+            openMissionGUI(player);
+        }
+        // No other actions for this GUI
+    }
+
+    private void handleCompletedMissionsClick(InventoryClickEvent event, Player player) {
+        if (isBackButton(event.getCurrentItem())) {
+            openMissionGUI(player);
+            return;
+        }
+
+        Mission clickedMission = getMissionFromItem(event.getCurrentItem());
+        if (clickedMission == null) return;
+
+        MissionManager.PlayerMissionData playerData = missionManager.getPlayerData(player);
+        
+        if (playerData.getCompletedMissions().contains(clickedMission.getId()) &&
+            !playerData.getClaimedMissions().contains(clickedMission.getId())) {
+            
+            String rewardString = clickedMission.getRewards().get(0);
+            if (rewardString.equals("custom_item:chromatic_elytra")) {
+                openColorSelectionGUI(player, clickedMission.getId());
+            } else {
+                player.sendMessage(Component.text("Reward claimed!", NamedTextColor.GREEN));
+                playerData.getCompletedMissions().remove(clickedMission.getId());
+                playerData.getClaimedMissions().add(clickedMission.getId());
+                player.closeInventory();
+            }
+        }
+    }
+
+    private void handleConfirmationClick(InventoryClickEvent event, Player player) {
+        Mission clickedMission = getMissionFromItem(event.getCurrentItem());
+        if (clickedMission == null) {
+            player.closeInventory();
+            return;
+        }
+
+        if (event.getCurrentItem().getType() == Material.GREEN_WOOL) {
+            missionManager.getPlayerData(player).getActiveMissions().add(clickedMission.getId());
+            player.sendMessage(Component.text("Mission '" + clickedMission.getName().replace('&', '§') + "' accepted!", NamedTextColor.GREEN));
+            openInProgressMissionsGUI(player);
+        } else if (event.getCurrentItem().getType() == Material.RED_WOOL) {
+            openAvailableMissionsGUI(player);
+        }
+    }
+
+    private void handleColorGUIClick(InventoryClickEvent event, Player player) {
+        ItemStack clickedItem = event.getCurrentItem();
+        if (clickedItem == null) return;
+
+        String color = "WHITE";
+        switch (clickedItem.getType()) {
+            case RED_WOOL: color = "RED"; break;
+            case BLUE_WOOL: color = "BLUE"; break;
+            case LIME_WOOL: color = "GREEN"; break;
+            case PURPLE_WOOL: color = "PURPLE"; break;
+            case ORANGE_WOOL: color = "ORANGE"; break;
+            case YELLOW_WOOL: color = "YELLOW"; break;
+            case BLACK_WOOL: color = "BLACK"; break;
+            case WHITE_WOOL: color = "WHITE"; break;
+            case CYAN_WOOL: color = "RAINBOW"; break;
+        }
+
+        String missionId = getMissionIdFromLore(clickedItem);
+        if (missionId == null) return;
+
+        RewardManager.giveChromaticElytra(player, color);
+        MissionManager.PlayerMissionData playerData = missionManager.getPlayerData(player);
+        playerData.getCompletedMissions().remove(missionId);
+        playerData.getClaimedMissions().add(missionId);
+        player.closeInventory();
+        player.sendMessage(Component.text("Chromatic Elytra received!", NamedTextColor.GOLD));
+    }
+
+    // --- GUI Creation Methods ---
+
+    public static void openMissionGUI(Player player) {
+        Inventory gui = Bukkit.createInventory(null, 27, Component.text(MAIN_GUI_TITLE));
+        gui.setItem(11, createGuiItem(Material.BOOK, "&a&lAvailable Missions", List.of("§7Click to see missions you can start.")));
+        gui.setItem(13, createGuiItem(Material.COMPASS, "&e&lIn Progress", List.of("§7Click to see your active missions.")));
+        gui.setItem(15, createGuiItem(Material.BEACON, "&b&lCompleted Missions", List.of("§7Click to see missions you have finished.")));
+        player.openInventory(gui);
+    }
+
+    private void openAvailableMissionsGUI(Player player) {
+        Inventory gui = Bukkit.createInventory(null, 54, Component.text(AVAILABLE_MISSIONS_TITLE));
+        MissionManager.PlayerMissionData playerData = missionManager.getPlayerData(player);
+        for (Mission mission : missionManager.getAllMissions().values()) {
+            if (!playerData.getActiveMissions().contains(mission.getId()) &&
+                !playerData.getCompletedMissions().contains(mission.getId()) &&
+                !playerData.getClaimedMissions().contains(mission.getId())) {
+                gui.addItem(createMissionItem(mission, 0, MissionStatus.AVAILABLE));
+            }
+        }
+        addBackButton(gui, 49);
+        player.openInventory(gui);
+    }
+
+    private void openInProgressMissionsGUI(Player player) {
+        Inventory gui = Bukkit.createInventory(null, 54, Component.text(IN_PROGRESS_MISSIONS_TITLE));
+        MissionManager.PlayerMissionData playerData = missionManager.getPlayerData(player);
+        for (String missionId : playerData.getActiveMissions()) {
+            Mission mission = missionManager.getMission(missionId);
+            if (mission == null || playerData.getCompletedMissions().contains(missionId)) continue;
+            int progress = playerData.getMissionProgress().getOrDefault(missionId, 0);
+            gui.addItem(createMissionItem(mission, progress, MissionStatus.IN_PROGRESS));
+        }
+        addBackButton(gui, 49);
+        player.openInventory(gui);
+    }
+
+    private void openCompletedMissionsGUI(Player player) {
+        Inventory gui = Bukkit.createInventory(null, 54, Component.text(COMPLETED_MISSIONS_TITLE));
+        MissionManager.PlayerMissionData playerData = missionManager.getPlayerData(player);
+        for (String missionId : playerData.getCompletedMissions()) {
+            if (!playerData.getClaimedMissions().contains(missionId)) {
+                Mission mission = missionManager.getMission(missionId);
+                if (mission == null) continue;
+                gui.addItem(createMissionItem(mission, mission.getAmount(), MissionStatus.COMPLETED));
+            }
+        }
+        addBackButton(gui, 49);
+        player.openInventory(gui);
+    }
+
+    private void openConfirmationGUI(Player player, Mission mission) {
+        Inventory gui = Bukkit.createInventory(null, 27, Component.text(CONFIRM_ACCEPT_TITLE));
+        ItemStack confirmItem = createGuiItem(Material.GREEN_WOOL, "&a&lConfirm", List.of("§7Accept this mission.", "mission_id:" + mission.getId()));
+        ItemStack cancelItem = createGuiItem(Material.RED_WOOL, "&c&lCancel", List.of("§7Do not accept this mission."));
+        gui.setItem(11, confirmItem);
+        gui.setItem(15, cancelItem);
+        player.openInventory(gui);
+    }
+
+    private static void openColorSelectionGUI(Player player, String missionId) {
+        Inventory gui = Bukkit.createInventory(null, 9, Component.text(COLOR_GUI_TITLE));
+        gui.setItem(0, createGuiItem(Material.RED_WOOL, "&cRed Trail", List.of("mission_id:" + missionId)));
+        gui.setItem(1, createGuiItem(Material.BLUE_WOOL, "&9Blue Trail", List.of("mission_id:" + missionId)));
+        gui.setItem(2, createGuiItem(Material.LIME_WOOL, "&aGreen Trail", List.of("mission_id:" + missionId)));
+        gui.setItem(3, createGuiItem(Material.PURPLE_WOOL, "&5Purple Trail", List.of("mission_id:" + missionId)));
+        gui.setItem(4, createGuiItem(Material.ORANGE_WOOL, "&6Orange Trail", List.of("mission_id:" + missionId)));
+        gui.setItem(5, createGuiItem(Material.YELLOW_WOOL, "&eYellow Trail", List.of("mission_id:" + missionId)));
+        gui.setItem(6, createGuiItem(Material.BLACK_WOOL, "&0Black Trail", List.of("mission_id:" + missionId)));
+        gui.setItem(7, createGuiItem(Material.WHITE_WOOL, "&fWhite Trail", List.of("mission_id:" + missionId)));
+        gui.setItem(8, createGuiItem(Material.CYAN_WOOL, "&bRainbow Trail", List.of("mission_id:" + missionId)));
+        player.openInventory(gui);
+    }
+
+    // --- Utility Methods ---
+
+    private enum MissionStatus { AVAILABLE, IN_PROGRESS, COMPLETED }
+
+    private static ItemStack createMissionItem(Mission mission, int currentProgress, MissionStatus status) {
+        boolean isClaimable = currentProgress >= mission.getAmount();
+        Material material = (status == MissionStatus.AVAILABLE || !isClaimable) ? Material.WRITABLE_BOOK : Material.ENCHANTED_BOOK;
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(Component.text(mission.getName().replace('&', '§')));
+        List<Component> lore = new ArrayList<>();
+        lore.add(Component.text(mission.getDescription().replace('&', '§'), NamedTextColor.GRAY));
+        lore.add(Component.text(""));
+        if (status != MissionStatus.AVAILABLE) {
+            double percentage = Math.min(1.0, (double) currentProgress / mission.getAmount());
+            lore.add(Component.text("Progress: " + currentProgress + " / " + mission.getAmount(), NamedTextColor.YELLOW));
+            lore.add(Component.text(createProgressBar(percentage)));
+            lore.add(Component.text(""));
+        }
+        switch (status) {
+            case AVAILABLE:
+                lore.add(Component.text(">» Click to accept mission!", NamedTextColor.GREEN));
+                break;
+            case COMPLETED:
+                lore.add(Component.text(">» Click to claim reward!", NamedTextColor.GREEN, TextDecoration.BOLD));
+                meta.addEnchant(Enchantment.LUCK_OF_THE_SEA, 1, true);
+                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                break;
+            case IN_PROGRESS:
+                lore.add(Component.text("Status: In Progress", NamedTextColor.YELLOW));
+                break;
+        }
+        lore.add(Component.text("mission_id:" + mission.getId(), NamedTextColor.DARK_GRAY).decoration(TextDecoration.ITALIC, false));
+        meta.lore(lore);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private static ItemStack createGuiItem(Material material, String name, List<String> lore) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(Component.text(name.replace('&', '§')));
+        meta.lore(lore.stream().map(l -> Component.text(l.replace('&', '§'))).collect(Collectors.toList()));
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private static String createProgressBar(double percentage) {
+        int barLength = 20;
+        int filled = (int) (barLength * percentage);
+        return "§a" + "|".repeat(filled) + "§7" + "|".repeat(barLength - filled);
+    }
+
+    private void addBackButton(Inventory gui, int slot) {
+        gui.setItem(slot, createGuiItem(Material.ARROW, "&c&lBack", List.of("§7Return to the main menu.")));
+    }
+
+    private boolean isBackButton(ItemStack item) {
+        return item != null && item.getType() == Material.ARROW;
+    }
+
+    private Mission getMissionFromItem(ItemStack item) {
+        String missionId = getMissionIdFromLore(item);
+        return missionId != null ? missionManager.getMission(missionId) : null;
+    }
+
+    private String getMissionIdFromLore(ItemStack item) {
+        if (item == null || !item.hasItemMeta() || !item.getItemMeta().hasLore()) return null;
+        for (Component component : item.getItemMeta().lore()) {
+            String line = component.toString();
+            if (line.contains("mission_id:")) {
+                return line.split("mission_id:")[1].split("\"")[0];
+            }
+        }
+        return null;
+    }
+}

@@ -31,5 +31,10 @@ public class JoinLeaveListener implements Listener {
         Component displayName = plugin.getChatManager().getFormattedDisplayName(player);
         Component quitMessage = displayName.append(Component.text(" has left the server.", NamedTextColor.YELLOW));
         event.quitMessage(quitMessage);
+
+        // Update playtime on quit
+        long totalTicks = player.getStatistic(org.bukkit.Statistic.PLAY_ONE_MINUTE);
+        long totalMinutes = totalTicks / (20 * 60);
+        plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".playtime_minutes", totalMinutes);
     }
 }

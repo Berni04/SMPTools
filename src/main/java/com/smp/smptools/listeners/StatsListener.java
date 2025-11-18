@@ -54,16 +54,16 @@ public class StatsListener implements Listener {
 
             if (originalDeathMessage != null) {
                 // Use replaceText to replace the player's raw name with the formatted component
-                Component finalMessage = originalDeathMessage.replaceText(builder -> 
-                    builder.matchLiteral(player.getName())
-                           .replacement(formattedPlayerName)
-                );
+                Component finalMessage = originalDeathMessage
+                        .replaceText(builder -> builder.matchLiteral(player.getName())
+                                .replacement(formattedPlayerName));
                 event.deathMessage(finalMessage);
             }
         }
 
         // Increment total death count
-        plugin.getStatsConfig().set("stats." + uuid + ".deaths_total", plugin.getStatsConfig().getInt("stats." + uuid + ".deaths_total", 0) + 1);
+        plugin.getStatsConfig().set("stats." + uuid + ".deaths_total",
+                plugin.getStatsConfig().getInt("stats." + uuid + ".deaths_total", 0) + 1);
 
         // Save detailed death info
         List<Map<?, ?>> deathInfo = plugin.getStatsConfig().getMapList("stats." + uuid + ".deaths_info");
@@ -89,10 +89,12 @@ public class StatsListener implements Listener {
 
         if (player.getKiller() != null) {
             Player killer = player.getKiller();
-            plugin.getStatsConfig().set("stats." + killer.getUniqueId() + ".player_kills", plugin.getStatsConfig().getInt("stats." + killer.getUniqueId() + ".player_kills", 0) + 1);
+            plugin.getStatsConfig().set("stats." + killer.getUniqueId() + ".player_kills",
+                    plugin.getStatsConfig().getInt("stats." + killer.getUniqueId() + ".player_kills", 0) + 1);
             plugin.getTagManager().checkMilestones(killer);
         }
-                plugin.getTagManager().checkMilestones(player);    }
+        plugin.getTagManager().checkMilestones(player);
+    }
 
     private void handleFunnyDeathMessage(PlayerDeathEvent event) {
         Player player = event.getEntity();
@@ -102,11 +104,11 @@ public class StatsListener implements Listener {
         EntityDamageEvent lastDamage = player.getLastDamageCause();
         if (lastDamage == null) {
             deathMessageTemplate = getRandomMessage(Arrays.asList(
-                "ceased to exist.",
-                "went gentle into that good night.",
-                "'s story ends here."
-            ));
-            event.deathMessage(formattedPlayerName.append(Component.text(" " + deathMessageTemplate, NamedTextColor.RED)));
+                    "ceased to exist.",
+                    "went gentle into that good night.",
+                    "'s story ends here."));
+            event.deathMessage(
+                    formattedPlayerName.append(Component.text(" " + deathMessageTemplate, NamedTextColor.RED)));
         } else {
             Component finalMessage;
             switch (lastDamage.getCause()) {
@@ -114,85 +116,81 @@ public class StatsListener implements Listener {
                     if (lastDamage instanceof EntityDamageByEntityEvent) {
                         Entity damager = ((EntityDamageByEntityEvent) lastDamage).getDamager();
                         if (damager instanceof Player) {
-                            Component formattedKillerName = plugin.getChatManager().getFormattedDisplayName((Player) damager);
+                            Component formattedKillerName = plugin.getChatManager()
+                                    .getFormattedDisplayName((Player) damager);
                             deathMessageTemplate = getRandomMessage(Arrays.asList(
-                                " was sent back to the lobby by ",
-                                " learned that %killer% is not their friend.",
-                                " was outplayed by "
-                            ));
+                                    " was sent back to the lobby by ",
+                                    " learned that %killer% is not their friend.",
+                                    " was outplayed by "));
                             if (deathMessageTemplate.contains("%killer%")) {
                                 // This is a bit of a hack to handle the different message structures
-                                finalMessage = formattedPlayerName.append(Component.text(deathMessageTemplate.replace("%killer%", ""), NamedTextColor.RED).append(formattedKillerName));
+                                finalMessage = formattedPlayerName.append(
+                                        Component.text(deathMessageTemplate.replace("%killer%", ""), NamedTextColor.RED)
+                                                .append(formattedKillerName));
                             } else {
-                                finalMessage = formattedPlayerName.append(Component.text(deathMessageTemplate, NamedTextColor.RED).append(formattedKillerName));
+                                finalMessage = formattedPlayerName.append(Component
+                                        .text(deathMessageTemplate, NamedTextColor.RED).append(formattedKillerName));
                             }
                         } else {
                             deathMessageTemplate = getRandomMessage(Arrays.asList(
-                                " was slain by a " + damager.getType().name().toLowerCase() + ".",
-                                " had a bone to pick with a " + damager.getType().name().toLowerCase() + "."
-                            ));
-                            finalMessage = formattedPlayerName.append(Component.text(deathMessageTemplate, NamedTextColor.RED));
+                                    " was slain by a " + damager.getType().name().toLowerCase() + ".",
+                                    " had a bone to pick with a " + damager.getType().name().toLowerCase() + "."));
+                            finalMessage = formattedPlayerName
+                                    .append(Component.text(deathMessageTemplate, NamedTextColor.RED));
                         }
                     } else {
-                        finalMessage = formattedPlayerName.append(Component.text(" was killed by something.", NamedTextColor.RED));
+                        finalMessage = formattedPlayerName
+                                .append(Component.text(" was killed by something.", NamedTextColor.RED));
                     }
                     break;
                 case ENTITY_EXPLOSION:
                     deathMessageTemplate = getRandomMessage(Arrays.asList(
-                        " got a hug from a Creeper.",
-                        " learned that some hugs are explosive."
-                    ));
+                            " got a hug from a Creeper.",
+                            " learned that some hugs are explosive."));
                     finalMessage = formattedPlayerName.append(Component.text(deathMessageTemplate, NamedTextColor.RED));
                     break;
                 case BLOCK_EXPLOSION:
                     deathMessageTemplate = getRandomMessage(Arrays.asList(
-                        " should not have slept in the Nether.",
-                        "'s bed went boom."
-                    ));
+                            " should not have slept in the Nether.",
+                            "'s bed went boom."));
                     finalMessage = formattedPlayerName.append(Component.text(deathMessageTemplate, NamedTextColor.RED));
                     break;
                 case FALL:
                     deathMessageTemplate = getRandomMessage(Arrays.asList(
-                        " thought they were a bird.",
-                        " forgot to deploy their parachute.",
-                        " tested gravity. It still works."
-                    ));
+                            " thought they were a bird.",
+                            " forgot to deploy their parachute.",
+                            " tested gravity. It still works."));
                     finalMessage = formattedPlayerName.append(Component.text(deathMessageTemplate, NamedTextColor.RED));
                     break;
                 case LAVA:
                     deathMessageTemplate = getRandomMessage(Arrays.asList(
-                        " tried to swim in the forbidden soup.",
-                        " is now one with the magma."
-                    ));
+                            " tried to swim in the forbidden soup.",
+                            " is now one with the magma."));
                     finalMessage = formattedPlayerName.append(Component.text(deathMessageTemplate, NamedTextColor.RED));
                     break;
                 case DROWNING:
                     deathMessageTemplate = getRandomMessage(Arrays.asList(
-                        " forgot how to breathe.",
-                        " is sleeping with the fishes."
-                    ));
+                            " forgot how to breathe.",
+                            " is sleeping with the fishes."));
                     finalMessage = formattedPlayerName.append(Component.text(deathMessageTemplate, NamedTextColor.RED));
                     break;
                 case VOID:
                     deathMessageTemplate = getRandomMessage(Arrays.asList(
-                        " fell out of the world.",
-                        " has been deleted from the simulation."
-                    ));
+                            " fell out of the world.",
+                            " has been deleted from the simulation."));
                     finalMessage = formattedPlayerName.append(Component.text(deathMessageTemplate, NamedTextColor.RED));
                     break;
                 case FIRE:
                 case FIRE_TICK:
                     deathMessageTemplate = getRandomMessage(Arrays.asList(
-                        " is extra crispy now.",
-                        " forgot to stop, drop, and roll."
-                    ));
+                            " is extra crispy now.",
+                            " forgot to stop, drop, and roll."));
                     finalMessage = formattedPlayerName.append(Component.text(deathMessageTemplate, NamedTextColor.RED));
                     break;
                 default:
                     deathMessageTemplate = getRandomMessage(Arrays.asList(
-                        " died in a mysterious way.",
-                        " met their end."
-                    ));
+                            " died in a mysterious way.",
+                            " met their end."));
                     finalMessage = formattedPlayerName.append(Component.text(deathMessageTemplate, NamedTextColor.RED));
                     break;
             }
@@ -212,23 +210,30 @@ public class StatsListener implements Listener {
 
             // Boss Kills
             if (entityType == EntityType.ENDER_DRAGON) {
-                plugin.getStatsConfig().set("stats." + killer.getUniqueId() + ".ender_dragon_kills", plugin.getStatsConfig().getInt("stats." + killer.getUniqueId() + ".ender_dragon_kills", 0) + 1);
+                plugin.getStatsConfig().set("stats." + killer.getUniqueId() + ".ender_dragon_kills",
+                        plugin.getStatsConfig().getInt("stats." + killer.getUniqueId() + ".ender_dragon_kills", 0) + 1);
             } else if (entityType == EntityType.WITHER) {
-                plugin.getStatsConfig().set("stats." + killer.getUniqueId() + ".wither_kills", plugin.getStatsConfig().getInt("stats." + killer.getUniqueId() + ".wither_kills", 0) + 1);
+                plugin.getStatsConfig().set("stats." + killer.getUniqueId() + ".wither_kills",
+                        plugin.getStatsConfig().getInt("stats." + killer.getUniqueId() + ".wither_kills", 0) + 1);
             } else if (entityType == EntityType.WARDEN) {
-                plugin.getStatsConfig().set("stats." + killer.getUniqueId() + ".warden_kills", plugin.getStatsConfig().getInt("stats." + killer.getUniqueId() + ".warden_kills", 0) + 1);
+                plugin.getStatsConfig().set("stats." + killer.getUniqueId() + ".warden_kills",
+                        plugin.getStatsConfig().getInt("stats." + killer.getUniqueId() + ".warden_kills", 0) + 1);
             }
 
             List<EntityType> trackedMobs = Arrays.asList(
-                    EntityType.COW, EntityType.SHEEP, EntityType.PIG, EntityType.CHICKEN, EntityType.TURTLE, EntityType.LLAMA, EntityType.RABBIT,
-                    EntityType.ZOMBIE, EntityType.SKELETON, EntityType.CREEPER, EntityType.ENDERMAN, EntityType.WITCH, EntityType.BLAZE, EntityType.SPIDER, EntityType.CAVE_SPIDER, EntityType.PHANTOM, EntityType.SLIME, EntityType.WITHER_SKELETON
-            );
+                    EntityType.COW, EntityType.SHEEP, EntityType.PIG, EntityType.CHICKEN, EntityType.TURTLE,
+                    EntityType.LLAMA, EntityType.RABBIT,
+                    EntityType.ZOMBIE, EntityType.SKELETON, EntityType.CREEPER, EntityType.ENDERMAN, EntityType.WITCH,
+                    EntityType.BLAZE, EntityType.SPIDER, EntityType.CAVE_SPIDER, EntityType.PHANTOM, EntityType.SLIME,
+                    EntityType.WITHER_SKELETON);
 
             if (trackedMobs.contains(entityType)) {
                 String mobName = entityType.name().toLowerCase();
-                plugin.getStatsConfig().set("stats." + killer.getUniqueId() + ".mob_kills." + mobName, plugin.getStatsConfig().getInt("stats." + killer.getUniqueId() + ".mob_kills." + mobName, 0) + 1);
+                plugin.getStatsConfig().set("stats." + killer.getUniqueId() + ".mob_kills." + mobName,
+                        plugin.getStatsConfig().getInt("stats." + killer.getUniqueId() + ".mob_kills." + mobName, 0)
+                                + 1);
             }
-            plugin.saveStatsConfig();
+            // plugin.saveStatsConfig(); // Removed to use periodic saver
             plugin.getTagManager().checkMilestones(killer);
         }
     }
@@ -239,7 +244,8 @@ public class StatsListener implements Listener {
         Material blockType = event.getBlock().getType();
 
         // Increment total blocks broken
-        plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".blocks_broken", plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".blocks_broken", 0) + 1);
+        plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".blocks_broken",
+                plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".blocks_broken", 0) + 1);
 
         List<Material> diamondOres = Arrays.asList(Material.DIAMOND_ORE, Material.DEEPSLATE_DIAMOND_ORE);
         List<Material> goldOres = Arrays.asList(Material.GOLD_ORE, Material.DEEPSLATE_GOLD_ORE);
@@ -251,25 +257,37 @@ public class StatsListener implements Listener {
         List<Material> emeraldOres = Arrays.asList(Material.EMERALD_ORE, Material.DEEPSLATE_EMERALD_ORE);
 
         String oreName = null;
-        if (diamondOres.contains(blockType)) oreName = "diamond";
-        else if (goldOres.contains(blockType)) oreName = "gold";
-        else if (ironOres.contains(blockType)) oreName = "iron";
-        else if (copperOres.contains(blockType)) oreName = "copper";
-        else if (redstoneOres.contains(blockType)) oreName = "redstone";
-        else if (lapisOres.contains(blockType)) oreName = "lapis";
-        else if (coalOres.contains(blockType)) oreName = "coal";
-        else if (emeraldOres.contains(blockType)) oreName = "emerald";
+        if (diamondOres.contains(blockType))
+            oreName = "diamond";
+        else if (goldOres.contains(blockType))
+            oreName = "gold";
+        else if (ironOres.contains(blockType))
+            oreName = "iron";
+        else if (copperOres.contains(blockType))
+            oreName = "copper";
+        else if (redstoneOres.contains(blockType))
+            oreName = "redstone";
+        else if (lapisOres.contains(blockType))
+            oreName = "lapis";
+        else if (coalOres.contains(blockType))
+            oreName = "coal";
+        else if (emeraldOres.contains(blockType))
+            oreName = "emerald";
 
         if (oreName != null) {
-            plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".ores_mined." + oreName, plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".ores_mined." + oreName, 0) + 1);
+            plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".ores_mined." + oreName,
+                    plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".ores_mined." + oreName, 0) + 1);
         }
-                plugin.getTagManager().checkMilestones(player);    }
+        plugin.getTagManager().checkMilestones(player);
+    }
 
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
         Player player = event.getPlayer();
-        plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".blocks_placed", plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".blocks_placed", 0) + 1);
-                plugin.getTagManager().checkMilestones(player);    }
+        plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".blocks_placed",
+                plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".blocks_placed", 0) + 1);
+        plugin.getTagManager().checkMilestones(player);
+    }
 
     @EventHandler
     public void onStatisticIncrement(PlayerStatisticIncrementEvent event) {
@@ -278,7 +296,8 @@ public class StatsListener implements Listener {
             long totalTicks = player.getStatistic(Statistic.PLAY_ONE_MINUTE);
             long totalMinutes = totalTicks / (20 * 60);
             plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".playtime_minutes", totalMinutes);
-                    plugin.getTagManager().checkMilestones(player);        }
+            plugin.getTagManager().checkMilestones(player);
+        }
     }
 
     @EventHandler
@@ -286,7 +305,8 @@ public class StatsListener implements Listener {
         Player player = event.getPlayer();
         if (player.getWorld().getName().equals("world_nether")) {
             plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".enter_nether", 1);
-                    plugin.getTagManager().checkMilestones(player);        }
+            plugin.getTagManager().checkMilestones(player);
+        }
     }
 
     @EventHandler
@@ -302,14 +322,17 @@ public class StatsListener implements Listener {
             } else {
                 return; // Don't check milestones if the item is not relevant
             }
-                    plugin.getTagManager().checkMilestones(player);        }
+            plugin.getTagManager().checkMilestones(player);
+        }
     }
 
     @EventHandler
     public void onEntityResurrect(EntityResurrectEvent event) {
         if (event.getEntity() instanceof Player) {
             Player player = (Player) event.getEntity();
-            plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".use_totem", plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".use_totem", 0) + 1);
-                    plugin.getTagManager().checkMilestones(player);        }
+            plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".use_totem",
+                    plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".use_totem", 0) + 1);
+            plugin.getTagManager().checkMilestones(player);
+        }
     }
 }

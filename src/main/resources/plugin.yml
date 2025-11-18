@@ -103,7 +103,23 @@ commands:
   tags:
     description: Manages player titles.
     usage: /tags [set <player> <title>]
+  missions:
+    description: Opens the mission GUI.
+    usage: /missions
+  sudo:
+    description: Force a player to execute a command or chat message.
+    usage: /sudo <player> <command>
+  customitem:
+    description: Gives a custom item with specified CustomModelData.
+    permission: smptools.customitem
+    usage: /<command> <item_type> <custom_model_data>
 permissions:
+  smptools.missions.admin:
+    description: Allows spawning the mission NPC.
+    default: op
   smptools.troll:
     description: Allows access to the /troll command.
+    default: op
+  smptools.sudo:
+    description: Allows access to the /sudo command.
     default: op

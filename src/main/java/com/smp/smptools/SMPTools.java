@@ -11,6 +11,7 @@ import com.smp.smptools.teleport.TeleportListener;
 import com.smp.smptools.sleep.SleepManager;
 import com.smp.smptools.chat.ChatManager;
 import com.smp.smptools.chunkloaders.ChunkLoaderManager;
+import com.smp.smptools.missions.MissionManager;
 import com.smp.smptools.accelerators.CropAccelerator;
 import com.smp.smptools.imagemap.MapManager;
 import com.smp.smptools.listeners.CombatListener;
@@ -57,6 +58,7 @@ public class SMPTools extends JavaPlugin {
     private ChatManager chatManager;
     private ChunkLoaderManager chunkLoaderManager;
     private CropAccelerator cropAccelerator; // Declare CropAccelerator
+    private MissionManager missionManager;
 
     @Override
     public void onEnable() {
@@ -75,34 +77,47 @@ public class SMPTools extends JavaPlugin {
         defaultRewards.add("item:diamond 5");
         getConfig().addDefault("features.daily-rewards.rewards", defaultRewards);
 
-                    // Default MMO-Skills Config
-                    getConfig().addDefault("features.mmo-skills.mining.enabled", true);
-                    getConfig().addDefault("features.mmo-skills.mining.double-drop-chance", "0.0015 * level"); // 7.5% at Lvl 50
-                    getConfig().addDefault("features.mmo-skills.woodcutting.enabled", true);
-                    getConfig().addDefault("features.mmo-skills.woodcutting.double-drop-chance", "0.0015 * level");
-                    getConfig().addDefault("features.mmo-skills.excavation.enabled", true);
-                    getConfig().addDefault("features.mmo-skills.excavation.double-drop-chance", "0.0015 * level");
-                    // Treasure Hunter Perk
-                    getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.enabled", true);
-                    getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.chance", "0.0005 * level"); // 2.5% at Lvl 50
-                    getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.loot.common", List.of("IRON_NUGGET 1", "GOLD_NUGGET 1"));
-                    getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.loot.uncommon", List.of("GLOWSTONE_DUST 2", "QUARTZ 1"));
-                                getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.loot.rare", List.of("DIAMOND 1", "NAME_TAG 1"));
-                    
-                                // Default Combat Skill Config
-                                getConfig().addDefault("features.mmo-skills.combat.enabled", true);
-                                getConfig().addDefault("features.mmo-skills.combat.critical-strike.enabled", true);
-                                getConfig().addDefault("features.mmo-skills.combat.critical-strike.chance", "0.002 * level"); // 10% at Lvl 50
-                                        getConfig().addDefault("features.mmo-skills.combat.critical-strike.damage-multiplier", "1.0 + (level / 10.0)"); // 1.0x + 5.0x = 6.0x at Lvl 50
-                                
-                                        // Sit on Stairs
-                                        getConfig().addDefault("features.sit-on-stairs.enabled", true);
-                                
-                                        // Player Graves
-                                        getConfig().addDefault("features.player-graves.enabled", true);
-                                
-                                        // Default Custom Enchants Config
-                                        getConfig().addDefault("features.custom-enchants.telekinesis.enabled", true);        getConfig().addDefault("features.custom-enchants.telekinesis.description", "Automatically sends block drops to your inventory.");
+        // Default MMO-Skills Config
+        getConfig().addDefault("features.mmo-skills.mining.enabled", true);
+        getConfig().addDefault("features.mmo-skills.mining.double-drop-chance", "0.0015 * level"); // 7.5% at Lvl 50
+        getConfig().addDefault("features.mmo-skills.woodcutting.enabled", true);
+        getConfig().addDefault("features.mmo-skills.woodcutting.double-drop-chance", "0.0015 * level");
+        getConfig().addDefault("features.mmo-skills.excavation.enabled", true);
+        getConfig().addDefault("features.mmo-skills.excavation.double-drop-chance", "0.0015 * level");
+        // Treasure Hunter Perk
+        getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.enabled", true);
+        getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.chance", "0.0005 * level"); // 2.5% at
+                                                                                                           // Lvl 50
+        getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.loot.common",
+                List.of("IRON_NUGGET 1", "GOLD_NUGGET 1"));
+        getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.loot.uncommon",
+                List.of("GLOWSTONE_DUST 2", "QUARTZ 1"));
+        getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.loot.rare",
+                List.of("DIAMOND 1", "NAME_TAG 1"));
+
+        // Default Combat Skill Config
+        getConfig().addDefault("features.mmo-skills.combat.enabled", true);
+        getConfig().addDefault("features.mmo-skills.combat.critical-strike.enabled", true);
+        getConfig().addDefault("features.mmo-skills.combat.critical-strike.chance", "0.002 * level"); // 10% at Lvl 50
+        getConfig().addDefault("features.mmo-skills.combat.critical-strike.damage-multiplier", "1.0 + (level / 10.0)"); // 1.0x
+                                                                                                                        // +
+                                                                                                                        // 5.0x
+                                                                                                                        // =
+                                                                                                                        // 6.0x
+                                                                                                                        // at
+                                                                                                                        // Lvl
+                                                                                                                        // 50
+
+        // Sit on Stairs
+        getConfig().addDefault("features.sit-on-stairs.enabled", true);
+
+        // Player Graves
+        getConfig().addDefault("features.player-graves.enabled", true);
+
+        // Default Custom Enchants Config
+        getConfig().addDefault("features.custom-enchants.telekinesis.enabled", true);
+        getConfig().addDefault("features.custom-enchants.telekinesis.description",
+                "Automatically sends block drops to your inventory.");
         List<String> telekinesisApplicable = new ArrayList<>();
         telekinesisApplicable.add("PICKAXE");
         telekinesisApplicable.add("AXE");
@@ -122,7 +137,8 @@ public class SMPTools extends JavaPlugin {
 
         // Music Player
         getConfig().addDefault("features.music-player.enabled", true);
-        getConfig().addDefault("features.music-player.base-url", "https://raw.githubusercontent.com/YourUser/YourRepo/main/");
+        getConfig().addDefault("features.music-player.base-url",
+                "https://raw.githubusercontent.com/YourUser/YourRepo/main/");
 
         // Funny Death Messages
         getConfig().addDefault("features.funny-death-messages.enabled", true);
@@ -177,6 +193,7 @@ public class SMPTools extends JavaPlugin {
             this.mapManager = new MapManager(this);
             this.mapManager.loadMaps();
         }
+        this.missionManager = new MissionManager(this);
 
         // Register Listeners
         Bukkit.getPluginManager().registerEvents(new VaultListener(this), this);
@@ -198,10 +215,15 @@ public class SMPTools extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new ChunkLoaderListener(this), this); // Register ChunkLoaderListener
         Bukkit.getPluginManager().registerEvents(new InvseeGUIListener(this), this); // Register InvseeGUIListener
         Bukkit.getPluginManager().registerEvents(new TrollGUIListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new MissionNPCListener(), this);
+        Bukkit.getPluginManager().registerEvents(new MissionGUIListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new ElytraTrailListener(), this);
+        Bukkit.getPluginManager().registerEvents(new MissionTrackerListener(this), this);
 
         // Register Accelerators
         if (getConfig().getBoolean("features.accelerated-growth.enabled", true)) {
-            this.cropAccelerator = new CropAccelerator(this, getConfig().getDouble("features.accelerated-growth.multiplier", 2.0));
+            this.cropAccelerator = new CropAccelerator(this,
+                    getConfig().getDouble("features.accelerated-growth.multiplier", 2.0));
             this.cropAccelerator.runTaskTimer(this, 0L, 20L); // Run every second
         }
 
@@ -234,9 +256,13 @@ public class SMPTools extends JavaPlugin {
         this.getCommand("tptoggle").setExecutor(tpaCommand);
         this.leaderboardCommand = new LeaderboardCommand(this);
         this.getCommand("leaderboard").setExecutor(leaderboardCommand);
-        Objects.requireNonNull(getCommand("givechunkloader")).setExecutor(new ChunkLoaderCommand(this)); // Register ChunkLoaderCommand
+        Objects.requireNonNull(getCommand("givechunkloader")).setExecutor(new ChunkLoaderCommand(this)); // Register
+                                                                                                         // ChunkLoaderCommand
         Objects.requireNonNull(getCommand("invsee")).setExecutor(new InvseeCommand(this));
         Objects.requireNonNull(getCommand("troll")).setExecutor(new TrollCommand(this));
+        Objects.requireNonNull(getCommand("missions")).setExecutor(new MissionCommand(this));
+        Objects.requireNonNull(getCommand("sudo")).setExecutor(new SudoCommand(this));
+        Objects.requireNonNull(getCommand("customitem")).setExecutor(new CustomItemCommand());
         Objects.requireNonNull(getCommand("r")).setExecutor(new ReplyCommand(this));
         Objects.requireNonNull(getCommand("rename")).setExecutor(new RenameCommand(this));
 
@@ -273,19 +299,18 @@ public class SMPTools extends JavaPlugin {
             this.getCommand("sound").setExecutor(new SoundCommand(this));
             Bukkit.getPluginManager().registerEvents(new ResourcePackListener(this), this);
         }
+        startStatsSaverTask();
+    }
 
-        // Playtime tracker
-        new org.bukkit.scheduler.BukkitRunnable() {
-            @Override
-            public void run() {
-                for (org.bukkit.entity.Player player : Bukkit.getOnlinePlayers()) {
-                    String uuid = player.getUniqueId().toString();
-                    long newTime = getStatsConfig().getLong("stats." + uuid + ".playtime_minutes", 0) + 1;
-                    getStatsConfig().set("stats." + uuid + ".playtime_minutes", newTime);
-                }
-                saveStatsConfig();
+    private void startStatsSaverTask() {
+        Bukkit.getScheduler().runTaskTimer(this, () -> {
+            for (org.bukkit.entity.Player player : Bukkit.getOnlinePlayers()) {
+                long totalTicks = player.getStatistic(org.bukkit.Statistic.PLAY_ONE_MINUTE);
+                long totalMinutes = totalTicks / (20 * 60);
+                getStatsConfig().set("stats." + player.getUniqueId() + ".playtime_minutes", totalMinutes);
             }
-        }.runTaskTimer(this, 0L, 6000L); // 6000 ticks = 5 minutes
+            saveStatsConfig();
+        }, 6000L, 6000L); // Run every 5 minutes (6000 ticks)
     }
 
     @Override
@@ -342,8 +367,10 @@ public class SMPTools extends JavaPlugin {
             ConfigurationSection milestones = tagsConfig.createSection("milestones");
 
             // Blocks Broken
-            createMilestone(milestones, "novice_builder", "Novice Builder", "Break 1,000 blocks", "blocks_broken", 1000);
-            createMilestone(milestones, "master_builder", "Master Builder", "Break 100,000 blocks", "blocks_broken", 100000);
+            createMilestone(milestones, "novice_builder", "Novice Builder", "Break 1,000 blocks", "blocks_broken",
+                    1000);
+            createMilestone(milestones, "master_builder", "Master Builder", "Break 100,000 blocks", "blocks_broken",
+                    100000);
 
             // Blocks Placed
             createMilestone(milestones, "architect", "Architect", "Place 10,000 blocks", "blocks_placed", 10000);
@@ -361,7 +388,8 @@ public class SMPTools extends JavaPlugin {
             createMilestone(milestones, "warrior", "Warrior", "Kill 50 players", "player_kills", 50);
 
             // Boss Kills
-            createMilestone(milestones, "dragon_slayer", "Dragon-Slayer", "Kill the Ender Dragon", "ender_dragon_kills", 1);
+            createMilestone(milestones, "dragon_slayer", "Dragon-Slayer", "Kill the Ender Dragon", "ender_dragon_kills",
+                    1);
             createMilestone(milestones, "wither_slayer", "Wither-Slayer", "Kill the Wither", "wither_kills", 1);
             createMilestone(milestones, "deep_dweller", "Deep-Dweller", "Kill the Warden", "warden_kills", 1);
 
@@ -373,27 +401,34 @@ public class SMPTools extends JavaPlugin {
 
             // Ore Milestones
             createMilestone(milestones, "diamond_king", "Diamond King", "Mine 500 diamonds", "ores_mined.diamond", 500);
-            createMilestone(milestones, "emerald_mogul", "Emerald Mogul", "Mine 500 emeralds", "ores_mined.emerald", 500);
+            createMilestone(milestones, "emerald_mogul", "Emerald Mogul", "Mine 500 emeralds", "ores_mined.emerald",
+                    500);
 
             // Mob Kills
-            createMilestone(milestones, "zombie_hunter", "Zombie Hunter", "Kill 1,000 zombies", "mob_kills.zombie", 1000);
-            createMilestone(milestones, "skeleton_archer", "Skeleton Archer", "Kill 1,000 skeletons", "mob_kills.skeleton", 1000);
-            createMilestone(milestones, "creeper_destroyer", "Creeper Destroyer", "Kill 500 creepers", "mob_kills.creeper", 500);
+            createMilestone(milestones, "zombie_hunter", "Zombie Hunter", "Kill 1,000 zombies", "mob_kills.zombie",
+                    1000);
+            createMilestone(milestones, "skeleton_archer", "Skeleton Archer", "Kill 1,000 skeletons",
+                    "mob_kills.skeleton", 1000);
+            createMilestone(milestones, "creeper_destroyer", "Creeper Destroyer", "Kill 500 creepers",
+                    "mob_kills.creeper", 500);
 
             // Crafting
             createMilestone(milestones, "crafter", "Crafter", "Craft 1,000 items", "items_crafted", 1000);
-            createMilestone(milestones, "master_crafter", "Master Crafter", "Craft 10,000 items", "items_crafted", 10000);
+            createMilestone(milestones, "master_crafter", "Master Crafter", "Craft 10,000 items", "items_crafted",
+                    10000);
 
             // Movement
             createMilestone(milestones, "hiker", "Hiker", "Walk 100,000 blocks", "distance_walked_cm", 10000000); // 100km
-            createMilestone(milestones, "sprinter", "Sprinter", "Sprint 100,000 blocks", "distance_sprinted_cm", 10000000); // 100km
+            createMilestone(milestones, "sprinter", "Sprinter", "Sprint 100,000 blocks", "distance_sprinted_cm",
+                    10000000); // 100km
             createMilestone(milestones, "swimmer", "Swimmer", "Swim 10,000 blocks", "distance_swam_cm", 1000000); // 10km
 
             saveTagsConfig();
         }
     }
 
-    private void createMilestone(ConfigurationSection parent, String key, String title, String description, String statistic, int value) {
+    private void createMilestone(ConfigurationSection parent, String key, String title, String description,
+            String statistic, int value) {
         ConfigurationSection section = parent.createSection(key);
         section.set("title", title);
         section.set("description", description);
@@ -508,5 +543,8 @@ public class SMPTools extends JavaPlugin {
     public ChunkLoaderManager getChunkLoaderManager() {
         return chunkLoaderManager;
     }
-}
 
+    public MissionManager getMissionManager() {
+        return missionManager;
+    }
+}

@@ -1,0 +1,31 @@
+# --------------------------------------------------- #
+#                 SMPTools Missions                     #
+# --------------------------------------------------- #
+#
+# Mission Types:
+#   - BREAK_BLOCK: Break a specific type of block.
+#     objective: The block material (e.g., "DIAMOND_ORE").
+#   - KILL_MOB: Kill a specific type of mob.
+#     objective: The entity type (e.g., "ZOMBIE").
+#   - CRAFT_ITEM: Craft a specific item.
+#     objective: The item material (e.g., "DIAMOND_PICKAXE").
+#   - STATISTIC: Reach a value for a vanilla Minecraft statistic.
+#     objective: The statistic name (e.g., "AVIATE_ONE_CM").
+#
+# Rewards:
+#   - "eco give %player% <amount>"
+#   - "item:<MATERIAL> <amount>"
+#   - "command: <some other command>"
+#   - "custom_item:<itemName>" (For special, code-handled items)
+
+missions:
+  elytra_flyer_1:
+    name: "&b&lSky Conqueror"
+    description: "&7Travel 10,000 blocks using an Elytra."
+    type: "STATISTIC"
+    objective: "AVIATE_ONE_CM"
+    amount: 1000000 # 10,000 blocks * 100 cm/block
+    prerequisites: []
+    rewards:
+      - "custom_item:chromatic_elytra"
+      - "eco give %player% 5000"

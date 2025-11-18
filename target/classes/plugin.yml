@@ -2,7 +2,7 @@ name: SMPTools
 version: 1.0-SNAPSHOT
 main: com.smp.smptools.SMPTools
 api-version: '1.21'
-author: Berna
+author: berni
 description: A simple SMP plugin with some useful features.
 commands:
   fly:
@@ -46,3 +46,80 @@ commands:
   leaderboard:
     description: Shows the server leaderboard.
     usage: /leaderboard
+  tpr:
+    description: Requests to teleport to another player.
+    usage: /tpr <player>
+  tpa:
+    description: Accepts a teleport request.
+    usage: /tpa
+  tpd:
+    description: Denies a teleport request.
+    usage: /tpd
+  tptoggle:
+    description: Toggle teleport requests.
+  r:
+    description: Reply to the last private message.
+    usage: /r <message>
+  rename:
+    description: Rename the item in your hand with MiniMessage formatting.
+    usage: /rename <name>
+  daily:
+    description: Claim your daily reward.
+  skills:
+    description: View your skill levels.
+  cenchant:
+    description: Apply a custom enchantment to an item.
+    permission: smptools.customenchant
+  tomap:
+    description: Renders an image from a URL onto a map.
+    usage: /tomap <url>
+  music:
+    description: Plays a .nbs song file from a URL.
+    usage: /music <play/broadcast/stop> [url]
+  ride:
+    description: Allows you to ride other entities.
+    usage: /ride
+  sound:
+    description: Plays a custom meme sound.
+    usage: /sound <sound_name>
+    permission: smptools.sound
+  sleepvote:
+    description: Used to vote for skipping the night.
+  givechunkloader:
+    description: Gives a chunk loader item to a player.
+    usage: /givechunkloader <player>
+    permission: smptools.chunkloader.give
+    permission-message: You don't have permission to use this command.
+  invsee:
+    description: View another player's inventory.
+    usage: /invsee <player>
+    permission: smptools.invsee
+    permission-message: You don't have permission to use this command.
+  troll:
+    description: Troll a player with various options.
+    usage: /troll <player>
+    permission: smptools.troll
+    permission-message: You don't have permission to use this command.
+  tags:
+    description: Manages player titles.
+    usage: /tags [set <player> <title>]
+  missions:
+    description: Opens the mission GUI.
+    usage: /missions
+  sudo:
+    description: Force a player to execute a command or chat message.
+    usage: /sudo <player> <command>
+  customitem:
+    description: Gives a custom item with specified CustomModelData.
+    permission: smptools.customitem
+    usage: /<command> <item_type> <custom_model_data>
+permissions:
+  smptools.missions.admin:
+    description: Allows spawning the mission NPC.
+    default: op
+  smptools.troll:
+    description: Allows access to the /troll command.
+    default: op
+  smptools.sudo:
+    description: Allows access to the /sudo command.
+    default: op
