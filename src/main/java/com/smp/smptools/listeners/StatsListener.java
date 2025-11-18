@@ -57,6 +57,14 @@ public class StatsListener implements Listener {
                 Component finalMessage = originalDeathMessage
                         .replaceText(builder -> builder.matchLiteral(player.getName())
                                 .replacement(formattedPlayerName));
+
+                if (player.getKiller() != null) {
+                    Component formattedKillerName = plugin.getChatManager().getFormattedDisplayName(player.getKiller());
+                    finalMessage = finalMessage
+                            .replaceText(builder -> builder.matchLiteral(player.getKiller().getName())
+                                    .replacement(formattedKillerName));
+                }
+
                 event.deathMessage(finalMessage);
             }
         }

@@ -36,16 +36,30 @@ public class TrollGUIListener implements Listener {
     private final SMPTools plugin;
     private static final String GUI_TITLE = "Troll Menu";
     private static final Random random = new Random();
-    private static final Map<Integer, String> trollIdMap = new HashMap<>(); // Map to store explicit integer ID to trollId string mapping
+    private static final Map<Integer, String> trollIdMap = new HashMap<>(); // Map to store explicit integer ID to
+                                                                            // trollId string mapping
+    private static final Map<java.util.UUID, Long> scrambledPlayers = new HashMap<>();
 
     public TrollGUIListener(SMPTools plugin) {
         this.plugin = plugin;
         initializeTrollIdMap(); // Initialize the map when the listener is created
     }
 
+    public static boolean isChatScrambled(Player player) {
+        if (scrambledPlayers.containsKey(player.getUniqueId())) {
+            if (System.currentTimeMillis() < scrambledPlayers.get(player.getUniqueId())) {
+                return true;
+            } else {
+                scrambledPlayers.remove(player.getUniqueId());
+            }
+        }
+        return false;
+    }
+
     private static void initializeTrollIdMap() {
         trollIdMap.clear(); // Ensure map is clear before repopulating
-        // Populate the map with explicit integer IDs and their corresponding trollId strings
+        // Populate the map with explicit integer IDs and their corresponding trollId
+        // strings
         trollIdMap.put(1, "fake_op");
         trollIdMap.put(2, "fake_ban");
         trollIdMap.put(3, "fake_crash");
@@ -80,39 +94,64 @@ public class TrollGUIListener implements Listener {
 
         // Troll Options (10-15 items)
         // Row 1
-        gui.setItem(0, createTrollItem(Material.PAPER, "<red>Fake OP</red>", "<gray>Sends a fake OP message to " + target.getName() + "</gray>", 1));
-        gui.setItem(1, createTrollItem(Material.BARRIER, "<red>Fake Ban</red>", "<gray>Sends a fake ban message to " + target.getName() + "</gray>", 2));
-        gui.setItem(2, createTrollItem(Material.REDSTONE_BLOCK, "<red>Fake Crash</red>", "<gray>Sends a fake client crash message to " + target.getName() + "</gray>", 3));
-        gui.setItem(3, createTrollItem(Material.CHEST, "<gold>Scramble Inventory</gold>", "<gray>Randomizes " + target.getName() + "'s inventory slots.</gray>", 4));
-        gui.setItem(4, createTrollItem(Material.DROPPER, "<gold>Drop Inventory</gold>", "<gray>Forces " + target.getName() + " to drop all items.</gray>", 5));
-        gui.setItem(5, createTrollItem(Material.COAL, "<dark_gray>Blindness</dark_gray>", "<gray>Applies temporary blindness to " + target.getName() + ".</gray>", 6));
-        gui.setItem(6, createTrollItem(Material.ROTTEN_FLESH, "<dark_green>Nausea</dark_green>", "<gray>Applies temporary nausea to " + target.getName() + ".</gray>", 7));
-        gui.setItem(7, createTrollItem(Material.SOUL_SAND, "<dark_gray>Slowness</dark_gray>", "<gray>Applies extreme slowness to " + target.getName() + ".</gray>", 8));
-        gui.setItem(8, createTrollItem(Material.FEATHER, "<aqua>Levitation</aqua>", "<gray>Applies temporary levitation to " + target.getName() + ".</gray>", 9));
+        gui.setItem(0, createTrollItem(Material.PAPER, "<red>Fake OP</red>",
+                "<gray>Sends a fake OP message to " + target.getName() + "</gray>", 1));
+        gui.setItem(1, createTrollItem(Material.BARRIER, "<red>Fake Ban</red>",
+                "<gray>Sends a fake ban message to " + target.getName() + "</gray>", 2));
+        gui.setItem(2, createTrollItem(Material.REDSTONE_BLOCK, "<red>Fake Crash</red>",
+                "<gray>Sends a fake client crash message to " + target.getName() + "</gray>", 3));
+        gui.setItem(3, createTrollItem(Material.CHEST, "<gold>Scramble Inventory</gold>",
+                "<gray>Randomizes " + target.getName() + "'s inventory slots.</gray>", 4));
+        gui.setItem(4, createTrollItem(Material.DROPPER, "<gold>Drop Inventory</gold>",
+                "<gray>Forces " + target.getName() + " to drop all items.</gray>", 5));
+        gui.setItem(5, createTrollItem(Material.COAL, "<dark_gray>Blindness</dark_gray>",
+                "<gray>Applies temporary blindness to " + target.getName() + ".</gray>", 6));
+        gui.setItem(6, createTrollItem(Material.ROTTEN_FLESH, "<dark_green>Nausea</dark_green>",
+                "<gray>Applies temporary nausea to " + target.getName() + ".</gray>", 7));
+        gui.setItem(7, createTrollItem(Material.SOUL_SAND, "<dark_gray>Slowness</dark_gray>",
+                "<gray>Applies extreme slowness to " + target.getName() + ".</gray>", 8));
+        gui.setItem(8, createTrollItem(Material.FEATHER, "<aqua>Levitation</aqua>",
+                "<gray>Applies temporary levitation to " + target.getName() + ".</gray>", 9));
 
         // Row 2
-        gui.setItem(9, createTrollItem(Material.LAVA_BUCKET, "<red>Fake Lava</red>", "<gray>Spawns temporary lava near " + target.getName() + ".</gray>", 10));
-        gui.setItem(10, createTrollItem(Material.WATER_BUCKET, "<blue>Fake Water</blue>", "<gray>Spawns temporary water near " + target.getName() + ".</gray>", 11));
-        gui.setItem(11, createTrollItem(Material.TRIDENT, "<yellow>Lightning Strike</yellow>", "<gray>Strikes " + target.getName() + " with lightning (no damage).</gray>", 12));
-        gui.setItem(12, createTrollItem(Material.TNT, "<red>Safe Explosion</red>", "<gray>Creates a visual explosion near " + target.getName() + " (no damage).</gray>", 13));
-        gui.setItem(13, createTrollItem(Material.CRAFTING_TABLE, "<gold>Swap Hotbar</gold>", "<gray>Swaps " + target.getName() + "'s hotbar with inventory row.</gray>", 14));
-        gui.setItem(14, createTrollItem(Material.SKELETON_SKULL, "<red>Fake Death Message</red>", "<gray>Broadcasts a fake death message for " + target.getName() + ".</gray>", 15));
-        gui.setItem(15, createTrollItem(Material.ENDER_PEARL, "<light_purple>Teleport Randomly</light_purple>", "<gray>Teleports " + target.getName() + " to a random nearby location.</gray>", 16));
-        gui.setItem(16, createTrollItem(Material.KNOWLEDGE_BOOK, "<green>Fake Advancement</green>", "<gray>Grants a fake advancement to " + target.getName() + ".</gray>", 17));
-        gui.setItem(17, createTrollItem(Material.JUKEBOX, "<aqua>Sound Spam</aqua>", "<gray>Spams " + target.getName() + " with annoying sounds.</gray>", 18));
+        gui.setItem(9, createTrollItem(Material.LAVA_BUCKET, "<red>Fake Lava</red>",
+                "<gray>Spawns temporary lava near " + target.getName() + ".</gray>", 10));
+        gui.setItem(10, createTrollItem(Material.WATER_BUCKET, "<blue>Fake Water</blue>",
+                "<gray>Spawns temporary water near " + target.getName() + ".</gray>", 11));
+        gui.setItem(11, createTrollItem(Material.TRIDENT, "<yellow>Lightning Strike</yellow>",
+                "<gray>Strikes " + target.getName() + " with lightning (no damage).</gray>", 12));
+        gui.setItem(12, createTrollItem(Material.TNT, "<red>Safe Explosion</red>",
+                "<gray>Creates a visual explosion near " + target.getName() + " (no damage).</gray>", 13));
+        gui.setItem(13, createTrollItem(Material.CRAFTING_TABLE, "<gold>Swap Hotbar</gold>",
+                "<gray>Swaps " + target.getName() + "'s hotbar with inventory row.</gray>", 14));
+        gui.setItem(14, createTrollItem(Material.SKELETON_SKULL, "<red>Fake Death Message</red>",
+                "<gray>Broadcasts a fake death message for " + target.getName() + ".</gray>", 15));
+        gui.setItem(15, createTrollItem(Material.ENDER_PEARL, "<light_purple>Teleport Randomly</light_purple>",
+                "<gray>Teleports " + target.getName() + " to a random nearby location.</gray>", 16));
+        gui.setItem(16, createTrollItem(Material.KNOWLEDGE_BOOK, "<green>Fake Advancement</green>",
+                "<gray>Grants a fake advancement to " + target.getName() + ".</gray>", 17));
+        gui.setItem(17, createTrollItem(Material.JUKEBOX, "<aqua>Sound Spam</aqua>",
+                "<gray>Spams " + target.getName() + " with annoying sounds.</gray>", 18));
 
         // Row 3
-        gui.setItem(18, createTrollItem(Material.WRITABLE_BOOK, "<gray>Chat Scramble</gray>", "<gray>Temporarily scrambles " + target.getName() + "'s chat messages.</gray>", 19));
-        gui.setItem(19, createTrollItem(Material.CLOCK, "<aqua>Fake Lag Message</aqua>", "<gray>Sends a repeating 'Lag detected!' message to " + target.getName() + ".</gray>", 22));
-        gui.setItem(20, createTrollItem(Material.OAK_DOOR, "<green>Fake Join/Leave</green>", "<gray>Broadcasts a fake join/leave message for a random player.</gray>", 23));
-        gui.setItem(21, createTrollItem(Material.NAME_TAG, "<light_purple>Random Item Rename</light_purple>", "<gray>Renames a random item in " + target.getName() + "'s inventory.</gray>", 24));
-        gui.setItem(22, createTrollItem(Material.SPONGE, "<yellow>Temporary Block Replace</yellow>", "<gray>Temporarily replaces blocks around " + target.getName() + ".</gray>", 25));
-        gui.setItem(23, createTrollItem(Material.NOTE_BLOCK, "<red>Sound Loop</red>", "<gray>Plays an annoying sound on loop for " + target.getName() + ".</gray>", 26));
-        gui.setItem(24, createTrollItem(Material.ANVIL, "<dark_gray>Fake Item Break</dark_gray>", "<gray>Sends a message that " + target.getName() + "'s item broke.</gray>", 21));
-
+        gui.setItem(18, createTrollItem(Material.WRITABLE_BOOK, "<gray>Chat Scramble</gray>",
+                "<gray>Temporarily scrambles " + target.getName() + "'s chat messages.</gray>", 19));
+        gui.setItem(19, createTrollItem(Material.CLOCK, "<aqua>Fake Lag Message</aqua>",
+                "<gray>Sends a repeating 'Lag detected!' message to " + target.getName() + ".</gray>", 22));
+        gui.setItem(20, createTrollItem(Material.OAK_DOOR, "<green>Fake Join/Leave</green>",
+                "<gray>Broadcasts a fake join/leave message for a random player.</gray>", 23));
+        gui.setItem(21, createTrollItem(Material.NAME_TAG, "<light_purple>Random Item Rename</light_purple>",
+                "<gray>Renames a random item in " + target.getName() + "'s inventory.</gray>", 24));
+        gui.setItem(22, createTrollItem(Material.SPONGE, "<yellow>Temporary Block Replace</yellow>",
+                "<gray>Temporarily replaces blocks around " + target.getName() + ".</gray>", 25));
+        gui.setItem(23, createTrollItem(Material.NOTE_BLOCK, "<red>Sound Loop</red>",
+                "<gray>Plays an annoying sound on loop for " + target.getName() + ".</gray>", 26));
+        gui.setItem(24, createTrollItem(Material.ANVIL, "<dark_gray>Fake Item Break</dark_gray>",
+                "<gray>Sends a message that " + target.getName() + "'s item broke.</gray>", 21));
 
         // Close button
-        gui.setItem(53, createTrollItem(Material.RED_WOOL, "<red>Close</red>", "<gray>Close the troll menu.</gray>", 99));
+        gui.setItem(53,
+                createTrollItem(Material.RED_WOOL, "<red>Close</red>", "<gray>Close the troll menu.</gray>", 99));
 
         opener.openInventory(gui);
     }
@@ -131,7 +170,7 @@ public class TrollGUIListener implements Listener {
     public void onInventoryClick(InventoryClickEvent event) {
         // Get the plain text title of the inventory
         String clickedTitle = event.getView().getTitle();
-        
+
         // Check if it's our Troll Menu
         if (!clickedTitle.startsWith(GUI_TITLE + " - ")) {
             return;
@@ -166,12 +205,16 @@ public class TrollGUIListener implements Listener {
         String originalTrollId = trollIdMap.get(trollId); // Use explicit ID directly for lookup
         Bukkit.getLogger().info("TrollGUIListener: Looked up originalTrollId: " + originalTrollId);
         if (originalTrollId == null) { // Should not happen if trollIdMap is correctly populated
-            opener.sendMessage(MiniMessage.miniMessage().deserialize("<red>Error: Unknown troll option (ID: " + trollId + ").</red>"));
+            opener.sendMessage(MiniMessage.miniMessage()
+                    .deserialize("<red>Error: Unknown troll option (ID: " + trollId + ").</red>"));
             opener.closeInventory();
             return;
         }
 
-        opener.sendMessage(MiniMessage.miniMessage().deserialize("<green>Executing troll '" + MiniMessage.miniMessage().serialize(clickedItem.getItemMeta().displayName()) + "' on " + target.getName() + "!</green>"));
+        opener.sendMessage(MiniMessage.miniMessage()
+                .deserialize("<green>Executing troll '"
+                        + MiniMessage.miniMessage().serialize(clickedItem.getItemMeta().displayName()) + "' on "
+                        + target.getName() + "!</green>"));
         executeTroll(opener, target, originalTrollId);
         opener.closeInventory();
     }
@@ -179,13 +222,16 @@ public class TrollGUIListener implements Listener {
     private void executeTroll(Player opener, Player target, String trollId) {
         switch (trollId) {
             case "fake_op":
-                target.sendMessage(MiniMessage.miniMessage().deserialize("<gray>[Server: Opped " + target.getName() + "]</gray>"));
+                target.sendMessage(
+                        MiniMessage.miniMessage().deserialize("<gray>[Server: Opped " + target.getName() + "]</gray>"));
                 break;
             case "fake_ban":
-                target.sendMessage(MiniMessage.miniMessage().deserialize("<red>You have been permanently banned from this server!</red>"));
+                target.sendMessage(MiniMessage.miniMessage()
+                        .deserialize("<red>You have been permanently banned from this server!</red>"));
                 break;
             case "fake_crash":
-                target.sendMessage(MiniMessage.miniMessage().deserialize("<red>Internal Server Error: java.lang.NullPointerException</red>"));
+                target.sendMessage(MiniMessage.miniMessage()
+                        .deserialize("<red>Internal Server Error: java.lang.NullPointerException</red>"));
                 break;
             case "scramble_inv":
                 scrambleInventory(target);
@@ -233,9 +279,9 @@ public class TrollGUIListener implements Listener {
                 soundSpam(target);
                 break;
             case "chat_scramble":
-                // This requires modifying ChatListener or using a temporary chat interceptor
-                // For now, we'll just send a message indicating it happened.
-                opener.sendMessage(MiniMessage.miniMessage().deserialize("<red>Chat Scramble is not fully implemented yet. (Requires ChatListener modification)</red>"));
+                scrambledPlayers.put(target.getUniqueId(), System.currentTimeMillis() + 30000); // 30 seconds
+                opener.sendMessage(MiniMessage.miniMessage()
+                        .deserialize("<green>Chat Scramble activated for " + target.getName() + " (30s)!</green>"));
                 break;
             case "fake_lag_message":
                 fakeLagMessage(target);
@@ -253,10 +299,15 @@ public class TrollGUIListener implements Listener {
                 soundLoop(target);
                 break;
             case "fake_item_break":
-                target.sendMessage(MiniMessage.miniMessage().deserialize("<red>Your " + MiniMessage.miniMessage().serialize(target.getInventory().getItemInMainHand().displayName()) + " just broke!</red>"));
+                target.sendMessage(MiniMessage.miniMessage()
+                        .deserialize("<red>Your "
+                                + MiniMessage.miniMessage()
+                                        .serialize(target.getInventory().getItemInMainHand().displayName())
+                                + " just broke!</red>"));
                 break;
             default:
-                opener.sendMessage(MiniMessage.miniMessage().deserialize("<red>Unknown troll option: " + trollId + "</red>"));
+                opener.sendMessage(
+                        MiniMessage.miniMessage().deserialize("<red>Unknown troll option: " + trollId + "</red>"));
                 break;
         }
     }
@@ -313,8 +364,10 @@ public class TrollGUIListener implements Listener {
     }
 
     private void broadcastFakeDeathMessage(Player player) {
-        // This is a simplified fake death message. More complex ones would mimic actual death causes.
-        Bukkit.broadcast(MiniMessage.miniMessage().deserialize("<red>" + player.getName() + " was slain by [Troll God]</red>"));
+        // This is a simplified fake death message. More complex ones would mimic actual
+        // death causes.
+        Bukkit.broadcast(
+                MiniMessage.miniMessage().deserialize("<red>" + player.getName() + " was slain by [Troll God]</red>"));
     }
 
     private void teleportRandomly(Player player) {
@@ -328,12 +381,14 @@ public class TrollGUIListener implements Listener {
     private void sendFakeAdvancement(Player player) {
         // This is a client-side packet, not directly available in Bukkit API.
         // For a simple troll, we can send a message that looks like an advancement.
-        player.sendMessage(MiniMessage.miniMessage().deserialize("<green>" + player.getName() + " has made the advancement [Troll Master]</green>"));
+        player.sendMessage(MiniMessage.miniMessage()
+                .deserialize("<green>" + player.getName() + " has made the advancement [Troll Master]</green>"));
     }
 
     private void soundSpam(Player player) {
         new BukkitRunnable() {
             int count = 0;
+
             @Override
             public void run() {
                 if (count >= 5) { // Spam 5 times
@@ -349,13 +404,15 @@ public class TrollGUIListener implements Listener {
     private void fakeLagMessage(Player player) {
         new BukkitRunnable() {
             int count = 0;
+
             @Override
             public void run() {
                 if (count >= 3) { // Send 3 messages
                     this.cancel();
                     return;
                 }
-                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Lag detected! Please check your connection.</red>"));
+                player.sendMessage(MiniMessage.miniMessage()
+                        .deserialize("<red>Lag detected! Please check your connection.</red>"));
                 count++;
             }
         }.runTaskTimer(plugin, 0L, 20L); // Every 1 second
@@ -363,18 +420,21 @@ public class TrollGUIListener implements Listener {
 
     private void fakeJoinLeave(Player player) {
         List<Player> onlinePlayers = new ArrayList<>(Bukkit.getOnlinePlayers());
-        if (onlinePlayers.isEmpty()) return;
+        if (onlinePlayers.isEmpty())
+            return;
 
         Player randomPlayer = onlinePlayers.get(random.nextInt(onlinePlayers.size()));
         String fakePlayerName = randomPlayer.getName();
 
         // Fake join message
-        Bukkit.broadcast(MiniMessage.miniMessage().deserialize("<yellow>" + fakePlayerName + " joined the game.</yellow>"));
+        Bukkit.broadcast(
+                MiniMessage.miniMessage().deserialize("<yellow>" + fakePlayerName + " joined the game.</yellow>"));
         new BukkitRunnable() {
             @Override
             public void run() {
                 // Fake leave message after a short delay
-                Bukkit.broadcast(MiniMessage.miniMessage().deserialize("<yellow>" + fakePlayerName + " left the game.</yellow>"));
+                Bukkit.broadcast(MiniMessage.miniMessage()
+                        .deserialize("<yellow>" + fakePlayerName + " left the game.</yellow>"));
             }
         }.runTaskLater(plugin, 20 * 5); // 5 seconds later
     }
@@ -399,8 +459,8 @@ public class TrollGUIListener implements Listener {
             ItemMeta meta = item.getItemMeta();
             List<String> funnyNames = Arrays.asList(
                     "<red>Useless Rock</red>", "<green>Magic Stick</green>", "<blue>Shiny Thing</blue>",
-                    "<gold>Mystery Meat</gold>", "<dark_purple>Broken Dream</dark_purple>", "<gray>Just a Block</gray>"
-            );
+                    "<gold>Mystery Meat</gold>", "<dark_purple>Broken Dream</dark_purple>",
+                    "<gray>Just a Block</gray>");
             meta.displayName(MiniMessage.miniMessage().deserialize(funnyNames.get(random.nextInt(funnyNames.size()))));
             item.setItemMeta(meta);
         }
@@ -423,9 +483,11 @@ public class TrollGUIListener implements Listener {
                         break;
                     }
                 }
-                if (blockToReplace != null) break;
+                if (blockToReplace != null)
+                    break;
             }
-            if (blockToReplace != null) break;
+            if (blockToReplace != null)
+                break;
         }
 
         if (blockToReplace != null) {
@@ -446,6 +508,7 @@ public class TrollGUIListener implements Listener {
     private void soundLoop(Player player) {
         new BukkitRunnable() {
             int count = 0;
+
             @Override
             public void run() {
                 if (count >= 10) { // Loop 10 times

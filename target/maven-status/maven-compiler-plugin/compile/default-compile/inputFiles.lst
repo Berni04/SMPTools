@@ -27,6 +27,7 @@ C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\leaderbo
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\commands\ChunkLoaderCommand.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\listeners\ChunkLoaderListener.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\commands\ReplyCommand.java
+C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\graves\GraveManager.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\commands\RenameCommand.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\listeners\ChatListener.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\listeners\CombatListener.java
@@ -82,3 +83,4 @@ C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\commands
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\SMPTools.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\commands\DelHomeCommand.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\commands\SoundCommand.java
+C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\graves\Grave.java

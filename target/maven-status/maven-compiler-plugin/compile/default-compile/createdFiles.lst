@@ -1,3 +1,4 @@
+com\smp\smptools\graves\Grave.class
 com\smp\smptools\music\Note.class
 com\smp\smptools\listeners\StatsListener$1.class
 com\smp\smptools\listeners\MissionGUIListener.class
@@ -70,6 +71,7 @@ com\smp\smptools\missions\MissionManager$PlayerMissionData.class
 com\smp\smptools\listeners\JoinLeaveListener.class
 com\smp\smptools\commands\SkillsCommand.class
 com\smp\smptools\commands\InvseeCommand.class
+com\smp\smptools\graves\GraveManager.class
 com\smp\smptools\listeners\TrollGUIListener$1.class
 com\smp\smptools\imagemap\MapManager.class
 com\smp\smptools\imagemap\ImageMapRenderer.class
@@ -81,6 +83,7 @@ com\smp\smptools\sleep\SleepVoteCommand.class
 com\smp\smptools\commands\HomesCommand.class
 com\smp\smptools\listeners\TagsGUIListener.class
 com\smp\smptools\music\Layer.class
+com\smp\smptools\listeners\MissionGUIListener$MissionGUIHolder.class
 com\smp\smptools\tpa\TpaManager$1.class
 com\smp\smptools\commands\CustomEnchantCommand.class
 com\smp\smptools\SMPTools.class
