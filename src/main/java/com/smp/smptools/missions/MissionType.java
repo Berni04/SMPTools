@@ -5,5 +5,6 @@ public enum MissionType {
     KILL_MOB,
     CRAFT_ITEM,
     STATISTIC,
-    REACH_LOCATION
+    REACH_LOCATION,
+    SUBMIT_ITEM
 }

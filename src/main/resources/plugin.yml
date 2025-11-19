@@ -117,6 +117,10 @@ commands:
     description: Opens the Advent Calendar.
     usage: /advent
     aliases: [xmas]
+  secretsanta:
+    description: Manage the Secret Santa event.
+    usage: /secretsanta <join|target|deposit|claim>
+    aliases: [ss]
 permissions:
   smptools.missions.admin:
     description: Allows spawning the mission NPC.

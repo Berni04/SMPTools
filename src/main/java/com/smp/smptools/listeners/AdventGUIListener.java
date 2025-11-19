@@ -2,6 +2,7 @@ package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.christmas.AdventManager;
+import com.smp.smptools.utils.HeadUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -17,7 +18,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class AdventGUIListener implements Listener {
@@ -32,9 +32,6 @@ public class AdventGUIListener implements Listener {
     }
 
     public void openAdventGUI(Player player) {
-        // Optional: Check if it is December. For testing purposes, we might want to
-        // allow it or have a config bypass.
-        // But per requirements, it should check.
         if (!adventManager.isDecember() && !player.hasPermission("smptools.advent.bypass")) {
             player.sendMessage(MiniMessage.miniMessage()
                     .deserialize("<red>The Advent Calendar is only available in December!</red>"));
@@ -47,14 +44,22 @@ public class AdventGUIListener implements Listener {
         for (int day = 1; day <= 25; day++) {
             ItemStack item;
             if (adventManager.hasClaimed(player.getUniqueId(), day)) {
-                item = createGuiItem(Material.MINECART, "<gold>Day " + day + "</gold>",
-                        "<gray>Status: <green>Claimed</green></gray>");
+                // Gold Present (Claimed)
+                item = createGuiItem(HeadUtils.getCustomHead(
+                        "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDBkM2MzMDRmZjAxOGZjZTY1MDk5ZWFlZDlkNjhhNGM0OTAxNGFlNzA2MTc2ZjhlZTE4NzcyYTdiMzYyZjU4NSJ9fX0="),
+                        "<gold>Day " + day + "</gold>", "<gray>Status: <green>Claimed</green></gray>");
             } else if (day <= currentDay || player.hasPermission("smptools.advent.bypass")) {
-                item = createGuiItem(Material.LIME_STAINED_GLASS_PANE, "<green>Day " + day + "</green>",
-                        "<gray>Status: <yellow>Available!</yellow></gray>", "<gray>Click to claim!</gray>");
+                // Green Present (Available)
+                item = createGuiItem(HeadUtils.getCustomHead(
+                        "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOWNmYWJiMzU1OTAzYzJiYzUzZjg4ODUyZDRkZjA5NjZjOTQ5OWI3NGMyNDczODk5ZGRkNWY3NzI3M2U2ODY4MSJ9fX0="),
+                        "<green>Day " + day + "</green>", "<gray>Status: <yellow>Available!</yellow></gray>",
+                        "<gray>Click to claim!</gray>");
             } else {
-                item = createGuiItem(Material.RED_STAINED_GLASS_PANE, "<red>Day " + day + "</red>",
-                        "<gray>Status: <red>Locked</red></gray>", "<gray>Come back later!</gray>");
+                // Red Present (Locked)
+                item = createGuiItem(HeadUtils.getCustomHead(
+                        "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjVjOWQzMTc0M2Y0ZDM2YzVhODkxN2ExODE5ZjJmYWUwYWIwODM4MjJlNGZhYmYxNmU4ODkxMjgxMWU2NzZlMCJ9fX0="),
+                        "<red>Day " + day + "</red>", "<gray>Status: <red>Locked</red></gray>",
+                        "<gray>Come back later!</gray>");
             }
             gui.setItem(day - 1, item);
         }
@@ -62,8 +67,7 @@ public class AdventGUIListener implements Listener {
         player.openInventory(gui);
     }
 
-    private ItemStack createGuiItem(Material material, String name, String... loreLines) {
-        ItemStack item = new ItemStack(material);
+    private ItemStack createGuiItem(ItemStack item, String name, String... loreLines) {
         ItemMeta meta = item.getItemMeta();
         meta.displayName(MiniMessage.miniMessage().deserialize(name));
         List<Component> lore = new ArrayList<>();

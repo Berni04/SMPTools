@@ -11,8 +11,10 @@ public class Mission {
     private final int amount;
     private final List<String> rewards;
     private final List<String> prerequisites;
+    private final String category;
 
-    public Mission(String id, String name, String description, MissionType type, String objective, int amount, List<String> rewards, List<String> prerequisites) {
+    public Mission(String id, String name, String description, MissionType type, String objective, int amount,
+            List<String> rewards, List<String> prerequisites, String category) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -21,14 +23,42 @@ public class Mission {
         this.amount = amount;
         this.rewards = rewards;
         this.prerequisites = prerequisites;
+        this.category = category;
     }
 
-    public String getId() { return id; }
-    public String getName() { return name; }
-    public String getDescription() { return description; }
-    public MissionType getType() { return type; }
-    public String getObjective() { return objective; }
-    public int getAmount() { return amount; }
-    public List<String> getRewards() { return rewards; }
-    public List<String> getPrerequisites() { return prerequisites; }
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public MissionType getType() {
+        return type;
+    }
+
+    public String getObjective() {
+        return objective;
+    }
+
+    public int getAmount() {
+        return amount;
+    }
+
+    public List<String> getRewards() {
+        return rewards;
+    }
+
+    public List<String> getPrerequisites() {
+        return prerequisites;
+    }
+
+    public String getCategory() {
+        return category;
+    }
 }

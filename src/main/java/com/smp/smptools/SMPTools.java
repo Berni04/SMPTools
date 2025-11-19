@@ -14,6 +14,9 @@ import com.smp.smptools.chunkloaders.ChunkLoaderManager;
 import com.smp.smptools.missions.MissionManager;
 import com.smp.smptools.accelerators.CropAccelerator;
 import com.smp.smptools.christmas.AdventManager;
+import com.smp.smptools.christmas.SecretSantaManager;
+import com.smp.smptools.managers.ChristmasWorldManager;
+import com.smp.smptools.managers.PortalManager;
 import com.smp.smptools.imagemap.MapManager;
 import com.smp.smptools.listeners.CombatListener;
 import com.smp.smptools.listeners.HomesGUIListener;
@@ -61,6 +64,8 @@ public class SMPTools extends JavaPlugin {
     private CropAccelerator cropAccelerator; // Declare CropAccelerator
     private MissionManager missionManager;
     private AdventManager adventManager;
+    private ChristmasWorldManager christmasWorldManager;
+    private PortalManager portalManager;
 
     @Override
     public void onEnable() {
@@ -197,6 +202,8 @@ public class SMPTools extends JavaPlugin {
         }
         this.missionManager = new MissionManager(this);
         this.adventManager = new AdventManager(this);
+        this.christmasWorldManager = new ChristmasWorldManager(this);
+        this.portalManager = new PortalManager(this);
 
         // Register Listeners
         Bukkit.getPluginManager().registerEvents(new VaultListener(this), this);
@@ -218,7 +225,7 @@ public class SMPTools extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new ChunkLoaderListener(this), this); // Register ChunkLoaderListener
         Bukkit.getPluginManager().registerEvents(new InvseeGUIListener(this), this); // Register InvseeGUIListener
         Bukkit.getPluginManager().registerEvents(new TrollGUIListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new MissionNPCListener(), this);
+        Bukkit.getPluginManager().registerEvents(new MissionNPCListener(this), this);
         Bukkit.getPluginManager().registerEvents(new MissionGUIListener(this), this);
         Bukkit.getPluginManager().registerEvents(new ElytraTrailListener(), this);
         Bukkit.getPluginManager().registerEvents(new MissionTrackerListener(this), this);
@@ -227,6 +234,7 @@ public class SMPTools extends JavaPlugin {
 
         AdventGUIListener adventGUIListener = new AdventGUIListener(this, adventManager);
         Bukkit.getPluginManager().registerEvents(adventGUIListener, this);
+        Bukkit.getPluginManager().registerEvents(new PortalListener(this), this);
 
         // Register Accelerators
         if (getConfig().getBoolean("features.accelerated-growth.enabled", true)) {
@@ -274,6 +282,10 @@ public class SMPTools extends JavaPlugin {
         Objects.requireNonNull(getCommand("r")).setExecutor(new ReplyCommand(this));
         Objects.requireNonNull(getCommand("rename")).setExecutor(new RenameCommand(this));
         Objects.requireNonNull(getCommand("advent")).setExecutor(new AdventCommand(adventGUIListener));
+
+        // Secret Santa
+        SecretSantaManager secretSantaManager = new SecretSantaManager(this);
+        Objects.requireNonNull(getCommand("secretsanta")).setExecutor(new SecretSantaCommand(this, secretSantaManager));
 
         // Register conditional features
         if (getConfig().getBoolean("features.daily-rewards.enabled")) {
@@ -327,6 +339,9 @@ public class SMPTools extends JavaPlugin {
         getLogger().info("SMPTools has been disabled!");
         if (chunkLoaderManager != null) {
             chunkLoaderManager.unloadAllChunks(); // Unload all force-loaded chunks
+        }
+        if (missionManager != null) {
+            missionManager.savePlayerData();
         }
         // Save configs
         saveStatsConfig();
@@ -559,5 +574,13 @@ public class SMPTools extends JavaPlugin {
 
     public AdventManager getAdventManager() {
         return adventManager;
+    }
+
+    public ChristmasWorldManager getChristmasWorldManager() {
+        return christmasWorldManager;
+    }
+
+    public PortalManager getPortalManager() {
+        return portalManager;
     }
 }

@@ -16,6 +16,8 @@ C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\commands
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\listeners\TrollGUIListener.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\commands\CustomItemCommand.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\listeners\TabHealthListener.java
+C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\commands\SecretSantaCommand.java
+C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\utils\HeadUtils.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\commands\MsgCommand.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\commands\PrivateVaultCommand.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\skills\SkillsManager.java
@@ -27,6 +29,7 @@ C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\imagemap
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\leaderboard\LeaderboardManager.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\commands\ChunkLoaderCommand.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\listeners\ChunkLoaderListener.java
+C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\listeners\PortalListener.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\commands\ReplyCommand.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\graves\GraveManager.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\commands\RenameCommand.java
@@ -38,6 +41,7 @@ C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\tags\Tag
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\imagemap\MapManager.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\missions\MissionManager.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\listeners\SitListener.java
+C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\managers\ChristmasWorldManager.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\missions\Mission.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\imagemap\MapCommand.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\listeners\AdvancementListener.java
@@ -47,6 +51,7 @@ C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\accelera
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\commands\CustomEnchantCommand.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\listeners\LeaderboardGUIListener.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\listeners\SleepListener.java
+C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\managers\PortalManager.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\enchants\TelekinesisEnchant.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\listeners\VaultListener.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\music\Note.java
@@ -74,6 +79,7 @@ C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\chat\Cha
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\teleport\TeleportManager.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\listeners\MissionTrackerListener.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\listeners\JoinLeaveListener.java
+C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\christmas\SecretSantaManager.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\music\SongPlayer.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\missions\RewardManager.java
 C:\Users\berna\Desktop\Gemini\1\SMPTools\src\main\java\com\smp\smptools\music\Layer.java

@@ -29,3 +29,377 @@ missions:
     rewards:
       - "custom_item:chromatic_elytra"
       - "eco give %player% 5000"
+
+  # ==========================================
+  #       CHRISTMAS QUESTLINE 1: WORKSHOP
+  # ==========================================
+  workshop_wood_a:
+    name: "&aTimber for Toys (Part 1)"
+    description: "&7Gather wood for the workshop."
+    type: BREAK_BLOCK
+    objective: SPRUCE_LOG
+    amount: 32
+    rewards:
+      - "eco give %player% 100"
+    category: "CHRISTMAS_WORKSHOP"
+  workshop_wood_b:
+    name: "&aTimber for Toys (Part 2)"
+    description: "&7Deliver the wood to the workshop."
+    type: SUBMIT_ITEM
+    objective: SPRUCE_LOG
+    amount: 32
+    rewards:
+      - "eco give %player% 200"
+      - "item:SPRUCE_SAPLING 5"
+    category: "CHRISTMAS_WORKSHOP"
+    prerequisites:
+      - "workshop_wood_a"
+  workshop_coal_a:
+    name: "&aFueling the Forge (Part 1)"
+    description: "&7Mine fuel for the fires."
+    type: BREAK_BLOCK
+    objective: COAL_ORE
+    amount: 16
+    rewards:
+      - "eco give %player% 100"
+    category: "CHRISTMAS_WORKSHOP"
+    prerequisites:
+      - "workshop_wood_b"
+  workshop_coal_b:
+    name: "&aFueling the Forge (Part 2)"
+    description: "&7Stockpile the coal."
+    type: SUBMIT_ITEM
+    objective: COAL
+    amount: 16
+    rewards:
+      - "eco give %player% 200"
+      - "item:TORCH 32"
+    category: "CHRISTMAS_WORKSHOP"
+    prerequisites:
+      - "workshop_coal_a"
+  workshop_wool:
+    name: "&aWarm Winter Wear"
+    description: "&7The elves need new coats."
+    type: SUBMIT_ITEM
+    objective: RED_WOOL
+    amount: 15
+    rewards:
+      - "eco give %player% 300"
+      - "item:SHEARS 1"
+    category: "CHRISTMAS_WORKSHOP"
+    prerequisites:
+      - "workshop_coal_b"
+  workshop_cookies_a:
+    name: "&aSnacks for Santa (Part 1)"
+    description: "&7Bake the treats."
+    type: CRAFT_ITEM
+    objective: COOKIE
+    amount: 64
+    rewards:
+      - "eco give %player% 100"
+    category: "CHRISTMAS_WORKSHOP"
+    prerequisites:
+      - "workshop_wool"
+  workshop_cookies_b:
+    name: "&aSnacks for Santa (Part 2)"
+    description: "&7Fill the cookie jar."
+    type: SUBMIT_ITEM
+    objective: COOKIE
+    amount: 64
+    rewards:
+      - "eco give %player% 300"
+      - "item:MILK_BUCKET 1"
+    category: "CHRISTMAS_WORKSHOP"
+    prerequisites:
+      - "workshop_cookies_a"
+  workshop_iron_a:
+    name: "&aSleigh Repairs (Part 1)"
+    description: "&7Prepare heavy plating."
+    type: CRAFT_ITEM
+    objective: IRON_BLOCK
+    amount: 5
+    rewards:
+      - "eco give %player% 200"
+    category: "CHRISTMAS_WORKSHOP"
+    prerequisites:
+      - "workshop_cookies_b"
+  workshop_iron_b:
+    name: "&aSleigh Repairs (Part 2)"
+    description: "&7Reinforce the sleigh."
+    type: SUBMIT_ITEM
+    objective: IRON_BLOCK
+    amount: 5
+    rewards:
+      - "eco give %player% 500"
+      - "item:IRON_INGOT 10"
+    category: "CHRISTMAS_WORKSHOP"
+    prerequisites:
+      - "workshop_iron_a"
+  workshop_fly:
+    name: "&aTest Flight"
+    description: "&7Ensure the skies are clear."
+    type: STATISTIC
+    objective: AVIATE_ONE_CM
+    amount: 50000
+    rewards:
+      - "eco give %player% 1000"
+      - "item:ELYTRA 1"
+    category: "CHRISTMAS_WORKSHOP"
+    prerequisites:
+      - "workshop_iron_b"
+  # ==========================================
+  #        CHRISTMAS QUESTLINE 2: GRINCH
+  # ==========================================
+  grinch_coal_a:
+    name: "&cCleaning the Coal (Part 1)"
+    description: "&7Remove the coal from stockings."
+    type: BREAK_BLOCK
+    objective: COAL_ORE
+    amount: 32
+    rewards:
+      - "eco give %player% 100"
+    category: "CHRISTMAS_GRINCH"
+  grinch_coal_b:
+    name: "&cCleaning the Coal (Part 2)"
+    description: "&7Dispose of the evidence."
+    type: SUBMIT_ITEM
+    objective: COAL
+    amount: 32
+    rewards:
+      - "eco give %player% 200"
+      - "item:CHARCOAL 16"
+    category: "CHRISTMAS_GRINCH"
+    prerequisites:
+      - "grinch_coal_a"
+  grinch_zombies_a:
+    name: "&cMinion Control (Part 1)"
+    description: "&7Defend the village."
+    type: KILL_MOB
+    objective: ZOMBIE
+    amount: 20
+    rewards:
+      - "eco give %player% 150"
+    category: "CHRISTMAS_GRINCH"
+    prerequisites:
+      - "grinch_coal_b"
+  grinch_zombies_b:
+    name: "&cMinion Control (Part 2)"
+    description: "&7Prove the deed is done."
+    type: SUBMIT_ITEM
+    objective: ROTTEN_FLESH
+    amount: 20
+    rewards:
+      - "eco give %player% 250"
+      - "item:GOLDEN_SWORD 1"
+    category: "CHRISTMAS_GRINCH"
+    prerequisites:
+      - "grinch_zombies_a"
+  grinch_paper_a:
+    name: "&cWrapping Paper (Part 1)"
+    description: "&7Make new wrapping paper."
+    type: CRAFT_ITEM
+    objective: PAPER
+    amount: 64
+    rewards:
+      - "eco give %player% 100"
+    category: "CHRISTMAS_GRINCH"
+    prerequisites:
+      - "grinch_zombies_b"
+  grinch_paper_b:
+    name: "&cWrapping Paper (Part 2)"
+    description: "&7Supply the packing station."
+    type: SUBMIT_ITEM
+    objective: PAPER
+    amount: 64
+    rewards:
+      - "eco give %player% 300"
+      - "item:BOOK 5"
+    category: "CHRISTMAS_GRINCH"
+    prerequisites:
+      - "grinch_paper_a"
+  grinch_skeletons_a:
+    name: "&cBone to Pick (Part 1)"
+    description: "&7Chase away the bony intruders."
+    type: KILL_MOB
+    objective: SKELETON
+    amount: 20
+    rewards:
+      - "eco give %player% 150"
+    category: "CHRISTMAS_GRINCH"
+    prerequisites:
+      - "grinch_paper_b"
+  grinch_skeletons_b:
+    name: "&cBone to Pick (Part 2)"
+    description: "&7Collect the spoils."
+    type: SUBMIT_ITEM
+    objective: BONE
+    amount: 20
+    rewards:
+      - "eco give %player% 250"
+      - "item:BONE_MEAL 32"
+    category: "CHRISTMAS_GRINCH"
+    prerequisites:
+      - "grinch_skeletons_a"
+  grinch_cake_a:
+    name: "&cThe Apology Cake (Part 1)"
+    description: "&7Bake a peace offering."
+    type: CRAFT_ITEM
+    objective: CAKE
+    amount: 1
+    rewards:
+      - "eco give %player% 200"
+    category: "CHRISTMAS_GRINCH"
+    prerequisites:
+      - "grinch_skeletons_b"
+  grinch_cake_b:
+    name: "&cThe Apology Cake (Part 2)"
+    description: "&7Place it on the banquet table."
+    type: SUBMIT_ITEM
+    objective: CAKE
+    amount: 1
+    rewards:
+      - "eco give %player% 500"
+      - "item:COCOA_BEANS 16"
+    category: "CHRISTMAS_GRINCH"
+    prerequisites:
+      - "grinch_cake_a"
+  grinch_walk:
+    name: "&cSpreading Cheer"
+    description: "&7Ensure everyone is happy."
+    type: STATISTIC
+    objective: WALK_ONE_CM
+    amount: 100000
+    rewards:
+      - "eco give %player% 1000"
+      - "item:TOTEM_OF_UNDYING 1"
+    category: "CHRISTMAS_GRINCH"
+    prerequisites:
+      - "grinch_cake_b"
+  # ==========================================
+  #        CHRISTMAS QUESTLINE 3: FEAST
+  # ==========================================
+  feast_beef_a:
+    name: "&6The Main Course (Part 1)"
+    description: "&7Hunt for the roast."
+    type: KILL_MOB
+    objective: COW
+    amount: 15
+    rewards:
+      - "eco give %player% 100"
+    category: "CHRISTMAS_FEAST"
+  feast_beef_b:
+    name: "&6The Main Course (Part 2)"
+    description: "&7Deliver the meat."
+    type: SUBMIT_ITEM
+    objective: COOKED_BEEF
+    amount: 15
+    rewards:
+      - "eco give %player% 200"
+      - "item:LEATHER 15"
+    category: "CHRISTMAS_FEAST"
+    prerequisites:
+      - "feast_beef_a"
+  feast_carrots_a:
+    name: "&6Vegetable Harvest (Part 1)"
+    description: "&7Harvest the crops."
+    type: BREAK_BLOCK
+    objective: CARROTS
+    amount: 64
+    rewards:
+      - "eco give %player% 100"
+    category: "CHRISTMAS_FEAST"
+    prerequisites:
+      - "feast_beef_b"
+  feast_carrots_b:
+    name: "&6Vegetable Harvest (Part 2)"
+    description: "&7Fill the veggie baskets."
+    type: SUBMIT_ITEM
+    objective: CARROT
+    amount: 64
+    rewards:
+      - "eco give %player% 200"
+      - "item:GOLDEN_CARROT 10"
+    category: "CHRISTMAS_FEAST"
+    prerequisites:
+      - "feast_carrots_a"
+  feast_sugar_a:
+    name: "&6Sweetener (Part 1)"
+    description: "&7Cut down the cane."
+    type: BREAK_BLOCK
+    objective: SUGAR_CANE
+    amount: 64
+    rewards:
+      - "eco give %player% 100"
+    category: "CHRISTMAS_FEAST"
+    prerequisites:
+      - "feast_carrots_b"
+  feast_sugar_b:
+    name: "&6Sweetener (Part 2)"
+    description: "&7Stock the pantry."
+    type: SUBMIT_ITEM
+    objective: SUGAR_CANE
+    amount: 64
+    rewards:
+      - "eco give %player% 200"
+      - "item:SUGAR 64"
+    category: "CHRISTMAS_FEAST"
+    prerequisites:
+      - "feast_sugar_a"
+  feast_pie_a:
+    name: "&6Dessert Time (Part 1)"
+    description: "&7Bake the pies."
+    type: CRAFT_ITEM
+    objective: PUMPKIN_PIE
+    amount: 16
+    rewards:
+      - "eco give %player% 150"
+    category: "CHRISTMAS_FEAST"
+    prerequisites:
+      - "feast_sugar_b"
+  feast_pie_b:
+    name: "&6Dessert Time (Part 2)"
+    description: "&7Serve the dessert."
+    type: SUBMIT_ITEM
+    objective: PUMPKIN_PIE
+    amount: 16
+    rewards:
+      - "eco give %player% 300"
+      - "item:PUMPKIN_SEEDS 16"
+    category: "CHRISTMAS_FEAST"
+    prerequisites:
+      - "feast_pie_a"
+  feast_apple_a:
+    name: "&6Golden Garnish (Part 1)"
+    description: "&7Craft the centerpiece."
+    type: CRAFT_ITEM
+    objective: GOLDEN_APPLE
+    amount: 5
+    rewards:
+      - "eco give %player% 200"
+    category: "CHRISTMAS_FEAST"
+    prerequisites:
+      - "feast_pie_b"
+  feast_apple_b:
+    name: "&6Golden Garnish (Part 2)"
+    description: "&7Present the final dish."
+    type: SUBMIT_ITEM
+    objective: GOLDEN_APPLE
+    amount: 5
+    rewards:
+      - "eco give %player% 500"
+      - "item:ENCHANTED_GOLDEN_APPLE 1"
+    category: "CHRISTMAS_FEAST"
+    prerequisites:
+      - "feast_apple_a"
+  feast_sprint:
+    name: "&6Burning Calories"
+    description: "&7Burn off the feast."
+    type: STATISTIC
+    objective: SPRINT_ONE_CM
+    amount: 50000
+    rewards:
+      - "eco give %player% 1000"
+      - "item:COOKED_PORKCHOP 64"
+    category: "CHRISTMAS_FEAST"
+    prerequisites:
+      - "feast_apple_b"

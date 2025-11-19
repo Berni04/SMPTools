@@ -3,6 +3,7 @@ package com.smp.smptools.listeners;
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.missions.Mission;
 import com.smp.smptools.missions.MissionManager;
+import com.smp.smptools.missions.MissionType;
 import com.smp.smptools.missions.RewardManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -32,6 +33,7 @@ public class MissionGUIListener implements Listener {
     private static final String COMPLETED_MISSIONS_TITLE = "Completed Missions";
     private static final String CONFIRM_ACCEPT_TITLE = "Confirm Mission Acceptance";
     private static final String COLOR_GUI_TITLE = "Choose a Trail Color";
+    private static final String QUESTLINE_SELECTION_TITLE = "Choose Your Path";
 
     private static MissionManager missionManager;
 
@@ -53,7 +55,7 @@ public class MissionGUIListener implements Listener {
         if (title.equals(MAIN_GUI_TITLE) || title.equals(MAIN_GUI_TITLE_NPC) ||
                 title.equals(AVAILABLE_MISSIONS_TITLE) || title.equals(IN_PROGRESS_MISSIONS_TITLE) ||
                 title.equals(COMPLETED_MISSIONS_TITLE) || title.equals(CONFIRM_ACCEPT_TITLE) ||
-                title.equals(COLOR_GUI_TITLE)) {
+                title.equals(COLOR_GUI_TITLE) || title.equals(QUESTLINE_SELECTION_TITLE)) {
 
             event.setCancelled(true);
 
@@ -82,6 +84,9 @@ public class MissionGUIListener implements Listener {
                     break;
                 case COLOR_GUI_TITLE:
                     handleColorGUIClick(event, player);
+                    break;
+                case QUESTLINE_SELECTION_TITLE:
+                    handleQuestlineSelectionClick(event, player);
                     break;
             }
         }
@@ -116,6 +121,29 @@ public class MissionGUIListener implements Listener {
     private void handleInProgressMissionsClick(InventoryClickEvent event, Player player, boolean isNpc) {
         if (isBackButton(event.getCurrentItem())) {
             openMissionGUI(player, isNpc);
+            return;
+        }
+
+        Mission clickedMission = getMissionFromItem(event.getCurrentItem());
+        if (clickedMission == null)
+            return;
+
+        if (clickedMission.getType() == MissionType.SUBMIT_ITEM) {
+            Material requiredMaterial = Material.valueOf(clickedMission.getObjective());
+            int requiredAmount = clickedMission.getAmount();
+            int currentAmount = countItems(player, requiredMaterial);
+
+            if (currentAmount >= requiredAmount) {
+                removeItems(player, requiredMaterial, requiredAmount);
+                missionManager.forceCompleteMission(player, clickedMission.getId());
+                player.sendMessage(Component.text("Mission completed! Items submitted.", NamedTextColor.GREEN));
+                openCompletedMissionsGUI(player, isNpc);
+            } else {
+                player.sendMessage(Component.text(
+                        "You don't have enough items! Need " + requiredAmount + " " + requiredMaterial.name(),
+                        NamedTextColor.RED));
+                player.closeInventory();
+            }
         }
     }
 
@@ -224,13 +252,40 @@ public class MissionGUIListener implements Listener {
         playerData.getClaimedMissions().add(missionId);
         player.closeInventory();
         player.sendMessage(Component.text("Chromatic Elytra received!", NamedTextColor.GOLD));
+        player.sendMessage(Component.text("Chromatic Elytra received!", NamedTextColor.GOLD));
+    }
+
+    private void handleQuestlineSelectionClick(InventoryClickEvent event, Player player) {
+        ItemStack clickedItem = event.getCurrentItem();
+        if (clickedItem == null)
+            return;
+
+        String questline = null;
+        switch (clickedItem.getType()) {
+            case CRAFTING_TABLE:
+                questline = "CHRISTMAS_WORKSHOP";
+                break;
+            case GREEN_WOOL:
+                questline = "CHRISTMAS_GRINCH";
+                break;
+            case CAKE:
+                questline = "CHRISTMAS_FEAST";
+                break;
+        }
+
+        if (questline != null) {
+            MissionManager.PlayerMissionData playerData = missionManager.getPlayerData(player);
+            playerData.setSelectedQuestline(questline);
+            player.sendMessage(Component.text("You have chosen your path!", NamedTextColor.GREEN));
+            openMissionGUI(player, true, questline);
+        }
     }
 
     // --- GUI Creation Methods ---
 
-    public static void openMissionGUI(Player player, boolean isNpc) {
+    public static void openMissionGUI(Player player, boolean isNpc, String category) {
         String title = isNpc ? MAIN_GUI_TITLE_NPC : MAIN_GUI_TITLE;
-        Inventory gui = Bukkit.createInventory(new MissionGUIHolder(isNpc), 27, Component.text(title));
+        Inventory gui = Bukkit.createInventory(new MissionGUIHolder(isNpc, category), 27, Component.text(title));
         gui.setItem(11, createGuiItem(Material.BOOK, "&a&lAvailable Missions",
                 List.of("§7Click to see missions you can start.")));
         gui.setItem(13,
@@ -240,19 +295,30 @@ public class MissionGUIListener implements Listener {
         player.openInventory(gui);
     }
 
-    // Overload for backward compatibility if needed, defaults to false
+    // Overload for backward compatibility if needed, defaults to false and NORMAL
     public static void openMissionGUI(Player player) {
-        openMissionGUI(player, false);
+        openMissionGUI(player, false, "NORMAL");
+    }
+
+    public static void openMissionGUI(Player player, boolean isNpc) {
+        openMissionGUI(player, isNpc, "NORMAL");
     }
 
     private void openAvailableMissionsGUI(Player player, boolean isNpc) {
-        Inventory gui = Bukkit.createInventory(new MissionGUIHolder(isNpc), 54,
+        String category = "NORMAL";
+        if (player.getOpenInventory().getTopInventory().getHolder() instanceof MissionGUIHolder) {
+            category = ((MissionGUIHolder) player.getOpenInventory().getTopInventory().getHolder()).getCategory();
+        }
+
+        Inventory gui = Bukkit.createInventory(new MissionGUIHolder(isNpc, category), 54,
                 Component.text(AVAILABLE_MISSIONS_TITLE));
         MissionManager.PlayerMissionData playerData = missionManager.getPlayerData(player);
         for (Mission mission : missionManager.getAllMissions().values()) {
+            if (!mission.getCategory().equalsIgnoreCase(category))
+                continue;
+
             if (!playerData.getActiveMissions().contains(mission.getId()) &&
-                    !playerData.getCompletedMissions().contains(mission.getId())) { // Show even if claimed? No, claimed
-                                                                                    // implies completed.
+                    !playerData.getCompletedMissions().contains(mission.getId())) {
                 gui.addItem(createMissionItem(mission, 0, MissionStatus.AVAILABLE, false));
             }
         }
@@ -261,14 +327,25 @@ public class MissionGUIListener implements Listener {
     }
 
     private void openInProgressMissionsGUI(Player player, boolean isNpc) {
-        Inventory gui = Bukkit.createInventory(new MissionGUIHolder(isNpc), 54,
+        String category = "NORMAL";
+        if (player.getOpenInventory().getTopInventory().getHolder() instanceof MissionGUIHolder) {
+            category = ((MissionGUIHolder) player.getOpenInventory().getTopInventory().getHolder()).getCategory();
+        }
+
+        Inventory gui = Bukkit.createInventory(new MissionGUIHolder(isNpc, category), 54,
                 Component.text(IN_PROGRESS_MISSIONS_TITLE));
         MissionManager.PlayerMissionData playerData = missionManager.getPlayerData(player);
         for (String missionId : playerData.getActiveMissions()) {
             Mission mission = missionManager.getMission(missionId);
             if (mission == null || playerData.getCompletedMissions().contains(missionId))
                 continue;
+            if (!mission.getCategory().equalsIgnoreCase(category))
+                continue;
+
             int progress = playerData.getMissionProgress().getOrDefault(missionId, 0);
+            if (mission.getType() == MissionType.SUBMIT_ITEM) {
+                progress = countItems(player, Material.valueOf(mission.getObjective()));
+            }
             gui.addItem(createMissionItem(mission, progress, MissionStatus.IN_PROGRESS, false));
         }
         addBackButton(gui, 49);
@@ -276,13 +353,21 @@ public class MissionGUIListener implements Listener {
     }
 
     private void openCompletedMissionsGUI(Player player, boolean isNpc) {
-        Inventory gui = Bukkit.createInventory(new MissionGUIHolder(isNpc), 54,
+        String category = "NORMAL";
+        if (player.getOpenInventory().getTopInventory().getHolder() instanceof MissionGUIHolder) {
+            category = ((MissionGUIHolder) player.getOpenInventory().getTopInventory().getHolder()).getCategory();
+        }
+
+        Inventory gui = Bukkit.createInventory(new MissionGUIHolder(isNpc, category), 54,
                 Component.text(COMPLETED_MISSIONS_TITLE));
         MissionManager.PlayerMissionData playerData = missionManager.getPlayerData(player);
         for (String missionId : playerData.getCompletedMissions()) {
             Mission mission = missionManager.getMission(missionId);
             if (mission == null)
                 continue;
+            if (!mission.getCategory().equalsIgnoreCase(category))
+                continue;
+
             boolean isClaimed = playerData.getClaimedMissions().contains(missionId);
             gui.addItem(createMissionItem(mission, mission.getAmount(), MissionStatus.COMPLETED, isClaimed));
         }
@@ -291,7 +376,9 @@ public class MissionGUIListener implements Listener {
     }
 
     private void openConfirmationGUI(Player player, Mission mission, boolean isNpc) {
-        Inventory gui = Bukkit.createInventory(new MissionGUIHolder(isNpc), 27, Component.text(CONFIRM_ACCEPT_TITLE));
+        String category = mission.getCategory();
+        Inventory gui = Bukkit.createInventory(new MissionGUIHolder(isNpc, category), 27,
+                Component.text(CONFIRM_ACCEPT_TITLE));
         ItemStack confirmItem = createGuiItem(Material.GREEN_WOOL, "&a&lConfirm",
                 List.of("§7Accept this mission.", "mission_id:" + mission.getId()));
         ItemStack cancelItem = createGuiItem(Material.RED_WOOL, "&c&lCancel", List.of("§7Do not accept this mission."));
@@ -311,6 +398,22 @@ public class MissionGUIListener implements Listener {
         gui.setItem(6, createGuiItem(Material.BLACK_WOOL, "&0Black Trail", List.of("mission_id:" + missionId)));
         gui.setItem(7, createGuiItem(Material.WHITE_WOOL, "&fWhite Trail", List.of("mission_id:" + missionId)));
         gui.setItem(8, createGuiItem(Material.CYAN_WOOL, "&bRainbow Trail", List.of("mission_id:" + missionId)));
+        player.openInventory(gui);
+        player.openInventory(gui);
+    }
+
+    public static void openQuestlineSelectionGUI(Player player) {
+        Inventory gui = Bukkit.createInventory(null, 9, Component.text(QUESTLINE_SELECTION_TITLE));
+
+        gui.setItem(2, createGuiItem(Material.CRAFTING_TABLE, "&a&lSanta's Workshop Recovery",
+                List.of("§7Help Santa rebuild after the storm.", "", "§eClick to select this path!")));
+
+        gui.setItem(4, createGuiItem(Material.GREEN_WOOL, "&c&lThe Grinch's Sabotage",
+                List.of("§7Recover stolen items and clean up the mess.", "", "§eClick to select this path!")));
+
+        gui.setItem(6, createGuiItem(Material.CAKE, "&6&lThe Great Feast",
+                List.of("§7Gather ingredients for a massive dinner.", "", "§eClick to select this path!")));
+
         player.openInventory(gui);
     }
 
@@ -408,16 +511,53 @@ public class MissionGUIListener implements Listener {
         return null;
     }
 
+    private int countItems(Player player, Material material) {
+        int count = 0;
+        for (ItemStack item : player.getInventory().getContents()) {
+            if (item != null && item.getType() == material) {
+                count += item.getAmount();
+            }
+        }
+        return count;
+    }
+
+    private void removeItems(Player player, Material material, int amount) {
+        int remaining = amount;
+        for (ItemStack item : player.getInventory().getContents()) {
+            if (item != null && item.getType() == material) {
+                if (item.getAmount() > remaining) {
+                    item.setAmount(item.getAmount() - remaining);
+                    remaining = 0;
+                } else {
+                    remaining -= item.getAmount();
+                    item.setAmount(0);
+                }
+                if (remaining <= 0)
+                    break;
+            }
+        }
+    }
+
     // Helper class to track GUI context
     public static class MissionGUIHolder implements org.bukkit.inventory.InventoryHolder {
         private final boolean isNpc;
+        private final String category;
+
+        public MissionGUIHolder(boolean isNpc, String category) {
+            this.isNpc = isNpc;
+            this.category = category;
+        }
 
         public MissionGUIHolder(boolean isNpc) {
-            this.isNpc = isNpc;
+            this(isNpc, "NORMAL");
         }
 
         public boolean isNpc() {
             return isNpc;
+        }
+
+        public String getCategory() {
+            return category;
         }
 
         @Override
