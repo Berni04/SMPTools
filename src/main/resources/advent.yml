@@ -1,0 +1,54 @@
+rewards:
+  1:
+    - "item: COOKIE 16"
+  2:
+    - "item: COAL 8"
+  3:
+    - "item: SNOWBALL 32"
+  4:
+    - "item: IRON_INGOT 5"
+  5:
+    - "item: GOLDEN_APPLE 1"
+  6:
+    - "item: NAME_TAG 1"
+  7:
+    - "item: DIAMOND 3"
+  8:
+    - "item: CAKE 1"
+  9:
+    - "item: EXPERIENCE_BOTTLE 16"
+  10:
+    - "item: SADDLE 1"
+  11:
+    - "item: GOLD_INGOT 5"
+  12:
+    - "item: MUSIC_DISC_PIGSTEP 1"
+  13:
+    - "item: ENDER_PEARL 4"
+  14:
+    - "item: DIAMOND_HORSE_ARMOR 1"
+  15:
+    - "item: EMERALD 2"
+  16:
+    - "item: SLIME_BLOCK 1"
+  17:
+    - "item: GHAST_TEAR 1"
+  18:
+    - "item: OBSIDIAN 4"
+  19:
+    - "item: TOTEM_OF_UNDYING 1"
+  20:
+    - "item: SHULKER_SHELL 1"
+  21:
+    - "item: NETHERITE_SCRAP 1"
+  22:
+    - "item: ENCHANTED_GOLDEN_APPLE 1"
+  23:
+    - "item: DRAGON_BREATH 1"
+  24:
+    - "item: WITHER_SKELETON_SKULL 1"
+  25:
+    - "item: NETHERITE_INGOT 1"
+    - "broadcast: &a%player% has claimed the Christmas Grand Prize!"
+
+players: {}

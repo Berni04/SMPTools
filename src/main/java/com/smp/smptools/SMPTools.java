@@ -13,6 +13,7 @@ import com.smp.smptools.chat.ChatManager;
 import com.smp.smptools.chunkloaders.ChunkLoaderManager;
 import com.smp.smptools.missions.MissionManager;
 import com.smp.smptools.accelerators.CropAccelerator;
+import com.smp.smptools.christmas.AdventManager;
 import com.smp.smptools.imagemap.MapManager;
 import com.smp.smptools.listeners.CombatListener;
 import com.smp.smptools.listeners.HomesGUIListener;
@@ -59,6 +60,7 @@ public class SMPTools extends JavaPlugin {
     private ChunkLoaderManager chunkLoaderManager;
     private CropAccelerator cropAccelerator; // Declare CropAccelerator
     private MissionManager missionManager;
+    private AdventManager adventManager;
 
     @Override
     public void onEnable() {
@@ -194,6 +196,7 @@ public class SMPTools extends JavaPlugin {
             this.mapManager.loadMaps();
         }
         this.missionManager = new MissionManager(this);
+        this.adventManager = new AdventManager(this);
 
         // Register Listeners
         Bukkit.getPluginManager().registerEvents(new VaultListener(this), this);
@@ -219,7 +222,11 @@ public class SMPTools extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new MissionGUIListener(this), this);
         Bukkit.getPluginManager().registerEvents(new ElytraTrailListener(), this);
         Bukkit.getPluginManager().registerEvents(new MissionTrackerListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new MissionTrackerListener(this), this);
         Bukkit.getPluginManager().registerEvents(new com.smp.smptools.graves.GraveManager(this), this);
+
+        AdventGUIListener adventGUIListener = new AdventGUIListener(this, adventManager);
+        Bukkit.getPluginManager().registerEvents(adventGUIListener, this);
 
         // Register Accelerators
         if (getConfig().getBoolean("features.accelerated-growth.enabled", true)) {
@@ -266,6 +273,7 @@ public class SMPTools extends JavaPlugin {
         Objects.requireNonNull(getCommand("customitem")).setExecutor(new CustomItemCommand());
         Objects.requireNonNull(getCommand("r")).setExecutor(new ReplyCommand(this));
         Objects.requireNonNull(getCommand("rename")).setExecutor(new RenameCommand(this));
+        Objects.requireNonNull(getCommand("advent")).setExecutor(new AdventCommand(adventGUIListener));
 
         // Register conditional features
         if (getConfig().getBoolean("features.daily-rewards.enabled")) {
@@ -547,5 +555,9 @@ public class SMPTools extends JavaPlugin {
 
     public MissionManager getMissionManager() {
         return missionManager;
+    }
+
+    public AdventManager getAdventManager() {
+        return adventManager;
     }
 }

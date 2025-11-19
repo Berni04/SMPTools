@@ -30,6 +30,7 @@ com\smp\smptools\teleport\TeleportManager.class
 com\smp\smptools\enchants\TelekinesisEnchant.class
 com\smp\smptools\commands\MissionCommand.class
 com\smp\smptools\listeners\SitListener.class
+com\smp\smptools\commands\AdventCommand.class
 com\smp\smptools\enchants\LumberjackEnchant.class
 com\smp\smptools\commands\SkillsCommand$1.class
 com\smp\smptools\listeners\MissionGUIListener$1.class
@@ -49,6 +50,7 @@ com\smp\smptools\listeners\VaultListener.class
 com\smp\smptools\commands\HomeCommand.class
 com\smp\smptools\commands\RideCommand.class
 com\smp\smptools\skills\SkillsManager.class
+com\smp\smptools\listeners\AdventGUIListener.class
 com\smp\smptools\music\NBSParser.class
 com\smp\smptools\listeners\CombatListener.class
 com\smp\smptools\listeners\MissionNPCListener.class
@@ -84,6 +86,7 @@ com\smp\smptools\commands\HomesCommand.class
 com\smp\smptools\listeners\TagsGUIListener.class
 com\smp\smptools\music\Layer.class
 com\smp\smptools\listeners\MissionGUIListener$MissionGUIHolder.class
+com\smp\smptools\christmas\AdventManager.class
 com\smp\smptools\tpa\TpaManager$1.class
 com\smp\smptools\commands\CustomEnchantCommand.class
 com\smp\smptools\SMPTools.class
