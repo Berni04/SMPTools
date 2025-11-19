@@ -113,6 +113,10 @@ commands:
     description: Gives a custom item with specified CustomModelData.
     permission: smptools.customitem
     usage: /<command> <item_type> <custom_model_data>
+  advent:
+    description: Opens the Advent Calendar.
+    usage: /advent
+    aliases: [xmas]
 permissions:
   smptools.missions.admin:
     description: Allows spawning the mission NPC.
