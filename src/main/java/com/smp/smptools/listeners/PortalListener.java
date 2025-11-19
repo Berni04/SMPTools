@@ -43,7 +43,8 @@ public class PortalListener implements Listener {
 
         Block block = to.getBlock();
         if (block.getType() == Material.POWDER_SNOW) {
-            if (isPortalFrame(block)) {
+            // Check if this powder snow is inside a valid portal frame
+            if (isInsidePortal(block)) {
                 Player player = event.getPlayer();
 
                 // Teleport logic
@@ -59,6 +60,28 @@ public class PortalListener implements Listener {
                 }
             }
         }
+    }
+
+    private boolean isInsidePortal(Block powderSnow) {
+        // Check all possible frame orientations around this powder snow block
+        BlockFace[] horizontalFaces = { BlockFace.EAST, BlockFace.WEST, BlockFace.NORTH, BlockFace.SOUTH };
+
+        for (BlockFace face : horizontalFaces) {
+            // Check if there's a snow block frame in this direction
+            Block adjacentBlock = powderSnow.getRelative(face);
+            if (adjacentBlock.getType() == Material.SNOW_BLOCK) {
+                // This could be part of a frame, check if it's a valid portal
+                // Try checking from the bottom of the portal
+                Block bottomFrame = powderSnow.getRelative(BlockFace.DOWN);
+                if (bottomFrame.getType() == Material.SNOW_BLOCK) {
+                    if (checkFrame(bottomFrame, face) || checkFrame(bottomFrame, face.getOppositeFace())) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     private boolean isPortalFrame(Block center) {
