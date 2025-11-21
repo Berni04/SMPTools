@@ -45,32 +45,7 @@ public class MissionCommand implements CommandExecutor {
         if (args.length > 0) {
             // Admin commands
             if (args[0].equalsIgnoreCase("npc")) {
-                if (args.length > 1) {
-                    if (args[1].equalsIgnoreCase("spawn")) {
-                        if (args.length > 2 && args[2].equalsIgnoreCase("santa")) {
-                            handleSantaSpawn(player);
-                        } else {
-                            handleNpcSpawn(player);
-                        }
-                        return true;
-                    }
-                    if (args[1].equalsIgnoreCase("remove")) {
-                        if (args.length > 2) {
-                            try {
-                                int radius = Integer.parseInt(args[2]);
-                                handleNpcRemove(player, radius);
-                            } catch (NumberFormatException e) {
-                                player.sendMessage(
-                                        Component.text("Invalid radius. Please specify a number.", NamedTextColor.RED));
-                            }
-                        } else {
-                            player.sendMessage(
-                                    Component.text("Usage: /missions npc remove <radius>", NamedTextColor.RED));
-                        }
-                        return true;
-                    }
-                }
-                player.sendMessage(Component.text("Usage: /missions npc <spawn [santa]|remove>", NamedTextColor.RED));
+                player.sendMessage(Component.text("Use /npc command for NPC management.", NamedTextColor.YELLOW));
                 return true;
             }
 
@@ -95,84 +70,7 @@ public class MissionCommand implements CommandExecutor {
         return true;
     }
 
-    private void handleNpcSpawn(Player player) {
-        if (!player.hasPermission("smptools.missions.admin")) {
-            player.sendMessage(Component.text("You don't have permission to do that.", NamedTextColor.RED));
-            return;
-        }
-
-        Villager npc = player.getWorld().spawn(player.getLocation(), Villager.class, v -> {
-            v.setAI(false);
-            v.setInvulnerable(true);
-            v.setSilent(true);
-            v.setCustomNameVisible(true);
-            v.customName(NPC_NAME);
-            v.setVillagerType(Villager.Type.PLAINS); // Or any other type
-            v.setProfession(Villager.Profession.LIBRARIAN); // Looks wise
-            v.getPersistentDataContainer().set(MISSION_NPC_KEY, PersistentDataType.BYTE, (byte) 1);
-        });
-
-        player.sendMessage(Component.text("Quest Master NPC spawned successfully!", NamedTextColor.GREEN));
-    }
-
-    private void handleSantaSpawn(Player player) {
-        if (!player.hasPermission("smptools.missions.admin")) {
-            player.sendMessage(Component.text("You don't have permission to do that.", NamedTextColor.RED));
-            return;
-        }
-
-        Zombie npc = player.getWorld().spawn(player.getLocation(), Zombie.class, z -> {
-            z.setAI(false);
-            z.setInvulnerable(true);
-            z.setSilent(true);
-            z.setBaby(false);
-            z.setShouldBurnInDay(false);
-            z.setCustomNameVisible(true);
-            z.customName(SANTA_NAME);
-
-            // Equipment
-            z.getEquipment().setHelmet(HeadUtils.getCustomHead(
-                    "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTAzNTFkOTJiMWU0ZjVkODM2MDUzODU5MGU2MDk4OTViZDI4M2IwNDc2Zjc0NDIzNjE2NTk3N2Y1YWIyOTllYiJ9fX0="));
-            z.getEquipment().setChestplate(createColoredArmor(Material.LEATHER_CHESTPLATE, Color.RED));
-            z.getEquipment().setLeggings(createColoredArmor(Material.LEATHER_LEGGINGS, Color.RED));
-            z.getEquipment().setBoots(createColoredArmor(Material.LEATHER_BOOTS, Color.BLACK));
-
-            z.getPersistentDataContainer().set(SANTA_NPC_KEY, PersistentDataType.BYTE, (byte) 1);
-        });
-
-        player.sendMessage(Component.text("Santa NPC spawned successfully!", NamedTextColor.GREEN));
-    }
-
-    private ItemStack createColoredArmor(Material material, Color color) {
-        ItemStack item = new ItemStack(material);
-        LeatherArmorMeta meta = (LeatherArmorMeta) item.getItemMeta();
-        meta.setColor(color);
-        item.setItemMeta(meta);
-        return item;
-    }
-
-    private void handleNpcRemove(Player player, int radius) {
-        if (!player.hasPermission("smptools.missions.admin")) {
-            player.sendMessage(Component.text("You don't have permission to do that.", NamedTextColor.RED));
-            return;
-        }
-
-        int count = 0;
-        for (Entity entity : player.getNearbyEntities(radius, radius, radius)) {
-            if (entity.getPersistentDataContainer().has(MISSION_NPC_KEY, PersistentDataType.BYTE) ||
-                    entity.getPersistentDataContainer().has(SANTA_NPC_KEY, PersistentDataType.BYTE)) {
-                entity.remove();
-                count++;
-            }
-        }
-
-        if (count > 0) {
-            player.sendMessage(Component.text("Removed " + count + " NPC(s) within a " + radius + "-block radius.",
-                    NamedTextColor.GREEN));
-        } else {
-            player.sendMessage(Component.text("No Mission NPCs found within that radius.", NamedTextColor.YELLOW));
-        }
-    }
+    // NPC spawning logic moved to NPCCommand and NPCManager
 
     private void handleListCommand(Player admin) {
         if (!admin.hasPermission("smptools.missions.admin")) {

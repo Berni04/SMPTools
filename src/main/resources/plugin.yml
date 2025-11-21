@@ -121,9 +121,16 @@ commands:
     description: Manage the Secret Santa event.
     usage: /secretsanta <join|target|deposit|claim>
     aliases: [ss]
+  npc:
+    description: Manage NPCs.
+    usage: /npc <spawn|remove|reload>
+    permission: smptools.npc.admin
 permissions:
   smptools.missions.admin:
     description: Allows spawning the mission NPC.
+    default: op
+  smptools.npc.admin:
+    description: Allows managing NPCs.
     default: op
   smptools.troll:
     description: Allows access to the /troll command.

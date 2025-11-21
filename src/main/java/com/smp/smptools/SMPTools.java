@@ -25,6 +25,13 @@ import com.smp.smptools.listeners.LeaderboardGUIListener;
 import com.smp.smptools.listeners.SkillsGUIListener;
 import com.smp.smptools.listeners.*;
 import com.smp.smptools.listeners.NameTagListener;
+import com.smp.smptools.listeners.MissionGUIListener;
+import com.smp.smptools.listeners.MissionNPCListener;
+import com.smp.smptools.listeners.PortalListener;
+import com.smp.smptools.listeners.NPCListener;
+import com.smp.smptools.listeners.AdventGUIListener;
+import com.smp.smptools.managers.NPCManager;
+import com.smp.smptools.managers.DialogueManager;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -66,6 +73,8 @@ public class SMPTools extends JavaPlugin {
     private AdventManager adventManager;
     private ChristmasWorldManager christmasWorldManager;
     private PortalManager portalManager;
+    private NPCManager npcManager;
+    private DialogueManager dialogueManager;
 
     @Override
     public void onEnable() {
@@ -204,6 +213,8 @@ public class SMPTools extends JavaPlugin {
         this.adventManager = new AdventManager(this);
         this.christmasWorldManager = new ChristmasWorldManager(this);
         this.portalManager = new PortalManager(this);
+        this.npcManager = new NPCManager(this);
+        this.dialogueManager = new DialogueManager(this);
 
         // Register Listeners
         Bukkit.getPluginManager().registerEvents(new VaultListener(this), this);
@@ -226,6 +237,7 @@ public class SMPTools extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new InvseeGUIListener(this), this); // Register InvseeGUIListener
         Bukkit.getPluginManager().registerEvents(new TrollGUIListener(this), this);
         Bukkit.getPluginManager().registerEvents(new MissionNPCListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new NPCListener(this), this);
         Bukkit.getPluginManager().registerEvents(new MissionGUIListener(this), this);
         Bukkit.getPluginManager().registerEvents(new ElytraTrailListener(), this);
         Bukkit.getPluginManager().registerEvents(new MissionTrackerListener(this), this);
@@ -281,7 +293,12 @@ public class SMPTools extends JavaPlugin {
         Objects.requireNonNull(getCommand("customitem")).setExecutor(new CustomItemCommand());
         Objects.requireNonNull(getCommand("r")).setExecutor(new ReplyCommand(this));
         Objects.requireNonNull(getCommand("rename")).setExecutor(new RenameCommand(this));
+        Objects.requireNonNull(getCommand("rename")).setExecutor(new RenameCommand(this));
         Objects.requireNonNull(getCommand("advent")).setExecutor(new AdventCommand(adventGUIListener));
+        Objects.requireNonNull(getCommand("npc")).setExecutor(new NPCCommand(this));
+
+        // Load NPCs
+        npcManager.loadNPCs();
 
         // Secret Santa
         SecretSantaManager secretSantaManager = new SecretSantaManager(this);
@@ -342,6 +359,9 @@ public class SMPTools extends JavaPlugin {
         }
         if (missionManager != null) {
             missionManager.savePlayerData();
+        }
+        if (npcManager != null) {
+            npcManager.removeAllNPCs();
         }
         // Save configs
         saveStatsConfig();
@@ -582,5 +602,13 @@ public class SMPTools extends JavaPlugin {
 
     public PortalManager getPortalManager() {
         return portalManager;
+    }
+
+    public NPCManager getNPCManager() {
+        return npcManager;
+    }
+
+    public DialogueManager getDialogueManager() {
+        return dialogueManager;
     }
 }

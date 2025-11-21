@@ -1,6 +1,7 @@
 package com.smp.smptools.listeners;
 
 import com.smp.smptools.commands.MissionCommand;
+import com.smp.smptools.managers.NPCManager;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -26,15 +27,15 @@ public class MissionNPCListener implements Listener {
         Player player = event.getPlayer();
 
         // Check if the entity has our custom PDC tag (Quest Master OR Santa)
-        if (clickedEntity.getPersistentDataContainer().has(MissionCommand.MISSION_NPC_KEY, PersistentDataType.BYTE) ||
-                clickedEntity.getPersistentDataContainer().has(MissionCommand.SANTA_NPC_KEY, PersistentDataType.BYTE)) {
+        if (clickedEntity.getPersistentDataContainer().has(NPCManager.MISSION_NPC_KEY, PersistentDataType.BYTE) ||
+                clickedEntity.getPersistentDataContainer().has(NPCManager.SANTA_NPC_KEY, PersistentDataType.BYTE)) {
 
             // Cancel the default interaction (e.g., villager trading GUI)
             event.setCancelled(true);
 
             // Determine category based on NPC type
             String category = "NORMAL";
-            if (clickedEntity.getPersistentDataContainer().has(MissionCommand.SANTA_NPC_KEY, PersistentDataType.BYTE)) {
+            if (clickedEntity.getPersistentDataContainer().has(NPCManager.SANTA_NPC_KEY, PersistentDataType.BYTE)) {
                 MissionManager.PlayerMissionData playerData = plugin.getMissionManager().getPlayerData(player);
                 String selectedQuestline = playerData.getSelectedQuestline();
 
@@ -56,8 +57,8 @@ public class MissionNPCListener implements Listener {
         Entity entity = event.getEntity();
 
         // Check if the damaged entity is our mission NPC
-        if (entity.getPersistentDataContainer().has(MissionCommand.MISSION_NPC_KEY, PersistentDataType.BYTE) ||
-                entity.getPersistentDataContainer().has(MissionCommand.SANTA_NPC_KEY, PersistentDataType.BYTE)) {
+        if (entity.getPersistentDataContainer().has(NPCManager.MISSION_NPC_KEY, PersistentDataType.BYTE) ||
+                entity.getPersistentDataContainer().has(NPCManager.SANTA_NPC_KEY, PersistentDataType.BYTE)) {
             // Cancel the damage event to make it fully invulnerable
             event.setCancelled(true);
         }

@@ -1,0 +1,43 @@
+dialogues:
+  story_npc:
+    start:
+      text: "&e[Storyteller] &fHo ho ho! Or... wait, I'm not him."
+      next: line2
+    line2:
+      text: "&e[Storyteller] &fSanta is in trouble! The Grinch has stolen the Christmas Spirit."
+      next: line3
+    line3:
+      text: "&e[Storyteller] &fWe need a hero to travel to the North Pole and save the holiday!"
+      next: line4
+    line4:
+      text: "&e[Storyteller] &fTo get there, you must build a portal."
+      next: line5
+    line5:
+      text: "&e[Storyteller] &fConstruct a frame of &bSnow Blocks &f(4x5) and activate it with a &9Water Bucket&f."
+      next: line6
+    line6:
+      text: "&e[Storyteller] &fHurry! The elves are counting on you."
+      options:
+        - text: "&aI'm on it!"
+          next: end
+  
+  santa:
+    start:
+      text: "&c[Santa] &fThank goodness you're here!"
+      next: line2
+    line2:
+      text: "&c[Santa] &fThe workshop is in chaos. We're behind schedule!"
+      next: line3
+    line3:
+      text: "&c[Santa] &fPlease, check the mission board and help my elves."
+      options:
+        - text: "&aShow me the missions!"
+          command: "missions"
+          next: end
+        - text: "&cI'm busy."
+          next: end
+
+  elf_worker:
+    start:
+      text: "&a[Elf] &fWork, work, work! No time to chat!"
+      next: end
