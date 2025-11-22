@@ -26,6 +26,12 @@ public class MissionManager {
         this.plugin = plugin;
         loadMissions();
         loadPlayerData();
+        startAutoSaveTask();
+    }
+
+    private void startAutoSaveTask() {
+        org.bukkit.Bukkit.getScheduler().runTaskTimer(plugin, this::savePlayerData, 6000L, 6000L); // Save every 5
+                                                                                                   // minutes
     }
 
     private void loadMissions() {

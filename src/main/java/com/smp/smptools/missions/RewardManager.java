@@ -18,7 +18,8 @@ import java.util.List;
 
 public class RewardManager {
 
-    public static final NamespacedKey ELYTRA_TRAIL_KEY = new NamespacedKey(SMPTools.getInstance(), "elytra_trail_color");
+    public static final NamespacedKey ELYTRA_TRAIL_KEY = new NamespacedKey(SMPTools.getInstance(),
+            "elytra_trail_color");
 
     public static void giveChromaticElytra(Player player, String color) {
         ItemStack elytra = new ItemStack(Material.ELYTRA);
@@ -31,15 +32,33 @@ public class RewardManager {
         lore.add(Component.text(""));
         NamedTextColor trailColor;
         switch (color.toUpperCase()) {
-            case "RED": trailColor = NamedTextColor.RED; break;
-            case "BLUE": trailColor = NamedTextColor.BLUE; break;
-            case "GREEN": trailColor = NamedTextColor.GREEN; break;
-            case "PURPLE": trailColor = NamedTextColor.DARK_PURPLE; break;
-            case "ORANGE": trailColor = NamedTextColor.GOLD; break;
-            case "YELLOW": trailColor = NamedTextColor.YELLOW; break;
-            case "BLACK": trailColor = NamedTextColor.BLACK; break;
-            case "RAINBOW": trailColor = NamedTextColor.LIGHT_PURPLE; break; // Just for display
-            default: trailColor = NamedTextColor.WHITE; break;
+            case "RED":
+                trailColor = NamedTextColor.RED;
+                break;
+            case "BLUE":
+                trailColor = NamedTextColor.BLUE;
+                break;
+            case "GREEN":
+                trailColor = NamedTextColor.GREEN;
+                break;
+            case "PURPLE":
+                trailColor = NamedTextColor.DARK_PURPLE;
+                break;
+            case "ORANGE":
+                trailColor = NamedTextColor.GOLD;
+                break;
+            case "YELLOW":
+                trailColor = NamedTextColor.YELLOW;
+                break;
+            case "BLACK":
+                trailColor = NamedTextColor.BLACK;
+                break;
+            case "RAINBOW":
+                trailColor = NamedTextColor.LIGHT_PURPLE;
+                break; // Just for display
+            default:
+                trailColor = NamedTextColor.WHITE;
+                break;
         }
         lore.add(Component.text("Trail Color: ", NamedTextColor.GRAY).append(Component.text(color, trailColor)));
         meta.lore(lore);
@@ -55,5 +74,36 @@ public class RewardManager {
 
         player.getInventory().addItem(elytra);
         player.sendMessage(Component.text("You have received the Chromatic Elytra!", NamedTextColor.GREEN));
+    }
+
+    public static void giveReward(Player player, String reward) {
+        if (reward.startsWith("item:")) {
+            String[] parts = reward.substring(5).split(" ");
+            Material material = Material.matchMaterial(parts[0]);
+            int amount = parts.length > 1 ? Integer.parseInt(parts[1]) : 1;
+
+            if (material != null) {
+                ItemStack item = new ItemStack(material, amount);
+                if (player.getInventory().firstEmpty() != -1) {
+                    player.getInventory().addItem(item);
+                } else {
+                    player.getWorld().dropItem(player.getLocation(), item);
+                }
+                player.sendMessage(Component.text("Received " + amount + " " + material.name(), NamedTextColor.GREEN));
+            }
+        } else if (reward.startsWith("custom_item:")) {
+            String customItem = reward.substring(12);
+            if (customItem.equalsIgnoreCase("chromatic_elytra")) {
+                // Handled by GUI for color selection, but if called directly (fallback)
+                giveChromaticElytra(player, "WHITE");
+            }
+        } else if (reward.startsWith("command:")) {
+            String command = reward.substring(8).replace("%player%", player.getName());
+            org.bukkit.Bukkit.dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), command);
+        } else {
+            // Assume it's a command if no prefix (like "eco give")
+            String command = reward.replace("%player%", player.getName());
+            org.bukkit.Bukkit.dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), command);
+        }
     }
 }

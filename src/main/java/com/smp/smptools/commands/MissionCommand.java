@@ -63,6 +63,16 @@ public class MissionCommand implements CommandExecutor {
                 handleResetCommand(player, args);
                 return true;
             }
+
+            if (args[0].equalsIgnoreCase("santa")) {
+                handleSantaCommand(player);
+                return true;
+            }
+
+            if (args[0].equalsIgnoreCase("resetquestline")) {
+                handleResetQuestlineCommand(player, args);
+                return true;
+            }
         }
 
         // Default action: open the mission GUI
@@ -134,5 +144,51 @@ public class MissionCommand implements CommandExecutor {
         plugin.getMissionManager().resetMission(target, missionId);
         admin.sendMessage(
                 Component.text("Reset mission '" + missionId + "' for " + target.getName(), NamedTextColor.GREEN));
+    }
+
+    private void handleSantaCommand(Player player) {
+        com.smp.smptools.missions.MissionManager.PlayerMissionData playerData = plugin.getMissionManager()
+                .getPlayerData(player);
+        String selectedQuestline = playerData.getSelectedQuestline();
+
+        if (selectedQuestline != null) {
+            MissionGUIListener.openMissionGUI(player, true, selectedQuestline);
+        } else {
+            MissionGUIListener.openQuestlineSelectionGUI(player);
+        }
+    }
+
+    private void handleResetQuestlineCommand(Player admin, String[] args) {
+        if (!admin.hasPermission("smptools.missions.admin")) {
+            admin.sendMessage(Component.text("You don't have permission to do that.", NamedTextColor.RED));
+            return;
+        }
+        if (args.length < 2) {
+            admin.sendMessage(Component.text("Usage: /missions resetquestline <player>", NamedTextColor.RED));
+            return;
+        }
+        Player target = plugin.getServer().getPlayer(args[1]);
+        if (target == null) {
+            admin.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
+            return;
+        }
+
+        com.smp.smptools.missions.MissionManager.PlayerMissionData data = plugin.getMissionManager()
+                .getPlayerData(target);
+        String currentQuestline = data.getSelectedQuestline();
+
+        if (currentQuestline != null) {
+            // Reset all missions in this questline
+            for (com.smp.smptools.missions.Mission mission : plugin.getMissionManager().getAllMissions().values()) {
+                if (mission.getCategory().equalsIgnoreCase(currentQuestline)) {
+                    plugin.getMissionManager().resetMission(target, mission.getId());
+                }
+            }
+        }
+
+        data.setSelectedQuestline(null);
+        plugin.getMissionManager().savePlayerData();
+        admin.sendMessage(
+                Component.text("Reset questline selection and progress for " + target.getName(), NamedTextColor.GREEN));
     }
 }

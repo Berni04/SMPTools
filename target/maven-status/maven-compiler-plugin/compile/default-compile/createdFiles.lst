@@ -5,6 +5,7 @@ com\smp\smptools\listeners\MissionGUIListener.class
 com\smp\smptools\listeners\TrollGUIListener$5.class
 com\smp\smptools\utils\HeadUtils.class
 com\smp\smptools\commands\SudoCommand.class
+com\smp\smptools\managers\DialogueManager$3.class
 com\smp\smptools\listeners\ChatListener.class
 com\smp\smptools\listeners\SkillsGUIListener.class
 com\smp\smptools\listeners\SkillsListener.class
@@ -20,6 +21,7 @@ com\smp\smptools\teleport\TeleportManager$1.class
 com\smp\smptools\commands\SetHomeCommand.class
 com\smp\smptools\commands\LeaderboardCommand.class
 com\smp\smptools\commands\SoundCommand.class
+com\smp\smptools\managers\NPCManager.class
 com\smp\smptools\listeners\PrefixGUIListener.class
 com\smp\smptools\leaderboard\LeaderboardManager.class
 com\smp\smptools\missions\RewardManager.class
@@ -34,6 +36,7 @@ com\smp\smptools\enchants\TelekinesisEnchant.class
 com\smp\smptools\commands\MissionCommand.class
 com\smp\smptools\listeners\SitListener.class
 com\smp\smptools\commands\AdventCommand.class
+com\smp\smptools\commands\NPCCommand.class
 com\smp\smptools\enchants\LumberjackEnchant.class
 com\smp\smptools\commands\SkillsCommand$1.class
 com\smp\smptools\listeners\MissionGUIListener$1.class
@@ -49,6 +52,7 @@ com\smp\smptools\commands\ClearStatsCommand.class
 com\smp\smptools\listeners\MissionTrackerListener.class
 com\smp\smptools\sleep\SleepManager.class
 com\smp\smptools\missions\MissionManager.class
+com\smp\smptools\managers\DialogueManager.class
 com\smp\smptools\listeners\VaultListener.class
 com\smp\smptools\commands\HomeCommand.class
 com\smp\smptools\commands\RideCommand.class
@@ -57,6 +61,7 @@ com\smp\smptools\listeners\AdventGUIListener.class
 com\smp\smptools\music\NBSParser.class
 com\smp\smptools\listeners\CombatListener.class
 com\smp\smptools\listeners\MissionNPCListener.class
+com\smp\smptools\listeners\NPCListener.class
 com\smp\smptools\christmas\SecretSantaManager.class
 com\smp\smptools\commands\TagsCommand.class
 com\smp\smptools\commands\DelHomeCommand.class
@@ -74,6 +79,7 @@ com\smp\smptools\imagemap\ImageProcessor.class
 com\smp\smptools\music\MusicCommand.class
 com\smp\smptools\commands\StatsCommand.class
 com\smp\smptools\missions\MissionManager$PlayerMissionData.class
+com\smp\smptools\managers\DialogueManager$1.class
 com\smp\smptools\listeners\JoinLeaveListener.class
 com\smp\smptools\commands\SkillsCommand.class
 com\smp\smptools\commands\InvseeCommand.class
@@ -87,6 +93,7 @@ com\smp\smptools\listeners\TabHealthListener.class
 com\smp\smptools\commands\RenameCommand.class
 com\smp\smptools\listeners\PortalListener.class
 com\smp\smptools\skills\SkillType.class
+com\smp\smptools\managers\DialogueManager$2.class
 com\smp\smptools\commands\ReplyCommand.class
 com\smp\smptools\sleep\SleepVoteCommand.class
 com\smp\smptools\commands\HomesCommand.class

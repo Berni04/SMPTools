@@ -32,7 +32,7 @@ dialogues:
       text: "&c[Santa] &fPlease, check the mission board and help my elves."
       options:
         - text: "&aShow me the missions!"
-          command: "missions"
+          command: "missions santa"
           next: end
         - text: "&cI'm busy."
           next: end

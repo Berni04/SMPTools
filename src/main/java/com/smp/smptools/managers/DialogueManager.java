@@ -41,7 +41,7 @@ public class DialogueManager {
     public void loadDialogues() {
         File file = new File(plugin.getDataFolder(), "dialogues.yml");
         if (!file.exists()) {
-            plugin.saveResource("dialogues.yml", false);
+            plugin.saveResource("dialogues.yml", true);
         }
         dialogueConfig = YamlConfiguration.loadConfiguration(file);
     }

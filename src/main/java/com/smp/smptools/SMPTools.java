@@ -241,7 +241,7 @@ public class SMPTools extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new MissionGUIListener(this), this);
         Bukkit.getPluginManager().registerEvents(new ElytraTrailListener(), this);
         Bukkit.getPluginManager().registerEvents(new MissionTrackerListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new MissionTrackerListener(this), this);
+
         Bukkit.getPluginManager().registerEvents(new com.smp.smptools.graves.GraveManager(this), this);
 
         AdventGUIListener adventGUIListener = new AdventGUIListener(this, adventManager);

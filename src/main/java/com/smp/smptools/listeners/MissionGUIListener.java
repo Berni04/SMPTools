@@ -108,7 +108,11 @@ public class MissionGUIListener implements Listener {
 
     private void handleAvailableMissionsClick(InventoryClickEvent event, Player player, boolean isNpc) {
         if (isBackButton(event.getCurrentItem())) {
-            openMissionGUI(player, isNpc);
+            String category = "NORMAL";
+            if (event.getView().getTopInventory().getHolder() instanceof MissionGUIHolder) {
+                category = ((MissionGUIHolder) event.getView().getTopInventory().getHolder()).getCategory();
+            }
+            openMissionGUI(player, isNpc, category);
             return;
         }
 
@@ -120,7 +124,11 @@ public class MissionGUIListener implements Listener {
 
     private void handleInProgressMissionsClick(InventoryClickEvent event, Player player, boolean isNpc) {
         if (isBackButton(event.getCurrentItem())) {
-            openMissionGUI(player, isNpc);
+            String category = "NORMAL";
+            if (event.getView().getTopInventory().getHolder() instanceof MissionGUIHolder) {
+                category = ((MissionGUIHolder) event.getView().getTopInventory().getHolder()).getCategory();
+            }
+            openMissionGUI(player, isNpc, category);
             return;
         }
 
@@ -149,7 +157,11 @@ public class MissionGUIListener implements Listener {
 
     private void handleCompletedMissionsClick(InventoryClickEvent event, Player player, boolean isNpc) {
         if (isBackButton(event.getCurrentItem())) {
-            openMissionGUI(player, isNpc);
+            String category = "NORMAL";
+            if (event.getView().getTopInventory().getHolder() instanceof MissionGUIHolder) {
+                category = ((MissionGUIHolder) event.getView().getTopInventory().getHolder()).getCategory();
+            }
+            openMissionGUI(player, isNpc, category);
             return;
         }
 
@@ -169,10 +181,21 @@ public class MissionGUIListener implements Listener {
                 return;
             }
 
-            String rewardString = clickedMission.getRewards().get(0);
-            if (rewardString.equals("custom_item:chromatic_elytra")) {
+            // Check for Chromatic Elytra first to open color selection
+            boolean hasChromaticElytra = false;
+            for (String reward : clickedMission.getRewards()) {
+                if (reward.contains("custom_item:chromatic_elytra")) {
+                    hasChromaticElytra = true;
+                    break;
+                }
+            }
+
+            if (hasChromaticElytra) {
                 openColorSelectionGUI(player, clickedMission.getId());
             } else {
+                for (String reward : clickedMission.getRewards()) {
+                    RewardManager.giveReward(player, reward);
+                }
                 player.sendMessage(Component.text("Reward claimed!", NamedTextColor.GREEN));
                 playerData.getClaimedMissions().add(clickedMission.getId());
                 // Re-open the GUI to update the item state
@@ -199,8 +222,8 @@ public class MissionGUIListener implements Listener {
             }
 
             missionManager.getPlayerData(player).getActiveMissions().add(clickedMission.getId());
-            player.sendMessage(Component.text("Mission '" + clickedMission.getName().replace('&', '§') + "' accepted!",
-                    NamedTextColor.GREEN));
+            player.sendMessage(Component.text("Mission Accepted: ", NamedTextColor.GOLD)
+                    .append(Component.text(clickedMission.getName().replace('&', '§'))));
             openInProgressMissionsGUI(player, isNpc);
         } else if (event.getCurrentItem().getType() == Material.RED_WOOL) {
             openAvailableMissionsGUI(player, isNpc);
@@ -276,6 +299,7 @@ public class MissionGUIListener implements Listener {
         if (questline != null) {
             MissionManager.PlayerMissionData playerData = missionManager.getPlayerData(player);
             playerData.setSelectedQuestline(questline);
+            missionManager.savePlayerData(); // Save immediately
             player.sendMessage(Component.text("You have chosen your path!", NamedTextColor.GREEN));
             openMissionGUI(player, true, questline);
         }
@@ -319,7 +343,21 @@ public class MissionGUIListener implements Listener {
 
             if (!playerData.getActiveMissions().contains(mission.getId()) &&
                     !playerData.getCompletedMissions().contains(mission.getId())) {
-                gui.addItem(createMissionItem(mission, 0, MissionStatus.AVAILABLE, false));
+
+                // Check prerequisites
+                boolean prerequisitesMet = true;
+                if (mission.getPrerequisites() != null && !mission.getPrerequisites().isEmpty()) {
+                    for (String prereqId : mission.getPrerequisites()) {
+                        if (!playerData.getCompletedMissions().contains(prereqId)) {
+                            prerequisitesMet = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (prerequisitesMet) {
+                    gui.addItem(createMissionItem(mission, 0, MissionStatus.AVAILABLE, false));
+                }
             }
         }
         addBackButton(gui, 49);

@@ -11,7 +11,9 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.persistence.PersistentDataType;
 
 import com.smp.smptools.SMPTools;
+
 import com.smp.smptools.missions.MissionManager;
+import org.bukkit.event.EventPriority;
 
 public class MissionNPCListener implements Listener {
 
@@ -21,34 +23,36 @@ public class MissionNPCListener implements Listener {
         this.plugin = plugin;
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOW)
     public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
         Entity clickedEntity = event.getRightClicked();
         Player player = event.getPlayer();
 
-        // Check if the entity has our custom PDC tag (Quest Master OR Santa)
-        if (clickedEntity.getPersistentDataContainer().has(NPCManager.MISSION_NPC_KEY, PersistentDataType.BYTE) ||
-                clickedEntity.getPersistentDataContainer().has(NPCManager.SANTA_NPC_KEY, PersistentDataType.BYTE)) {
+        // Check if the entity has our custom PDC tag (Quest Master)
+        if (clickedEntity.getPersistentDataContainer().has(NPCManager.MISSION_NPC_KEY, PersistentDataType.BYTE)) {
 
             // Cancel the default interaction (e.g., villager trading GUI)
             event.setCancelled(true);
 
             // Determine category based on NPC type
             String category = "NORMAL";
-            if (clickedEntity.getPersistentDataContainer().has(NPCManager.SANTA_NPC_KEY, PersistentDataType.BYTE)) {
-                MissionManager.PlayerMissionData playerData = plugin.getMissionManager().getPlayerData(player);
-                String selectedQuestline = playerData.getSelectedQuestline();
-
-                if (selectedQuestline != null) {
-                    category = selectedQuestline;
-                } else {
-                    MissionGUIListener.openQuestlineSelectionGUI(player);
-                    return;
-                }
-            }
 
             // Open the mission GUI for the player with the correct category
             MissionGUIListener.openMissionGUI(player, true, category);
+        } else if (clickedEntity.getPersistentDataContainer().has(NPCManager.SANTA_NPC_KEY, PersistentDataType.BYTE)) {
+            // Check if player has already selected a questline
+            MissionManager.PlayerMissionData playerData = plugin.getMissionManager().getPlayerData(player);
+            if (playerData.getSelectedQuestline() != null) {
+                plugin.getLogger().info("Player " + player.getName() + " has questline "
+                        + playerData.getSelectedQuestline() + ". Opening GUI directly.");
+                // Player has a questline, so we bypass dialogue and open GUI directly
+                event.setCancelled(true);
+                MissionGUIListener.openMissionGUI(player, true, playerData.getSelectedQuestline());
+            } else {
+                plugin.getLogger().info("Player " + player.getName() + " has NO questline. Starting dialogue.");
+            }
+            // If no questline, we do NOT cancel. NPCListener will pick it up and start
+            // dialogue.
         }
     }
 
