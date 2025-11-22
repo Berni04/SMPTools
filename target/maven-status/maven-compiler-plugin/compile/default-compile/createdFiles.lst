@@ -75,6 +75,7 @@ com\smp\smptools\listeners\StatsGUIListener.class
 com\smp\smptools\listeners\TrollGUIListener$4.class
 com\smp\smptools\listeners\LeaderboardGUIListener.class
 com\smp\smptools\commands\TpaCommand.class
+com\smp\smptools\listeners\ChristmasWorldListener.class
 com\smp\smptools\imagemap\ImageProcessor.class
 com\smp\smptools\music\MusicCommand.class
 com\smp\smptools\commands\StatsCommand.class
