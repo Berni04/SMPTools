@@ -125,6 +125,12 @@ commands:
     description: Manage NPCs.
     usage: /npc <spawn|remove|reload>
     permission: smptools.npc.admin
+  uptime:
+    description: Shows the server uptime.
+    usage: /uptime
+  ping:
+    description: Shows your ping.
+    usage: /ping
 permissions:
   smptools.missions.admin:
     description: Allows spawning the mission NPC.

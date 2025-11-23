@@ -338,6 +338,10 @@ public class SMPTools extends JavaPlugin {
             this.getCommand("sound").setExecutor(new SoundCommand(this));
             Bukkit.getPluginManager().registerEvents(new ResourcePackListener(this), this);
         }
+
+        this.getCommand("uptime").setExecutor(new UptimeCommand());
+        this.getCommand("ping").setExecutor(new PingCommand());
+
         startStatsSaverTask();
     }
 
