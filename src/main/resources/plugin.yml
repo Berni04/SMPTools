@@ -135,6 +135,14 @@ commands:
     description: Manage Christmas presents.
     usage: /present <give|remove> [tier]
     permission: smptools.admin
+  krampus:
+    description: Manage Krampus spawning.
+    usage: /krampus <spawn>
+    permission: smptools.admin
+  blackfriday:
+    description: Manage the Black Friday event.
+    usage: /blackfriday <start|stop|reload|status>
+    permission: smptools.admin
 permissions:
   smptools.missions.admin:
     description: Allows spawning the mission NPC.

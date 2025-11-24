@@ -1,0 +1,3 @@
+enabled: false
+discount-percentage: 90
+announcement-message: "&6&l[Black Friday] &eVillager trades are now {status}!"

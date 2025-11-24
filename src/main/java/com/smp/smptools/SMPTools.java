@@ -32,6 +32,7 @@ import com.smp.smptools.listeners.NPCListener;
 import com.smp.smptools.listeners.AdventGUIListener;
 import com.smp.smptools.managers.NPCManager;
 import com.smp.smptools.managers.DialogueManager;
+import com.smp.smptools.managers.BlackFridayManager;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -75,6 +76,7 @@ public class SMPTools extends JavaPlugin {
     private PortalManager portalManager;
     private NPCManager npcManager;
     private DialogueManager dialogueManager;
+    private BlackFridayManager blackFridayManager;
 
     @Override
     public void onEnable() {
@@ -215,6 +217,7 @@ public class SMPTools extends JavaPlugin {
         this.portalManager = new PortalManager(this);
         this.npcManager = new NPCManager(this);
         this.dialogueManager = new DialogueManager(this);
+        this.blackFridayManager = new BlackFridayManager(this);
 
         // Register Listeners
         Bukkit.getPluginManager().registerEvents(new VaultListener(this), this);
@@ -358,6 +361,12 @@ public class SMPTools extends JavaPlugin {
         this.getCommand("krampus").setExecutor(new com.smp.smptools.commands.KrampusCommand(krampusManager));
         Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.KrampusListener(this, krampusManager),
                 this);
+
+        // Black Friday
+        Bukkit.getPluginManager()
+                .registerEvents(new com.smp.smptools.listeners.BlackFridayListener(this, blackFridayManager), this);
+        Objects.requireNonNull(getCommand("blackfriday"))
+                .setExecutor(new com.smp.smptools.commands.BlackFridayCommand(blackFridayManager));
 
         startStatsSaverTask();
     }
@@ -632,5 +641,9 @@ public class SMPTools extends JavaPlugin {
 
     public DialogueManager getDialogueManager() {
         return dialogueManager;
+    }
+
+    public BlackFridayManager getBlackFridayManager() {
+        return blackFridayManager;
     }
 }
