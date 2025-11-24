@@ -15,8 +15,18 @@ public class PingCommand implements CommandExecutor {
             return true;
         }
 
-        Player player = (Player) sender;
-        int ping = player.getPing();
+        Player target = (Player) sender;
+
+        if (args.length > 0) {
+            Player foundPlayer = org.bukkit.Bukkit.getPlayer(args[0]);
+            if (foundPlayer == null) {
+                sender.sendMessage(ChatColor.RED + "Player not found.");
+                return true;
+            }
+            target = foundPlayer;
+        }
+
+        int ping = target.getPing();
 
         String color;
         if (ping < 50) {
@@ -27,7 +37,11 @@ public class PingCommand implements CommandExecutor {
             color = ChatColor.RED.toString();
         }
 
-        player.sendMessage(ChatColor.GRAY + "Your ping is: " + color + ping + "ms");
+        if (target.equals(sender)) {
+            sender.sendMessage(ChatColor.GRAY + "Your ping is: " + color + ping + "ms");
+        } else {
+            sender.sendMessage(ChatColor.GRAY + target.getName() + "'s ping is: " + color + ping + "ms");
+        }
 
         return true;
     }

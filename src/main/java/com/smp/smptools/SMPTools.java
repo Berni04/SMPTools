@@ -342,6 +342,17 @@ public class SMPTools extends JavaPlugin {
         this.getCommand("uptime").setExecutor(new UptimeCommand());
         this.getCommand("ping").setExecutor(new PingCommand());
 
+        // Present Hunt
+        com.smp.smptools.christmas.PresentManager presentManager = new com.smp.smptools.christmas.PresentManager(this);
+        this.getCommand("present").setExecutor(new com.smp.smptools.commands.PresentCommand(presentManager));
+        Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.PresentListener(presentManager), this);
+
+        // Festive Mobs
+        Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.FestiveMobsListener(this), this);
+
+        // Snowball Warfare
+        Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.SnowballListener(this), this);
+
         startStatsSaverTask();
     }
 

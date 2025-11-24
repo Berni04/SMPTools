@@ -129,8 +129,12 @@ commands:
     description: Shows the server uptime.
     usage: /uptime
   ping:
-    description: Shows your ping.
-    usage: /ping
+    description: Shows your or another player's ping.
+    usage: /ping [player]
+  present:
+    description: Manage Christmas presents.
+    usage: /present <give|remove> [tier]
+    permission: smptools.admin
 permissions:
   smptools.missions.admin:
     description: Allows spawning the mission NPC.

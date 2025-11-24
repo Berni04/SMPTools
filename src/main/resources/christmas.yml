@@ -1,0 +1,27 @@
+presents:
+  common:
+    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTRiZLmNmZTI4YWRhNzU1NTg2ZGEwNDRiOGE1ZTFkMTdiODRkM2IxOTc0M2U0YzY1NjQyZTIxYTE5J319fQ=="
+    rewards:
+      - "eco give %player% 500"
+      - "item:COOKIE 16"
+  rare:
+    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTY4NGY1MzNlODU1MmM1YmJjYjA3OWI3Y2JkY2QyNzM1M2Y5MGJkYjE4N2Q3OTczM2E5MWRkNjE4In19fQ=="
+    rewards:
+      - "eco give %player% 1000"
+      - "item:DIAMOND 2"
+  legendary:
+    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYjczYTIxMTRjMzI4ZWRlYmU0Y2U2NDUyZWRhYmFjYjJjNmI3YjM2YTIxYjY4OWI2M2Q0NDg2ZTY1NyJ9fX0="
+    rewards:
+      - "eco give %player% 5000"
+      - "item:NETHERITE_INGOT 1"
+
+festive-mobs:
+  enabled: true
+  candy-cane-chance: 0.05
+  creeper-confetti: true
+
+snowball-warfare:
+  enabled: true
+  damage: 2.0
+  freeze-ticks: 40
+  headshot-multiplier: 2.0
