@@ -353,6 +353,12 @@ public class SMPTools extends JavaPlugin {
         // Snowball Warfare
         Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.SnowballListener(this), this);
 
+        // Krampus Night
+        com.smp.smptools.christmas.KrampusManager krampusManager = new com.smp.smptools.christmas.KrampusManager(this);
+        this.getCommand("krampus").setExecutor(new com.smp.smptools.commands.KrampusCommand(krampusManager));
+        Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.KrampusListener(this, krampusManager),
+                this);
+
         startStatsSaverTask();
     }
 

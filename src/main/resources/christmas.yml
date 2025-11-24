@@ -25,3 +25,12 @@ snowball-warfare:
   damage: 2.0
   freeze-ticks: 40
   headshot-multiplier: 2.0
+
+krampus:
+  enabled: true
+  health: 300.0
+  name: "&c&lKrampus"
+  drops:
+    - "DIAMOND"
+    - "EMERALD"
+    - "COAL"
