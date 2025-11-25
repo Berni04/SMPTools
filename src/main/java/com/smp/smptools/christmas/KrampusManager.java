@@ -16,8 +16,13 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.File;
+import org.bukkit.NamespacedKey;
+import org.bukkit.persistence.PersistentDataType;
+
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class KrampusManager {
@@ -25,9 +30,12 @@ public class KrampusManager {
     private final SMPTools plugin;
     private FileConfiguration christmasConfig;
     private final Map<UUID, Location> kidnappedPlayers = new HashMap<>();
+    private final Map<UUID, Set<UUID>> playerGuards = new HashMap<>();
+    public final NamespacedKey krampusKey;
 
     public KrampusManager(SMPTools plugin) {
         this.plugin = plugin;
+        this.krampusKey = new NamespacedKey(plugin, "krampus_entity");
         loadConfig();
     }
 
@@ -55,11 +63,19 @@ public class KrampusManager {
         krampus.getEquipment().setHelmet(new ItemStack(Material.WITHER_SKELETON_SKULL));
         krampus.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
         krampus.getEquipment().setItemInMainHand(new ItemStack(Material.NETHERITE_AXE));
+
+        // Persistent Data
+        krampus.getPersistentDataContainer().set(krampusKey, PersistentDataType.BYTE, (byte) 1);
     }
 
-    public void kidnapPlayer(Player player) {
+    public void kidnapPlayer(Player player, WitherSkeleton krampus) {
         if (kidnappedPlayers.containsKey(player.getUniqueId()))
             return;
+
+        // Despawn Krampus
+        if (krampus != null) {
+            krampus.remove();
+        }
 
         // Save location
         kidnappedPlayers.put(player.getUniqueId(), player.getLocation());
@@ -73,13 +89,33 @@ public class KrampusManager {
         // Teleport
         player.teleport(cageLoc.clone().add(0.5, 1, 0.5));
         player.sendMessage(
-                Component.text("You have been kidnapped by Krampus! Defeat the guard to escape!", NamedTextColor.RED));
+                Component.text("You have been kidnapped by Krampus! Defeat the guards to escape!", NamedTextColor.RED));
 
-        // Spawn Guard
-        Zombie guard = (Zombie) cageLoc.getWorld().spawnEntity(cageLoc.clone().add(0.5, 1, 0.5), EntityType.ZOMBIE);
-        guard.customName(Component.text("Cage Guard", NamedTextColor.RED));
-        guard.setCustomNameVisible(true);
-        guard.getEquipment().setHelmet(new ItemStack(Material.IRON_HELMET));
+        // Spawn Guards
+        Set<UUID> guards = new HashSet<>();
+        for (int i = 0; i < 5; i++) {
+            Zombie guard = (Zombie) cageLoc.getWorld().spawnEntity(cageLoc.clone().add(0.5, 1, 0.5), EntityType.ZOMBIE);
+            guard.customName(Component.text("Cage Guard", NamedTextColor.RED));
+            guard.setCustomNameVisible(true);
+            guard.getEquipment().setHelmet(new ItemStack(Material.IRON_HELMET));
+            guards.add(guard.getUniqueId());
+        }
+        playerGuards.put(player.getUniqueId(), guards);
+    }
+
+    public void checkGuardDeath(Player player, UUID guardId) {
+        if (playerGuards.containsKey(player.getUniqueId())) {
+            Set<UUID> guards = playerGuards.get(player.getUniqueId());
+            if (guards.remove(guardId)) {
+                if (guards.isEmpty()) {
+                    releasePlayer(player);
+                    playerGuards.remove(player.getUniqueId());
+                } else {
+                    player.sendMessage(
+                            Component.text("Guard defeated! " + guards.size() + " remaining!", NamedTextColor.YELLOW));
+                }
+            }
+        }
     }
 
     public void releasePlayer(Player player) {
@@ -98,10 +134,11 @@ public class KrampusManager {
     }
 
     private void buildCage(Location center) {
-        for (int x = -2; x <= 2; x++) {
-            for (int y = 0; y <= 4; y++) {
-                for (int z = -2; z <= 2; z++) {
-                    if (x == -2 || x == 2 || z == -2 || z == 2 || y == 0 || y == 4) {
+        // 9x9 Cage (Radius 4)
+        for (int x = -4; x <= 4; x++) {
+            for (int y = 0; y <= 5; y++) {
+                for (int z = -4; z <= 4; z++) {
+                    if (x == -4 || x == 4 || z == -4 || z == 4 || y == 0 || y == 5) {
                         center.clone().add(x, y, z).getBlock().setType(Material.IRON_BARS);
                     } else {
                         center.clone().add(x, y, z).getBlock().setType(Material.AIR);
@@ -110,8 +147,8 @@ public class KrampusManager {
             }
         }
         // Floor
-        for (int x = -1; x <= 1; x++) {
-            for (int z = -1; z <= 1; z++) {
+        for (int x = -3; x <= 3; x++) {
+            for (int z = -3; z <= 3; z++) {
                 center.clone().add(x, 0, z).getBlock().setType(Material.BEDROCK);
             }
         }

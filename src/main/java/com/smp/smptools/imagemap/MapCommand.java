@@ -31,43 +31,74 @@ public class MapCommand implements CommandExecutor {
         }
 
         if (args.length == 0) {
-            sender.sendMessage(ChatColor.RED + "Usage: /tomap <url>");
+            sender.sendMessage(ChatColor.RED + "Usage: /tomap <url> [width] [height]");
             return true;
         }
 
         Player player = (Player) sender;
         String urlString = args[0];
 
+        int widthGrid = 1;
+        int heightGrid = 1;
+
+        if (args.length >= 3) {
+            try {
+                widthGrid = Integer.parseInt(args[1]);
+                heightGrid = Integer.parseInt(args[2]);
+            } catch (NumberFormatException e) {
+                player.sendMessage(ChatColor.RED + "Width and Height must be numbers.");
+                return true;
+            }
+        }
+
         player.sendMessage(ChatColor.GRAY + "Downloading and processing image... this may take a moment.");
+
+        int finalWidthGrid = widthGrid;
+        int finalHeightGrid = heightGrid;
 
         new Thread(() -> {
             try {
                 URL url = new URL(urlString);
-                BufferedImage image = ImageProcessor.getImage(url);
+                int totalWidth = finalWidthGrid * 128;
+                int totalHeight = finalHeightGrid * 128;
 
-                if (image == null) {
-                    player.sendMessage(ChatColor.RED + "Failed to download or process the image. Please check the URL.");
+                BufferedImage fullImage = ImageProcessor.getImage(url, totalWidth, totalHeight);
+
+                if (fullImage == null) {
+                    player.sendMessage(
+                            ChatColor.RED + "Failed to download or process the image. Please check the URL.");
                     return;
                 }
 
                 // Process and render the image on the main thread
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    MapView mapView = Bukkit.createMap(player.getWorld());
-                    mapView.getRenderers().forEach(mapView::removeRenderer); // Clear default renderers
+                    for (int x = 0; x < finalWidthGrid; x++) {
+                        for (int y = 0; y < finalHeightGrid; y++) {
 
-                    mapView.addRenderer(new ImageMapRenderer(image));
+                            BufferedImage subImage = ImageProcessor.getSubImage(fullImage, x * 128, y * 128, 128, 128);
 
-                    ItemStack mapItem = new ItemStack(Material.FILLED_MAP);
-                    MapMeta mapMeta = (MapMeta) mapItem.getItemMeta();
-                    mapMeta.setMapView(mapView);
-                    mapItem.setItemMeta(mapMeta);
+                            MapView mapView = Bukkit.createMap(player.getWorld());
+                            mapView.getRenderers().forEach(mapView::removeRenderer); // Clear default renderers
+                            mapView.addRenderer(new ImageMapRenderer(subImage));
 
-                    // Save for persistence
-                    plugin.getImageMapsConfig().set("maps." + mapView.getId(), urlString);
+                            ItemStack mapItem = new ItemStack(Material.FILLED_MAP);
+                            MapMeta mapMeta = (MapMeta) mapItem.getItemMeta();
+                            mapMeta.setMapView(mapView);
+                            mapItem.setItemMeta(mapMeta);
+
+                            // Save for persistence
+                            String path = "maps." + mapView.getId();
+                            plugin.getImageMapsConfig().set(path + ".url", urlString);
+                            plugin.getImageMapsConfig().set(path + ".x", x);
+                            plugin.getImageMapsConfig().set(path + ".y", y);
+                            plugin.getImageMapsConfig().set(path + ".width", finalWidthGrid);
+                            plugin.getImageMapsConfig().set(path + ".height", finalHeightGrid);
+
+                            player.getInventory().addItem(mapItem);
+                        }
+                    }
                     plugin.saveImageMapsConfig();
-
-                    player.getInventory().addItem(mapItem);
-                    player.sendMessage(ChatColor.GREEN + "Your map has been created!");
+                    player.sendMessage(ChatColor.GREEN + "Your map(s) have been created!");
                 });
 
             } catch (Exception e) {

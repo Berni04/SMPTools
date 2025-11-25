@@ -18,6 +18,7 @@ import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.io.File;
 import java.util.List;
@@ -49,10 +50,15 @@ public class KrampusListener implements Listener {
             return;
 
         // Boss Abilities
-        if (event.getDamager() instanceof WitherSkeleton && event.getDamager().getCustomName() != null) {
+        if (event.getDamager() instanceof WitherSkeleton) {
             WitherSkeleton krampus = (WitherSkeleton) event.getDamager();
-            if (krampus.getCustomName().contains("Krampus") && event.getEntity() instanceof Player) {
+            if (krampus.getPersistentDataContainer().has(krampusManager.krampusKey, PersistentDataType.BYTE)
+                    && event.getEntity() instanceof Player) {
                 Player player = (Player) event.getEntity();
+
+                // Debug Log
+                plugin.getLogger().info("Krampus hit " + player.getName() + ". Health: " + player.getHealth()
+                        + ", Damage: " + event.getFinalDamage());
 
                 // Blindness
                 if (random.nextDouble() < 0.2) {
@@ -62,9 +68,10 @@ public class KrampusListener implements Listener {
 
                 // Kidnap Check (Lethal Damage)
                 if (player.getHealth() - event.getFinalDamage() <= 0) {
+                    plugin.getLogger().info("Krampus kidnapping triggered for " + player.getName());
                     event.setCancelled(true);
                     player.setHealth(player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue()); // Heal
-                    krampusManager.kidnapPlayer(player);
+                    krampusManager.kidnapPlayer(player, krampus);
                 }
             }
         }
@@ -78,8 +85,8 @@ public class KrampusListener implements Listener {
         LivingEntity entity = event.getEntity();
 
         // Krampus Death
-        if (entity instanceof WitherSkeleton && entity.getCustomName() != null
-                && entity.getCustomName().contains("Krampus")) {
+        if (entity instanceof WitherSkeleton
+                && entity.getPersistentDataContainer().has(krampusManager.krampusKey, PersistentDataType.BYTE)) {
             event.getDrops().clear();
             List<String> drops = christmasConfig.getStringList("krampus.drops");
             for (String drop : drops) {
@@ -96,7 +103,7 @@ public class KrampusListener implements Listener {
             if (entity.getKiller() != null) {
                 Player killer = entity.getKiller();
                 if (krampusManager.isKidnapped(killer)) {
-                    krampusManager.releasePlayer(killer);
+                    krampusManager.checkGuardDeath(killer, entity.getUniqueId());
                 }
             }
         }

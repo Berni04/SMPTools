@@ -125,6 +125,24 @@ commands:
     description: Manage NPCs.
     usage: /npc <spawn|remove|reload>
     permission: smptools.npc.admin
+  uptime:
+    description: Shows the server uptime.
+    usage: /uptime
+  ping:
+    description: Shows your or another player's ping.
+    usage: /ping [player]
+  present:
+    description: Manage Christmas presents.
+    usage: /present <give|remove> [tier]
+    permission: smptools.admin
+  krampus:
+    description: Manage Krampus spawning.
+    usage: /krampus <spawn>
+    permission: smptools.admin
+  blackfriday:
+    description: Manage the Black Friday event.
+    usage: /blackfriday <start|stop|reload|status>
+    permission: smptools.admin
 permissions:
   smptools.missions.admin:
     description: Allows spawning the mission NPC.

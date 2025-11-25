@@ -10,13 +10,13 @@ import java.net.URL;
 
 public class ImageProcessor {
 
-    public static BufferedImage getImage(URL url) {
+    public static BufferedImage getImage(URL url, int width, int height) {
         try {
             BufferedImage downloadedImage = ImageIO.read(url);
             if (downloadedImage == null) {
                 return null;
             }
-            BufferedImage resizedImage = resizeImage(downloadedImage);
+            BufferedImage resizedImage = resizeImage(downloadedImage, width, height);
             return ditherImage(resizedImage);
         } catch (Exception e) {
             e.printStackTrace();
@@ -24,9 +24,13 @@ public class ImageProcessor {
         }
     }
 
-    private static BufferedImage resizeImage(BufferedImage originalImage) {
-        Image resultingImage = originalImage.getScaledInstance(128, 128, Image.SCALE_DEFAULT);
-        BufferedImage outputImage = new BufferedImage(128, 128, BufferedImage.TYPE_INT_ARGB);
+    public static BufferedImage getSubImage(BufferedImage fullImage, int x, int y, int width, int height) {
+        return fullImage.getSubimage(x, y, width, height);
+    }
+
+    private static BufferedImage resizeImage(BufferedImage originalImage, int width, int height) {
+        Image resultingImage = originalImage.getScaledInstance(width, height, Image.SCALE_DEFAULT);
+        BufferedImage outputImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2d = outputImage.createGraphics();
         g2d.drawImage(resultingImage, 0, 0, null);
         g2d.dispose();
@@ -34,9 +38,11 @@ public class ImageProcessor {
     }
 
     private static BufferedImage ditherImage(BufferedImage image) {
-        BufferedImage dithered = new BufferedImage(128, 128, BufferedImage.TYPE_INT_RGB);
-        for (int y = 0; y < 128; y++) {
-            for (int x = 0; x < 128; x++) {
+        int width = image.getWidth();
+        int height = image.getHeight();
+        BufferedImage dithered = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
                 int rgb = image.getRGB(x, y);
                 java.awt.Color color = new java.awt.Color(rgb, true);
                 byte colorIndex = MapPalette.matchColor(color);
