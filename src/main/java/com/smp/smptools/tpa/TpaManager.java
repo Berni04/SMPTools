@@ -7,6 +7,7 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 import java.util.Set;
@@ -23,7 +24,7 @@ public class TpaManager {
         this.plugin = plugin;
     }
 
-    public void sendTeleportRequest(Player requester, Player target) {
+    public void sendTeleportRequest(@NotNull Player requester, @NotNull Player target) {
         if (tpaToggledOff.contains(target.getUniqueId())) {
             requester.sendMessage(Component.text(target.getName() + " is not accepting teleport requests at this time.", NamedTextColor.RED));
             return;
@@ -61,7 +62,7 @@ public class TpaManager {
         }.runTaskLater(plugin, Constants.TPA_TIMEOUT_TICKS);
     }
 
-    public void acceptTeleportRequest(Player acceptor) {
+    public void acceptTeleportRequest(@NotNull Player acceptor) {
         if (!pendingRequests.containsKey(acceptor.getUniqueId())) {
             acceptor.sendMessage(Component.text("You have no pending teleport requests.", NamedTextColor.RED));
             return;
@@ -79,7 +80,7 @@ public class TpaManager {
         acceptor.sendMessage(Component.text(requester.getName() + " has started teleporting to you.", NamedTextColor.GREEN));
     }
 
-    public void denyTeleportRequest(Player denier) {
+    public void denyTeleportRequest(@NotNull Player denier) {
         if (!pendingRequests.containsKey(denier.getUniqueId())) {
             denier.sendMessage(Component.text("You have no pending teleport requests.", NamedTextColor.RED));
             return;
@@ -94,7 +95,7 @@ public class TpaManager {
         denier.sendMessage(Component.text("Teleport request denied.", NamedTextColor.GREEN));
     }
 
-    public void toggleTpa(Player player) {
+    public void toggleTpa(@NotNull Player player) {
         if (tpaToggledOff.contains(player.getUniqueId())) {
             tpaToggledOff.remove(player.getUniqueId());
             player.sendMessage(Component.text("You are now accepting teleport requests.", NamedTextColor.GREEN));

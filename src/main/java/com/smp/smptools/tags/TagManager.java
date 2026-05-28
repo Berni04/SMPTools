@@ -7,6 +7,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
@@ -32,18 +34,18 @@ public class TagManager {
         }
     }
 
-    public String getPlayerTitle(Player player) {
+    public @Nullable String getPlayerTitle(@NotNull Player player) {
         return playerTitles.get(player.getUniqueId().toString());
     }
 
-    public void setPlayerTitle(Player player, String title) {
+    public void setPlayerTitle(@NotNull Player player, @NotNull String title) {
         playerTitles.put(player.getUniqueId().toString(), title);
         plugin.getTagsConfig().set("player-titles." + player.getUniqueId().toString(), title);
         plugin.saveTagsConfig();
         plugin.getNameTagListener().updatePlayerName(player); // Update display name immediately
     }
 
-    public void removePlayerTitle(Player player) {
+    public void removePlayerTitle(@NotNull Player player) {
         playerTitles.remove(player.getUniqueId().toString());
         plugin.getTagsConfig().set("player-titles." + player.getUniqueId().toString(), null);
         plugin.saveTagsConfig();
@@ -51,7 +53,7 @@ public class TagManager {
     }
 
     // Milestone logic
-    public void checkMilestones(Player player) {
+    public void checkMilestones(@NotNull Player player) {
         String uuid = player.getUniqueId().toString();
         ConfigurationSection stats = plugin.getStatsConfig().getConfigurationSection("stats." + uuid);
         if (stats == null) return;
@@ -78,11 +80,11 @@ public class TagManager {
         }
     }
 
-    public boolean hasUnlockedTitle(Player player, String title) {
+    public boolean hasUnlockedTitle(@NotNull Player player, @NotNull String title) {
         return plugin.getTagsConfig().getStringList("unlocked-titles." + player.getUniqueId().toString()).contains(title);
     }
 
-    public void unlockTitle(Player player, String title) {
+    public void unlockTitle(@NotNull Player player, @NotNull String title) {
         List<String> unlockedTitles = plugin.getTagsConfig().getStringList("unlocked-titles." + player.getUniqueId().toString());
         if (!unlockedTitles.contains(title)) {
             unlockedTitles.add(title);
@@ -91,11 +93,11 @@ public class TagManager {
         }
     }
 
-    public List<String> getUnlockedTitles(Player player) {
+    public @NotNull List<String> getUnlockedTitles(@NotNull Player player) {
         return plugin.getTagsConfig().getStringList("unlocked-titles." + player.getUniqueId().toString());
     }
 
-    public String getTagDescription(String title) {
+    public @Nullable String getTagDescription(@NotNull String title) {
         if (title == null) return null;
 
         ConfigurationSection milestones = plugin.getTagsConfig().getConfigurationSection("milestones");

@@ -5,6 +5,7 @@ import com.smp.smptools.utils.Constants;
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Random;
@@ -18,7 +19,7 @@ public class SkillsManager {
         this.plugin = plugin;
     }
 
-    public void addExperience(Player player, SkillType skill, int amount) {
+    public void addExperience(@NotNull Player player, @NotNull SkillType skill, int amount) {
         if (!isSkillEnabled(skill)) {
             return;
         }
@@ -44,15 +45,15 @@ public class SkillsManager {
         plugin.saveStatsConfig();
     }
 
-    public int getLevel(Player player, SkillType skill) {
+    public int getLevel(@NotNull Player player, @NotNull SkillType skill) {
         return plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".skills." + skill.name().toLowerCase() + ".level", 1);
     }
 
-    public int getCurrentExperience(Player player, SkillType skill) {
+    public int getCurrentExperience(@NotNull Player player, @NotNull SkillType skill) {
         return plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".skills." + skill.name().toLowerCase() + ".experience", 0);
     }
 
-    public boolean attemptDoubleDrop(Player player, SkillType skill) {
+    public boolean attemptDoubleDrop(@NotNull Player player, @NotNull SkillType skill) {
         if (!isSkillEnabled(skill)) {
             return false;
         }
