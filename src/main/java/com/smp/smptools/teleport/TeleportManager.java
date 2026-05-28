@@ -7,17 +7,17 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level; // Import Level for logging
 
 public class TeleportManager {
 
     private final SMPTools plugin;
-    private final Map<UUID, BukkitTask> pendingTeleports = new HashMap<>();
-    private final Map<UUID, Location> initialLocations = new HashMap<>();
-    private final java.util.Set<UUID> teleportingSafely = new java.util.HashSet<>(); // New set to track safe teleports
+    private final Map<UUID, BukkitTask> pendingTeleports = new ConcurrentHashMap<>();
+    private final Map<UUID, Location> initialLocations = new ConcurrentHashMap<>();
+    private final java.util.Set<UUID> teleportingSafely = ConcurrentHashMap.newKeySet(); // New set to track safe teleports
 
     public TeleportManager(SMPTools plugin) {
         this.plugin = plugin;

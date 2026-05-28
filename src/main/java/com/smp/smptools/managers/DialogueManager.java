@@ -20,18 +20,18 @@ import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 
 import java.io.File;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class DialogueManager {
 
     private final SMPTools plugin;
     private FileConfiguration dialogueConfig;
-    private final Map<UUID, String> playerCurrentDialogue = new HashMap<>(); // Player UUID -> Dialogue ID
-    private final Map<UUID, String> playerCurrentLine = new HashMap<>(); // Player UUID -> Line ID
-    private final Map<UUID, UUID> activeTextDisplays = new HashMap<>(); // Player UUID -> TextDisplay Entity UUID
-    private final Map<UUID, UUID> playerNPC = new HashMap<>(); // Player UUID -> NPC Entity UUID
+    private final Map<UUID, String> playerCurrentDialogue = new ConcurrentHashMap<>(); // Player UUID -> Dialogue ID
+    private final Map<UUID, String> playerCurrentLine = new ConcurrentHashMap<>(); // Player UUID -> Line ID
+    private final Map<UUID, UUID> activeTextDisplays = new ConcurrentHashMap<>(); // Player UUID -> TextDisplay Entity UUID
+    private final Map<UUID, UUID> playerNPC = new ConcurrentHashMap<>(); // Player UUID -> NPC Entity UUID
 
     public DialogueManager(SMPTools plugin) {
         this.plugin = plugin;

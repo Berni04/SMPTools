@@ -10,14 +10,14 @@ import org.bukkit.entity.Player;
 
 import java.io.InputStream;
 import java.net.URL;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class MusicCommand implements CommandExecutor {
 
     private final SMPTools plugin;
-    private final Map<UUID, SongPlayer> playingTasks = new HashMap<>();
+    private final Map<UUID, SongPlayer> playingTasks = new ConcurrentHashMap<>();
 
     public MusicCommand(SMPTools plugin) {
         this.plugin = plugin;

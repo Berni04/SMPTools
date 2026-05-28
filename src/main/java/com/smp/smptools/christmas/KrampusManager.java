@@ -19,18 +19,17 @@ import java.io.File;
 import org.bukkit.NamespacedKey;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class KrampusManager {
 
     private final SMPTools plugin;
     private FileConfiguration christmasConfig;
-    private final Map<UUID, Location> kidnappedPlayers = new HashMap<>();
-    private final Map<UUID, Set<UUID>> playerGuards = new HashMap<>();
+    private final Map<UUID, Location> kidnappedPlayers = new ConcurrentHashMap<>();
+    private final Map<UUID, Set<UUID>> playerGuards = new ConcurrentHashMap<>();
     public final NamespacedKey krampusKey;
 
     public KrampusManager(SMPTools plugin) {

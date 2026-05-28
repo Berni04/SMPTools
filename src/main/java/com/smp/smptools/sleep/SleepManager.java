@@ -7,16 +7,16 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class SleepManager {
 
     private final SMPTools plugin;
     private boolean voteInProgress = false;
-    private final Set<UUID> yesVotes = new HashSet<>();
-    private final Set<UUID> noVotes = new HashSet<>();
+    private final Set<UUID> yesVotes = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> noVotes = ConcurrentHashMap.newKeySet();
     private Player voteInitiator;
 
     public SleepManager(SMPTools plugin) {

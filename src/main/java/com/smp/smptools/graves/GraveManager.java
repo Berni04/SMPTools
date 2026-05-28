@@ -26,11 +26,12 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class GraveManager implements Listener {
 
     private final SMPTools plugin;
-    private final Map<Location, Grave> graves = new HashMap<>();
+    private final Map<Location, Grave> graves = new ConcurrentHashMap<>();
     private File gravesFile;
     private FileConfiguration gravesConfig;
 

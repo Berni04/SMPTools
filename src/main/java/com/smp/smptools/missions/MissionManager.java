@@ -9,16 +9,16 @@ import org.bukkit.entity.Player;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class MissionManager {
 
     private final SMPTools plugin;
-    private final Map<String, Mission> missions = new HashMap<>();
-    private final Map<UUID, PlayerMissionData> playerData = new HashMap<>();
+    private final Map<String, Mission> missions = new ConcurrentHashMap<>();
+    private final Map<UUID, PlayerMissionData> playerData = new ConcurrentHashMap<>();
     private File playerMissionsFile;
     private FileConfiguration playerMissionsConfig;
 
