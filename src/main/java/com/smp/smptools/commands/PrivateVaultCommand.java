@@ -1,8 +1,10 @@
 package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -30,7 +32,7 @@ public class PrivateVaultCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "Only players can use this command!");
+            sender.sendMessage(Component.text("Only players can use this command!", NamedTextColor.RED));
             return true;
         }
 
@@ -45,7 +47,7 @@ public class PrivateVaultCommand implements CommandExecutor {
                 vaultSize = 54;
             }
 
-            Inventory vault = Bukkit.createInventory(null, vaultSize, ChatColor.DARK_PURPLE + "Private Vault");
+            Inventory vault = Bukkit.createInventory(null, vaultSize, Component.text("Private Vault", TextColor.fromHexString("#5B2C6F")));
 
             // Load items from config
             String encodedInventory = config.getString("privatevaults." + playerUUID.toString());
@@ -60,9 +62,9 @@ public class PrivateVaultCommand implements CommandExecutor {
             }
 
             player.openInventory(vault);
-            player.sendMessage(ChatColor.GREEN + "Opened your private vault.");
+            player.sendMessage(Component.text("Opened your private vault.", NamedTextColor.GREEN));
         } else {
-            player.sendMessage(ChatColor.RED + "You don't have permission to use this command.");
+            player.sendMessage(Component.text("You don't have permission to use this command.", NamedTextColor.RED));
         }
         return true;
     }
