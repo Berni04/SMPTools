@@ -55,6 +55,52 @@ public final class Constants {
     /** Radius for NPC cleanup operations */
     public static final double NPC_CLEANUP_RADIUS = 3.0;
 
+    // Troll durations
+    /** Duration for blindness/nausea troll effects (10 seconds) */
+    public static final long TROLL_BLINDNESS_DURATION_TICKS = TICKS_PER_SECOND * 10;
+    
+    /** Duration for levitation troll effect (5 seconds) */
+    public static final long TROLL_LEVITATION_DURATION_TICKS = TICKS_PER_SECOND * 5;
+    
+    /** Duration for chat scramble troll effect (30 seconds) */
+    public static final long TROLL_CHAT_SCRAMBLE_DURATION_MS = 30000;
+    
+    /** Duration for temporary block troll effect (3 seconds) */
+    public static final long TROLL_TEMP_BLOCK_DURATION_TICKS = TICKS_PER_SECOND * 3;
+    
+    /** Radius for teleport troll effect */
+    public static final int TROLL_TELEPORT_RADIUS = 10;
+    
+    /** Count for sound spam troll effect */
+    public static final int TROLL_SOUND_SPAM_COUNT = 5;
+
+    // Mission GUI
+    /** Size for standard mission GUI */
+    public static final int MISSION_GUI_SIZE = 27;
+    
+    /** Size for large mission GUI */
+    public static final int MISSION_GUI_LARGE_SIZE = 54;
+    
+    /** Slot for back button in mission GUI */
+    public static final int MISSION_BACK_BUTTON_SLOT = 49;
+    
+    /** Length of progress bar in mission GUI */
+    public static final int MISSION_PROGRESS_BAR_LENGTH = 20;
+
+    // Stats
+    /** Minutes in one hour */
+    public static final int MINUTES_PER_HOUR = 60;
+    
+    /** Minutes in one day */
+    public static final int MINUTES_PER_DAY = 1440;
+
+    // Treasure rarity thresholds
+    /** Threshold for rare treasure (5%) */
+    public static final double TREASURE_RARE_THRESHOLD = 0.05;
+    
+    /** Threshold for uncommon treasure (20%) */
+    public static final double TREASURE_UNCOMMON_THRESHOLD = 0.25;
+
     private Constants() {
         // Prevent instantiation
     }
