@@ -7,8 +7,12 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.net.URL;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ImageProcessor {
+
+    private static final Logger logger = Logger.getLogger(ImageProcessor.class.getName());
 
     public static BufferedImage getImage(URL url, int width, int height) {
         try {
@@ -19,7 +23,7 @@ public class ImageProcessor {
             BufferedImage resizedImage = resizeImage(downloadedImage, width, height);
             return ditherImage(resizedImage);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Failed to process image from URL: " + url, e);
             return null;
         }
     }
