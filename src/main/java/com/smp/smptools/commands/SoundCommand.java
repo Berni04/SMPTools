@@ -1,7 +1,8 @@
 package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.SoundCategory;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -20,16 +21,16 @@ public class SoundCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("This command can only be used by players.");
+            sender.sendMessage(Component.text("This command can only be used by players.", NamedTextColor.RED));
             return true;
         }
 
         if (args.length == 0) {
-            sender.sendMessage(ChatColor.RED + "Usage: /sound <sound_name>");
+            sender.sendMessage(Component.text("Usage: /sound <sound_name>", NamedTextColor.RED));
             // Optionally, list available sounds
             ConfigurationSection soundsSection = plugin.getConfig().getConfigurationSection("features.meme-sounds.sounds");
             if (soundsSection != null) {
-                sender.sendMessage(ChatColor.YELLOW + "Available sounds: " + String.join(", ", soundsSection.getKeys(false)));
+                sender.sendMessage(Component.text("Available sounds: " + String.join(", ", soundsSection.getKeys(false)), NamedTextColor.YELLOW));
             }
             return true;
         }
@@ -39,7 +40,7 @@ public class SoundCommand implements CommandExecutor {
         String soundKey = plugin.getConfig().getString("features.meme-sounds.sounds." + soundName);
 
         if (soundKey == null) {
-            player.sendMessage(ChatColor.RED + "That sound does not exist.");
+            player.sendMessage(Component.text("That sound does not exist.", NamedTextColor.RED));
             return true;
         }
 
