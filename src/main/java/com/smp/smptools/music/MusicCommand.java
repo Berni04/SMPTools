@@ -1,8 +1,9 @@
 package com.smp.smptools.music;
 
 import com.smp.smptools.SMPTools;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -26,14 +27,14 @@ public class MusicCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("This command can only be used by players.");
+            sender.sendMessage(Component.text("This command can only be used by players.", NamedTextColor.RED));
             return true;
         }
 
         Player player = (Player) sender;
 
         if (args.length == 0) {
-            player.sendMessage(ChatColor.RED + "Usage: /music <play|broadcast|stop> [url]");
+            player.sendMessage(Component.text("Usage: /music <play|broadcast|stop> [url]", NamedTextColor.RED));
             return true;
         }
 
@@ -41,7 +42,7 @@ public class MusicCommand implements CommandExecutor {
 
         if (subCommand.equals("broadcast")) {
             if (!player.hasPermission("smptools.music.broadcast")) {
-                player.sendMessage(ChatColor.RED + "You don't have permission to broadcast music.");
+                player.sendMessage(Component.text("You don't have permission to broadcast music.", NamedTextColor.RED));
                 return true;
             }
         }
@@ -50,15 +51,15 @@ public class MusicCommand implements CommandExecutor {
             SongPlayer task = playingTasks.remove(player.getUniqueId());
             if (task != null) {
                 task.cancel();
-                player.sendMessage(ChatColor.YELLOW + "Music stopped.");
+                player.sendMessage(Component.text("Music stopped.", NamedTextColor.YELLOW));
             } else {
-                player.sendMessage(ChatColor.RED + "No music is currently playing.");
+                player.sendMessage(Component.text("No music is currently playing.", NamedTextColor.RED));
             }
             return true;
         }
 
         if (args.length < 2) {
-            player.sendMessage(ChatColor.RED + "Usage: /music " + subCommand + " <url_or_name>");
+            player.sendMessage(Component.text("Usage: /music " + subCommand + " <url_or_name>", NamedTextColor.RED));
             return true;
         }
 
@@ -75,30 +76,27 @@ public class MusicCommand implements CommandExecutor {
         } else {
             String baseUrl = plugin.getConfig().getString("features.music-player.base-url");
             if (baseUrl == null || baseUrl.isEmpty()) {
-                player.sendMessage(ChatColor.RED + "The base URL for songs is not configured on the server.");
+                player.sendMessage(Component.text("The base URL for songs is not configured on the server.", NamedTextColor.RED));
                 return true;
             }
             try {
-                // URL encode the filename to handle spaces and other special characters
                 String encodedName = java.net.URLEncoder.encode(input, java.nio.charset.StandardCharsets.UTF_8.toString());
-                // Replace '+' with '%20' for compatibility with raw file paths
                 String urlPathCompatibleEncodedName = encodedName.replace("+", "%20");
                 urlString = baseUrl + urlPathCompatibleEncodedName + ".nbs";
             } catch (java.io.UnsupportedEncodingException e) {
-                // This should never happen with UTF-8
-                player.sendMessage(ChatColor.RED + "An internal error occurred while encoding the song name.");
-                e.printStackTrace();
+                player.sendMessage(Component.text("An internal error occurred while encoding the song name.", NamedTextColor.RED));
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to encode song name", e);
                 return true;
             }
         }
 
-        player.sendMessage(ChatColor.GRAY + "Downloading and parsing song...");
+        player.sendMessage(Component.text("Downloading and parsing song...", NamedTextColor.GRAY));
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try (InputStream stream = new URL(urlString).openStream()) {
                 Song song = NBSParser.parse(stream);
                 if (song == null) {
-                    player.sendMessage(ChatColor.RED + "Failed to parse the song. Please check the file format.");
+                    player.sendMessage(Component.text("Failed to parse the song. Please check the file format.", NamedTextColor.RED));
                     return;
                 }
 
@@ -112,11 +110,11 @@ public class MusicCommand implements CommandExecutor {
                     
                     playingTasks.put(player.getUniqueId(), songPlayer);
                     songPlayer.play(plugin);
-                    player.sendMessage(ChatColor.GREEN + "Now playing: " + song.getTitle());
+                    player.sendMessage(Component.text("Now playing: " + song.getTitle(), NamedTextColor.GREEN));
                 });
 
             } catch (Exception e) {
-                player.sendMessage(ChatColor.RED + "Failed to download the song. Please check the URL.");
+                player.sendMessage(Component.text("Failed to download the song. Please check the URL.", NamedTextColor.RED));
                 plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to download song", e);
             }
         });
