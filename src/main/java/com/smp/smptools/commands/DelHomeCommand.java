@@ -1,7 +1,8 @@
 package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -18,12 +19,12 @@ public class DelHomeCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "Only players can use this command!");
+            sender.sendMessage(Component.text("Only players can use this command!", NamedTextColor.RED));
             return true;
         }
 
         if (args.length == 0) {
-            sender.sendMessage(ChatColor.RED + "Please specify the name of the home you want to delete. Usage: /delhome <name>");
+            sender.sendMessage(Component.text("Please specify the name of the home you want to delete. Usage: /delhome <name>", NamedTextColor.RED));
             return true;
         }
 
@@ -34,9 +35,9 @@ public class DelHomeCommand implements CommandExecutor {
         if (plugin.getConfig().contains("homes." + playerUUID + "." + homeName)) {
             plugin.getConfig().set("homes." + playerUUID + "." + homeName, null);
             plugin.saveConfig();
-            player.sendMessage(ChatColor.GREEN + "Your home '" + homeName + "' has been deleted!");
+            player.sendMessage(Component.text("Your home '" + homeName + "' has been deleted!", NamedTextColor.GREEN));
         } else {
-            player.sendMessage(ChatColor.RED + "You don't have a home named '" + homeName + "'.");
+            player.sendMessage(Component.text("You don't have a home named '" + homeName + "'.", NamedTextColor.RED));
         }
         return true;
     }
