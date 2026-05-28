@@ -94,7 +94,7 @@ public class MusicCommand implements CommandExecutor {
 
         player.sendMessage(ChatColor.GRAY + "Downloading and parsing song...");
 
-        new Thread(() -> {
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try (InputStream stream = new URL(urlString).openStream()) {
                 Song song = NBSParser.parse(stream);
                 if (song == null) {
@@ -117,9 +117,9 @@ public class MusicCommand implements CommandExecutor {
 
             } catch (Exception e) {
                 player.sendMessage(ChatColor.RED + "Failed to download the song. Please check the URL.");
-                e.printStackTrace();
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to download song", e);
             }
-        }).start();
+        });
 
         return true;
     }

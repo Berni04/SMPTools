@@ -56,7 +56,7 @@ public class MapCommand implements CommandExecutor {
         int finalWidthGrid = widthGrid;
         int finalHeightGrid = heightGrid;
 
-        new Thread(() -> {
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
                 URL url = new URL(urlString);
                 int totalWidth = finalWidthGrid * 128;
@@ -103,9 +103,9 @@ public class MapCommand implements CommandExecutor {
 
             } catch (Exception e) {
                 player.sendMessage(ChatColor.RED + "An error occurred: " + e.getMessage());
-                e.printStackTrace();
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to create map", e);
             }
-        }).start();
+        });
 
         return true;
     }

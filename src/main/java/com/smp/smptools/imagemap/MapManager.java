@@ -49,7 +49,7 @@ public class MapManager {
     }
 
     private void loadImage(int mapId, String urlString, int xGrid, int yGrid, int widthGrid, int heightGrid) {
-        new Thread(() -> {
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
                 URL url = new URL(urlString);
                 // Calculate total size based on grid
@@ -75,6 +75,6 @@ public class MapManager {
                 plugin.getLogger()
                         .warning("Failed to reload map " + mapId + " from URL " + urlString + ": " + e.getMessage());
             }
-        }).start();
+        });
     }
 }
