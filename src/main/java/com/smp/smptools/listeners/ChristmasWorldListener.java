@@ -1,6 +1,8 @@
 package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -17,7 +19,6 @@ import org.bukkit.event.entity.EntityToggleGlideEvent;
 import org.bukkit.event.player.PlayerBedEnterEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.ChatColor;
 
 public class ChristmasWorldListener implements Listener {
 
@@ -99,7 +100,7 @@ public class ChristmasWorldListener implements Listener {
     public void onPlayerBedEnter(PlayerBedEnterEvent event) {
         if (event.getPlayer().getWorld().getName().equalsIgnoreCase(WORLD_NAME)) {
             event.setCancelled(true);
-            event.getPlayer().sendMessage(ChatColor.RED + "You cannot sleep in this world!");
+            event.getPlayer().sendMessage(Component.text("You cannot sleep in this world!", NamedTextColor.RED));
         }
     }
 
@@ -123,11 +124,11 @@ public class ChristmasWorldListener implements Listener {
     @EventHandler
     public void onEntityToggleGlide(EntityToggleGlideEvent event) {
         if (event.getEntity().getWorld().getName().equalsIgnoreCase(WORLD_NAME)) {
-            if (event.isGliding()) { // Trying to start gliding
+            if (event.isGliding()) {
                 event.setCancelled(true);
                 if (event.getEntity() instanceof Player) {
                     ((Player) event.getEntity())
-                            .sendMessage(ChatColor.RED + "Elytra flying is disabled in this world!");
+                            .sendMessage(Component.text("Elytra flying is disabled in this world!", NamedTextColor.RED));
                 }
             }
         }
