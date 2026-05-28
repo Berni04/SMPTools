@@ -39,6 +39,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.smp.smptools.utils.AsyncConfigHelper;
 import java.io.File;
 import java.io.IOException;
 
@@ -276,7 +277,6 @@ public class SMPTools extends JavaPlugin {
         this.getCommand("delhome").setExecutor(new DelHomeCommand(this));
         this.getCommand("homes").setExecutor(new HomesCommand(this));
         this.getCommand("msg").setExecutor(new MsgCommand(this));
-        this.getCommand("stats").setExecutor(new StatsCommand(this));
         this.getCommand("clearstats").setExecutor(new ClearStatsCommand(this));
         this.getCommand("prefix").setExecutor(new PrefixCommand());
         this.getCommand("color").setExecutor(new ColorCommand());
@@ -296,7 +296,6 @@ public class SMPTools extends JavaPlugin {
         Objects.requireNonNull(getCommand("sudo")).setExecutor(new SudoCommand(this));
         Objects.requireNonNull(getCommand("customitem")).setExecutor(new CustomItemCommand());
         Objects.requireNonNull(getCommand("r")).setExecutor(new ReplyCommand(this));
-        Objects.requireNonNull(getCommand("rename")).setExecutor(new RenameCommand(this));
         Objects.requireNonNull(getCommand("rename")).setExecutor(new RenameCommand(this));
         Objects.requireNonNull(getCommand("advent")).setExecutor(new AdventCommand(adventGUIListener));
         Objects.requireNonNull(getCommand("npc")).setExecutor(new NPCCommand(this));
@@ -418,11 +417,7 @@ public class SMPTools extends JavaPlugin {
     }
 
     public void saveStatsConfig() {
-        try {
-            statsConfig.save(statsFile);
-        } catch (IOException e) {
-            getLogger().severe("Could not save stats.yml file!");
-        }
+        AsyncConfigHelper.saveConfigAsync(this, statsConfig, statsFile, "stats.yml");
     }
 
     public void setupTagsConfig() {
@@ -516,11 +511,7 @@ public class SMPTools extends JavaPlugin {
     }
 
     public void saveTagsConfig() {
-        try {
-            tagsConfig.save(tagsFile);
-        } catch (IOException e) {
-            getLogger().severe("Could not save tags.yml file!");
-        }
+        AsyncConfigHelper.saveConfigAsync(this, tagsConfig, tagsFile, "tags.yml");
     }
 
     public void setupRewardsConfig() {
@@ -540,11 +531,7 @@ public class SMPTools extends JavaPlugin {
     }
 
     public void saveRewardsConfig() {
-        try {
-            rewardsConfig.save(rewardsFile);
-        } catch (IOException e) {
-            getLogger().severe("Could not save rewards.yml file!");
-        }
+        AsyncConfigHelper.saveConfigAsync(this, rewardsConfig, rewardsFile, "rewards.yml");
     }
 
     public void setupImageMapsConfig() {
@@ -564,11 +551,7 @@ public class SMPTools extends JavaPlugin {
     }
 
     public void saveImageMapsConfig() {
-        try {
-            imageMapsConfig.save(imageMapsFile);
-        } catch (IOException e) {
-            getLogger().severe("Could not save imagemaps.yml file!");
-        }
+        AsyncConfigHelper.saveConfigAsync(this, imageMapsConfig, imageMapsFile, "imagemaps.yml");
     }
 
     public static SMPTools getInstance() {

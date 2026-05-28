@@ -8,15 +8,15 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class TagManager {
 
     private final SMPTools plugin;
-    private final Map<String, String> playerTitles = new HashMap<>(); // UUID -> Title
+    private final Map<String, String> playerTitles = new ConcurrentHashMap<>(); // UUID -> Title
 
     public TagManager(SMPTools plugin) {
         this.plugin = plugin;

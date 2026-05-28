@@ -1,6 +1,7 @@
 package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
+import com.smp.smptools.utils.Constants;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Bisected;
@@ -12,16 +13,17 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.entity.EntityDismountEvent;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class SitListener implements Listener {
 
     private final SMPTools plugin;
-    private final Set<UUID> sittingPlayers = new HashSet<>();
+    private final Set<UUID> sittingPlayers = ConcurrentHashMap.newKeySet();
 
     public SitListener(SMPTools plugin) {
         this.plugin = plugin;
@@ -63,7 +65,7 @@ public class SitListener implements Listener {
             return;
         }
 
-        Location sitLocation = block.getLocation().add(0.5, 1.2, 0.5);
+        Location sitLocation = block.getLocation().add(Constants.SIT_OFFSET_X, Constants.SIT_OFFSET_Y, Constants.SIT_OFFSET_Z);
         ArmorStand armorStand = (ArmorStand) player.getWorld().spawnEntity(sitLocation, EntityType.ARMOR_STAND);
 
         armorStand.setGravity(false);
@@ -88,6 +90,23 @@ public class SitListener implements Listener {
                 if (armorStand.getPassengers().contains(player)) {
                     armorStand.remove();
                     sittingPlayers.remove(player.getUniqueId());
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        UUID uuid = event.getPlayer().getUniqueId();
+        if (sittingPlayers.remove(uuid)) {
+            // Find and remove the armor stand the player was sitting on
+            for (org.bukkit.entity.Entity entity : event.getPlayer().getNearbyEntities(2, 2, 2)) {
+                if (entity instanceof ArmorStand) {
+                    ArmorStand armorStand = (ArmorStand) entity;
+                    if (armorStand.getPassengers().contains(event.getPlayer())) {
+                        armorStand.remove();
+                        break;
+                    }
                 }
             }
         }

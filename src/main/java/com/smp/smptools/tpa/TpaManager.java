@@ -1,23 +1,23 @@
 package com.smp.smptools.tpa;
 
 import com.smp.smptools.SMPTools;
+import com.smp.smptools.utils.Constants;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class TpaManager {
 
     private final SMPTools plugin;
-    private final Map<UUID, UUID> pendingRequests = new HashMap<>(); // Target UUID -> Requester UUID
-    private final Set<UUID> tpaToggledOff = new HashSet<>(); // Players who have /tptoggle off
+    private final Map<UUID, UUID> pendingRequests = new ConcurrentHashMap<>(); // Target UUID -> Requester UUID
+    private final Set<UUID> tpaToggledOff = ConcurrentHashMap.newKeySet(); // Players who have /tptoggle off
 
     public TpaManager(SMPTools plugin) {
         this.plugin = plugin;
@@ -58,7 +58,7 @@ public class TpaManager {
                     target.sendMessage(Component.text("Teleport request from " + requester.getName() + " has expired.", NamedTextColor.RED));
                 }
             }
-        }.runTaskLater(plugin, 20 * 60); // 60 seconds
+        }.runTaskLater(plugin, Constants.TPA_TIMEOUT_TICKS);
     }
 
     public void acceptTeleportRequest(Player acceptor) {

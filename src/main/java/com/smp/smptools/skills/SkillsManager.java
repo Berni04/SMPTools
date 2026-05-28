@@ -1,6 +1,7 @@
 package com.smp.smptools.skills;
 
 import com.smp.smptools.SMPTools;
+import com.smp.smptools.utils.Constants;
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -63,11 +64,8 @@ public class SkillsManager {
             return false;
         }
 
-        // Simple formula parser
         try {
-            String[] parts = chanceFormula.split("\\*");
-            double baseChance = Double.parseDouble(parts[0].trim());
-            double chance = baseChance * level;
+            double chance = parseFormula(chanceFormula, level);
             return random.nextDouble() < chance;
         } catch (Exception e) {
             plugin.getLogger().warning("Invalid double-drop-chance formula for " + skill.name() + ": " + chanceFormula);
@@ -76,8 +74,7 @@ public class SkillsManager {
     }
 
     public int getExpToNextLevel(int currentLevel) {
-        // A simple exponential growth formula
-        return (int) (100 * Math.pow(1.2, currentLevel - 1));
+        return (int) (Constants.SKILL_BASE_EXP * Math.pow(Constants.SKILL_GROWTH_RATE, currentLevel - 1));
     }
 
     private boolean isSkillEnabled(SkillType skill) {
@@ -164,12 +161,9 @@ public class SkillsManager {
         if (chanceFormula == null) return;
 
         try {
-            String[] parts = chanceFormula.split("\\*");
-            double baseChance = Double.parseDouble(parts[0].trim());
-            double chance = baseChance * level;
+            double chance = parseFormula(chanceFormula, level);
 
             if (random.nextDouble() < chance) {
-                // Success! Find a treasure.
                 List<String> common = plugin.getConfig().getStringList("features.mmo-skills.excavation.treasure-hunter.loot.common");
                 List<String> uncommon = plugin.getConfig().getStringList("features.mmo-skills.excavation.treasure-hunter.loot.uncommon");
                 List<String> rare = plugin.getConfig().getStringList("features.mmo-skills.excavation.treasure-hunter.loot.rare");
@@ -177,13 +171,13 @@ public class SkillsManager {
                 String itemString;
                 double rarityRoll = random.nextDouble();
 
-                if (rarityRoll < 0.05) { // 5% chance for rare
+                if (rarityRoll < 0.05) {
                     itemString = rare.get(random.nextInt(rare.size()));
                     player.sendMessage("§6§lRARE! §eYou found a rare treasure!");
-                } else if (rarityRoll < 0.25) { // 20% chance for uncommon (25-5)
+                } else if (rarityRoll < 0.25) {
                     itemString = uncommon.get(random.nextInt(uncommon.size()));
                     player.sendMessage("§aYou found an uncommon treasure!");
-                } else { // 75% chance for common
+                } else {
                     itemString = common.get(random.nextInt(common.size()));
                 }
 
@@ -262,19 +256,10 @@ public class SkillsManager {
         }
 
         try {
-            // Calculate chance
-            String[] chanceParts = chanceFormula.split("\\*");
-            double baseChance = Double.parseDouble(chanceParts[0].trim());
-            double chance = baseChance * level;
+            double chance = parseFormula(chanceFormula, level);
 
             if (random.nextDouble() < chance) {
-                // Calculate damage multiplier
-                double multiplier = 1.0;
-                if (damageMultiplierFormula.contains("level")) {
-                    multiplier = Double.parseDouble(damageMultiplierFormula.replace("level", String.valueOf(level)).replace(" ", ""));
-                } else {
-                    multiplier = Double.parseDouble(damageMultiplierFormula);
-                }
+                double multiplier = parseDamageMultiplier(damageMultiplierFormula, level);
                 player.sendMessage("§c§lCRITICAL STRIKE! §r§7(" + String.format("%.1f", multiplier) + "x Damage)");
                 return baseDamage * multiplier;
             }
@@ -282,5 +267,26 @@ public class SkillsManager {
             plugin.getLogger().warning("Could not execute Critical Strike due to an error: " + e.getMessage());
         }
         return baseDamage;
+    }
+
+    private double parseFormula(String formula, int level) {
+        if (formula == null || formula.isEmpty()) {
+            throw new IllegalArgumentException("Formula cannot be null or empty");
+        }
+
+        if (!formula.matches("\\d+\\.?\\d*\\s*\\*\\s*level")) {
+            throw new IllegalArgumentException("Invalid formula format: " + formula);
+        }
+
+        String[] parts = formula.split("\\*");
+        double base = Double.parseDouble(parts[0].trim());
+        return base * level;
+    }
+
+    private double parseDamageMultiplier(String formula, int level) {
+        if (formula.contains("level")) {
+            return Double.parseDouble(formula.replace("level", String.valueOf(level)).replace(" ", ""));
+        }
+        return Double.parseDouble(formula);
     }
 }
