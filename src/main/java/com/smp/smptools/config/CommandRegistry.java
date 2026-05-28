@@ -1,7 +1,36 @@
 package com.smp.smptools.config;
 
 import com.smp.smptools.SMPTools;
-import com.smp.smptools.commands.*;
+import com.smp.smptools.commands.AdventCommand;
+import com.smp.smptools.commands.ChunkLoaderCommand;
+import com.smp.smptools.commands.ClearStatsCommand;
+import com.smp.smptools.commands.ColorCommand;
+import com.smp.smptools.commands.CustomEnchantCommand;
+import com.smp.smptools.commands.CustomItemCommand;
+import com.smp.smptools.commands.DailyRewardCommand;
+import com.smp.smptools.commands.DelHomeCommand;
+import com.smp.smptools.commands.FlyCommand;
+import com.smp.smptools.commands.HomeCommand;
+import com.smp.smptools.commands.HomesCommand;
+import com.smp.smptools.commands.InvseeCommand;
+import com.smp.smptools.commands.LeaderboardCommand;
+import com.smp.smptools.commands.MissionCommand;
+import com.smp.smptools.commands.MsgCommand;
+import com.smp.smptools.commands.NPCCommand;
+import com.smp.smptools.commands.PingCommand;
+import com.smp.smptools.commands.PrefixCommand;
+import com.smp.smptools.commands.PrivateVaultCommand;
+import com.smp.smptools.commands.ReplyCommand;
+import com.smp.smptools.commands.RenameCommand;
+import com.smp.smptools.commands.RideCommand;
+import com.smp.smptools.commands.SetHomeCommand;
+import com.smp.smptools.commands.SkillsCommand;
+import com.smp.smptools.commands.SoundCommand;
+import com.smp.smptools.commands.SudoCommand;
+import com.smp.smptools.commands.TagsCommand;
+import com.smp.smptools.commands.TpaCommand;
+import com.smp.smptools.commands.TrollCommand;
+import com.smp.smptools.commands.UptimeCommand;
 import com.smp.smptools.managers.AdventGUIListener;
 import org.bukkit.Bukkit;
 
