@@ -1,7 +1,9 @@
 package com.smp.smptools;
 
 import com.smp.smptools.commands.*;
+import com.smp.smptools.config.CommandRegistry;
 import com.smp.smptools.config.ConfigDefaults;
+import com.smp.smptools.config.ListenerRegistry;
 import com.smp.smptools.enchants.EnchantmentManager;
 import com.smp.smptools.leaderboard.LeaderboardManager;
 import com.smp.smptools.skills.SkillsManager;
@@ -119,38 +121,16 @@ public class SMPTools extends JavaPlugin {
         this.dialogueManager = new DialogueManager(this);
         this.blackFridayManager = new BlackFridayManager(this);
 
-        // Register Listeners
-        Bukkit.getPluginManager().registerEvents(new VaultListener(this), this);
+        // Register Listeners and Commands
         this.nameTagListener = new NameTagListener(this);
         Bukkit.getPluginManager().registerEvents(nameTagListener, this);
-        Bukkit.getPluginManager().registerEvents(new StatsListener(this), this);
+
         StatsCommand statsCommand = new StatsCommand(this);
         this.getCommand("stats").setExecutor(statsCommand);
-        Bukkit.getPluginManager().registerEvents(new StatsGUIListener(statsCommand), this);
-        Bukkit.getPluginManager().registerEvents(new JoinLeaveListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new ChatListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new HomesGUIListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new PrefixGUIListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new LeaderboardGUIListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new TagsGUIListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new TabHealthListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new TeleportListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new AdvancementListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new ChunkLoaderListener(this), this); // Register ChunkLoaderListener
-        Bukkit.getPluginManager().registerEvents(new InvseeGUIListener(this), this); // Register InvseeGUIListener
-        Bukkit.getPluginManager().registerEvents(new TrollGUIListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new MissionNPCListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new NPCListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new MissionGUIListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new ElytraTrailListener(), this);
-        Bukkit.getPluginManager().registerEvents(new MissionTrackerListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new ChristmasWorldListener(this), this);
-
-        Bukkit.getPluginManager().registerEvents(new com.smp.smptools.graves.GraveManager(this), this);
 
         AdventGUIListener adventGUIListener = new AdventGUIListener(this, adventManager);
-        Bukkit.getPluginManager().registerEvents(adventGUIListener, this);
-        Bukkit.getPluginManager().registerEvents(new PortalListener(this), this);
+
+        ListenerRegistry.registerCoreListeners(this, statsCommand, adventGUIListener);
 
         // Register Accelerators
         if (getConfig().getBoolean("features.accelerated-growth.enabled", true)) {
@@ -159,45 +139,30 @@ public class SMPTools extends JavaPlugin {
             this.cropAccelerator.runTaskTimer(this, 0L, 20L); // Run every second
         }
 
+        // Conditional listeners
         if (getConfig().getBoolean("features.sleep-voting.enabled")) {
             Bukkit.getPluginManager().registerEvents(new SleepListener(this), this);
-            this.getCommand("sleepvote").setExecutor(new com.smp.smptools.sleep.SleepVoteCommand(this));
         }
-
         if (getConfig().getBoolean("features.sit-on-stairs.enabled")) {
             Bukkit.getPluginManager().registerEvents(new SitListener(this), this);
         }
+        if (getConfig().getBoolean("features.mmo-skills.enabled")) {
+            Bukkit.getPluginManager().registerEvents(new SkillsListener(this), this);
+            Bukkit.getPluginManager().registerEvents(new SkillsGUIListener(), this);
+            Bukkit.getPluginManager().registerEvents(new CombatListener(this), this);
+        }
+        if (getConfig().getBoolean("features.custom-enchants.enabled")) {
+            Bukkit.getPluginManager().registerEvents(new EnchantmentListener(this), this);
+        }
+        if (getConfig().getBoolean("features.meme-sounds.enabled")) {
+            Bukkit.getPluginManager().registerEvents(new ResourcePackListener(this), this);
+        }
 
         // Register Commands
-        this.getCommand("fly").setExecutor(new FlyCommand());
-        this.getCommand("pv").setExecutor(new PrivateVaultCommand(this));
-        this.getCommand("sethome").setExecutor(new SetHomeCommand(this));
-        this.getCommand("home").setExecutor(new HomeCommand(this));
-        this.getCommand("delhome").setExecutor(new DelHomeCommand(this));
-        this.getCommand("homes").setExecutor(new HomesCommand(this));
-        this.getCommand("msg").setExecutor(new MsgCommand(this));
-        this.getCommand("clearstats").setExecutor(new ClearStatsCommand(this));
-        this.getCommand("prefix").setExecutor(new PrefixCommand());
-        this.getCommand("color").setExecutor(new ColorCommand());
-        this.getCommand("tags").setExecutor(new TagsCommand(this));
         TpaCommand tpaCommand = new TpaCommand(this);
-        this.getCommand("tpr").setExecutor(tpaCommand);
-        this.getCommand("tpa").setExecutor(tpaCommand);
-        this.getCommand("tpd").setExecutor(tpaCommand);
-        this.getCommand("tptoggle").setExecutor(tpaCommand);
         this.leaderboardCommand = new LeaderboardCommand(this);
-        this.getCommand("leaderboard").setExecutor(leaderboardCommand);
-        Objects.requireNonNull(getCommand("givechunkloader")).setExecutor(new ChunkLoaderCommand(this)); // Register
-                                                                                                         // ChunkLoaderCommand
-        Objects.requireNonNull(getCommand("invsee")).setExecutor(new InvseeCommand(this));
-        Objects.requireNonNull(getCommand("troll")).setExecutor(new TrollCommand(this));
-        Objects.requireNonNull(getCommand("missions")).setExecutor(new MissionCommand(this));
-        Objects.requireNonNull(getCommand("sudo")).setExecutor(new SudoCommand(this));
-        Objects.requireNonNull(getCommand("customitem")).setExecutor(new CustomItemCommand());
-        Objects.requireNonNull(getCommand("r")).setExecutor(new ReplyCommand(this));
-        Objects.requireNonNull(getCommand("rename")).setExecutor(new RenameCommand(this));
-        Objects.requireNonNull(getCommand("advent")).setExecutor(new AdventCommand(adventGUIListener));
-        Objects.requireNonNull(getCommand("npc")).setExecutor(new NPCCommand(this));
+        CommandRegistry.registerAll(this, leaderboardCommand, tpaCommand, adventGUIListener);
+        CommandRegistry.registerConditionalCommands(this);
 
         // Load NPCs
         npcManager.loadNPCs();
@@ -205,43 +170,6 @@ public class SMPTools extends JavaPlugin {
         // Secret Santa
         SecretSantaManager secretSantaManager = new SecretSantaManager(this);
         Objects.requireNonNull(getCommand("secretsanta")).setExecutor(new SecretSantaCommand(this, secretSantaManager));
-
-        // Register conditional features
-        if (getConfig().getBoolean("features.daily-rewards.enabled")) {
-            this.getCommand("daily").setExecutor(new DailyRewardCommand(this));
-        }
-
-        if (getConfig().getBoolean("features.mmo-skills.enabled")) {
-            Bukkit.getPluginManager().registerEvents(new SkillsListener(this), this);
-            Bukkit.getPluginManager().registerEvents(new SkillsGUIListener(), this);
-            Bukkit.getPluginManager().registerEvents(new CombatListener(this), this); // Register CombatListener
-            this.getCommand("skills").setExecutor(new SkillsCommand(this));
-        }
-
-        if (getConfig().getBoolean("features.custom-enchants.enabled")) {
-            Bukkit.getPluginManager().registerEvents(new EnchantmentListener(this), this);
-            this.getCommand("cenchant").setExecutor(new CustomEnchantCommand(this));
-        }
-
-        if (getConfig().getBoolean("features.image-to-map.enabled")) {
-            this.getCommand("tomap").setExecutor(new com.smp.smptools.imagemap.MapCommand(this));
-        }
-
-        if (getConfig().getBoolean("features.music-player.enabled")) {
-            this.getCommand("music").setExecutor(new com.smp.smptools.music.MusicCommand(this));
-        }
-
-        if (getConfig().getBoolean("features.ride.enabled")) {
-            this.getCommand("ride").setExecutor(new RideCommand());
-        }
-
-        if (getConfig().getBoolean("features.meme-sounds.enabled")) {
-            this.getCommand("sound").setExecutor(new SoundCommand(this));
-            Bukkit.getPluginManager().registerEvents(new ResourcePackListener(this), this);
-        }
-
-        this.getCommand("uptime").setExecutor(new UptimeCommand());
-        this.getCommand("ping").setExecutor(new PingCommand());
 
         // Present Hunt
         com.smp.smptools.christmas.PresentManager presentManager = new com.smp.smptools.christmas.PresentManager(this);

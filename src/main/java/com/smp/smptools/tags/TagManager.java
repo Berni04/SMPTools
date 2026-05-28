@@ -61,8 +61,12 @@ public class TagManager {
 
         for (String key : milestones.getKeys(false)) {
             ConfigurationSection milestone = milestones.getConfigurationSection(key);
+            if (milestone == null) continue;
+
             String title = milestone.getString("title");
             String statistic = milestone.getString("statistic");
+            if (title == null || statistic == null) continue;
+
             long requiredValue = milestone.getLong("value");
             long playerValue = stats.getLong(statistic, 0);
 
@@ -92,13 +96,18 @@ public class TagManager {
     }
 
     public String getTagDescription(String title) {
+        if (title == null) return null;
+
         ConfigurationSection milestones = plugin.getTagsConfig().getConfigurationSection("milestones");
-        if (milestones != null) {
-            for (String key : milestones.getKeys(false)) {
-                ConfigurationSection milestone = milestones.getConfigurationSection(key);
-                if (milestone.getString("title").equals(title)) {
-                    return milestone.getString("description");
-                }
+        if (milestones == null) return null;
+
+        for (String key : milestones.getKeys(false)) {
+            ConfigurationSection milestone = milestones.getConfigurationSection(key);
+            if (milestone == null) continue;
+
+            String milestoneTitle = milestone.getString("title");
+            if (title.equals(milestoneTitle)) {
+                return milestone.getString("description");
             }
         }
         return null;

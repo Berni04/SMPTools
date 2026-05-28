@@ -47,7 +47,20 @@ public class MissionManager {
         for (String missionId : missionsSection.getKeys(false)) {
             String name = missionsSection.getString(missionId + ".name");
             String description = missionsSection.getString(missionId + ".description");
-            MissionType type = MissionType.valueOf(missionsSection.getString(missionId + ".type"));
+            String typeStr = missionsSection.getString(missionId + ".type");
+            if (typeStr == null) {
+                plugin.getLogger().warning("Missing type for mission: " + missionId);
+                continue;
+            }
+
+            MissionType type;
+            try {
+                type = MissionType.valueOf(typeStr);
+            } catch (IllegalArgumentException e) {
+                plugin.getLogger().warning("Invalid mission type '" + typeStr + "' for mission: " + missionId);
+                continue;
+            }
+
             String objective = missionsSection.getString(missionId + ".objective");
             int amount = missionsSection.getInt(missionId + ".amount");
             List<String> rewards = missionsSection.getStringList(missionId + ".rewards");
