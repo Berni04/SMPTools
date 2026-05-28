@@ -1,7 +1,9 @@
 package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -19,7 +21,7 @@ public class TagsGUIListener implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!event.getView().getTitle().equals("Your Titles")) {
+        if (!event.getView().title().equals(Component.text("Your Titles"))) {
             return;
         }
 
@@ -32,14 +34,14 @@ public class TagsGUIListener implements Listener {
             return;
         }
 
-        if (clickedItem.getType() == Material.NAME_TAG) {
-            String title = ChatColor.stripColor(clickedItem.getItemMeta().getDisplayName());
+        if (clickedItem.getType() == Material.LIME_DYE) {
+            String title = PlainTextComponentSerializer.plainText().serialize(clickedItem.getItemMeta().displayName());
             plugin.getTagManager().setPlayerTitle(player, title);
-            player.sendMessage(ChatColor.GREEN + "You have equipped the title: " + title);
+            player.sendMessage(Component.text("You have equipped the title: " + title, NamedTextColor.GREEN));
             player.closeInventory();
-        } else if (clickedItem.getType() == Material.BARRIER && clickedItem.getItemMeta().getDisplayName().equals(ChatColor.RED + "Clear Title")) {
+        } else if (clickedItem.getType() == Material.BARRIER) {
             plugin.getTagManager().removePlayerTitle(player);
-            player.sendMessage(ChatColor.GREEN + "Your title has been cleared.");
+            player.sendMessage(Component.text("Your title has been cleared.", NamedTextColor.GREEN));
             player.closeInventory();
         }
     }
