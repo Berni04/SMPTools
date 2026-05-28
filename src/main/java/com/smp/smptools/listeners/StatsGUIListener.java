@@ -2,8 +2,10 @@ package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.commands.StatsCommand;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
@@ -27,45 +29,46 @@ public class StatsGUIListener implements Listener {
 
     @EventHandler
     public void onStatsGUIClick(InventoryClickEvent event) {
-        String viewTitle = event.getView().getTitle();
+        Component viewTitle = event.getView().title();
+        String viewTitlePlain = PlainTextComponentSerializer.plainText().serialize(viewTitle);
         Player player = (Player) event.getWhoClicked();
 
         // Check if it's any of our stats GUIs
-        if (viewTitle.contains("'s Stats") || viewTitle.contains("'s Deaths") || viewTitle.contains("Death #")) {
-            event.setCancelled(true); // Cancel all clicks in our GUIs by default
+        if (viewTitlePlain.contains("'s Stats") || viewTitlePlain.contains("'s Deaths") || viewTitlePlain.contains("Death #")) {
+            event.setCancelled(true);
 
             ItemStack clickedItem = event.getCurrentItem();
             if (clickedItem == null || clickedItem.getType() == Material.AIR) {
                 return;
             }
 
-            String targetName = viewTitle.split("'s|#")[0].replace(ChatColor.DARK_AQUA.toString(), "").replace(ChatColor.DARK_RED.toString(), "");
+            String targetName = viewTitlePlain.split("'s|#")[0];
             OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
 
             // --- Navigation Logic ---
 
             // Main stats page -> Deaths List
-            if (viewTitle.endsWith("'s Stats") && clickedItem.getType() == Material.PAPER) {
+            if (viewTitlePlain.endsWith("'s Stats") && clickedItem.getType() == Material.PAPER) {
                 statsCommand.showDeathInfoGUI(player, target);
             }
             // Deaths List -> Detailed Death
-            else if (viewTitle.endsWith("'s Deaths") && clickedItem.getType() == Material.PAPER) {
+            else if (viewTitlePlain.endsWith("'s Deaths") && clickedItem.getType() == Material.PAPER) {
                 int deathIndex = getIndexFromItem(clickedItem, "Death #");
                 if (deathIndex != -1) statsCommand.showDetailedDeathInfoGUI(player, target, deathIndex);
             }
             // Detailed Death -> Inventory View
-            else if (viewTitle.contains("'s Death #") && clickedItem.getType() == Material.CHEST) {
-                int deathIndex = getIndexFromTitle(viewTitle, "Death #");
+            else if (viewTitlePlain.contains("'s Death #") && clickedItem.getType() == Material.CHEST) {
+                int deathIndex = getIndexFromTitle(viewTitlePlain, "Death #");
                 if (deathIndex != -1) statsCommand.showDeathInventoryGUI(player, target, deathIndex);
             }
             // --- Rollback Logic ---
-            else if (viewTitle.contains("Inventory") && clickedItem.getType() == Material.TOTEM_OF_UNDYING) {
+            else if (viewTitlePlain.contains("Inventory") && clickedItem.getType() == Material.TOTEM_OF_UNDYING) {
                 if (!player.hasPermission("smptools.stats.rollback")) {
-                    player.sendMessage(ChatColor.RED + "You do not have permission to roll back inventories.");
+                    player.sendMessage(Component.text("You do not have permission to roll back inventories.", NamedTextColor.RED));
                     return;
                 }
 
-                int deathIndex = getIndexFromTitle(viewTitle, "Death #");
+                int deathIndex = getIndexFromTitle(viewTitlePlain, "Death #");
                 if (deathIndex != -1) {
                     rollbackInventory(player, target, deathIndex);
                 }
@@ -76,7 +79,7 @@ public class StatsGUIListener implements Listener {
     private int getIndexFromItem(ItemStack item, String prefix) {
         if (item == null || !item.hasItemMeta() || !item.getItemMeta().hasDisplayName()) return -1;
         try {
-            String name = ChatColor.stripColor(item.getItemMeta().getDisplayName());
+            String name = PlainTextComponentSerializer.plainText().serialize(item.getItemMeta().displayName());
             return Integer.parseInt(name.replace(prefix, "").trim()) - 1;
         } catch (NumberFormatException e) {
             return -1;
@@ -99,12 +102,12 @@ public class StatsGUIListener implements Listener {
         Map<String, Object> death = (Map<String, Object>) deathInfo.get(deathIndex);
 
         if (death.containsKey("rolled_back") && (Boolean) death.get("rolled_back")) {
-            admin.sendMessage(ChatColor.RED + "This death has already been rolled back.");
+            admin.sendMessage(Component.text("This death has already been rolled back.", NamedTextColor.RED));
             return;
         }
 
         if (!target.isOnline()) {
-            admin.sendMessage(ChatColor.RED + "Target player must be online to receive their items.");
+            admin.sendMessage(Component.text("Target player must be online to receive their items.", NamedTextColor.RED));
             return;
         }
 
@@ -126,8 +129,8 @@ public class StatsGUIListener implements Listener {
         plugin.getStatsConfig().set(path, deathInfo);
         plugin.saveStatsConfig();
 
-        admin.sendMessage(ChatColor.GREEN + "Successfully rolled back death #" + (deathIndex + 1) + " for " + target.getName() + ".");
-        targetPlayer.sendMessage(ChatColor.GREEN + "Your inventory from a previous death has been restored by an administrator.");
+        admin.sendMessage(Component.text("Successfully rolled back death #" + (deathIndex + 1) + " for " + target.getName() + ".", NamedTextColor.GREEN));
+        targetPlayer.sendMessage(Component.text("Your inventory from a previous death has been restored by an administrator.", NamedTextColor.GREEN));
         admin.closeInventory();
     }
 }
