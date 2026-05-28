@@ -1,7 +1,9 @@
 package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -9,6 +11,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 public class HomesGUIListener implements Listener {
 
@@ -20,7 +23,7 @@ public class HomesGUIListener implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!event.getView().getTitle().equals("Your Homes")) {
+        if (!event.getView().title().equals(Component.text("Your Homes"))) {
             return;
         }
 
@@ -33,7 +36,7 @@ public class HomesGUIListener implements Listener {
             return;
         }
 
-        String homeName = ChatColor.stripColor(clickedItem.getItemMeta().getDisplayName());
+        String homeName = PlainTextComponentSerializer.plainText().serialize(clickedItem.getItemMeta().displayName());
 
         if (event.isLeftClick()) {
             // Teleport to home
@@ -47,7 +50,7 @@ public class HomesGUIListener implements Listener {
 
     @EventHandler
     public void onDeleteConfirmationClick(InventoryClickEvent event) {
-        if (!event.getView().getTitle().startsWith("Delete home")) {
+        if (!event.getView().title().equals(Component.text("Delete home?"))) {
             return;
         }
 
@@ -60,13 +63,14 @@ public class HomesGUIListener implements Listener {
             return;
         }
 
-        String homeName = event.getView().getTitle().split("'")[1];
+        String homeName = PlainTextComponentSerializer.plainText().serialize(event.getView().title())
+                .replace("Delete home '", "").replace("'?", "");
 
         if (clickedItem.getType() == Material.GREEN_WOOL) {
             // Confirm delete
             player.performCommand("delhome " + homeName);
             player.closeInventory();
-            player.sendMessage(ChatColor.GREEN + "Home '" + homeName + "' has been deleted.");
+            player.sendMessage(Component.text("Home '" + homeName + "' has been deleted.", NamedTextColor.GREEN));
         } else if (clickedItem.getType() == Material.RED_WOOL) {
             // Cancel delete
             player.closeInventory();
@@ -74,16 +78,16 @@ public class HomesGUIListener implements Listener {
     }
 
     private void openDeleteConfirmation(Player player, String homeName) {
-        Inventory confirmationGUI = plugin.getServer().createInventory(null, 27, "Delete home '" + homeName + "'?");
+        Inventory confirmationGUI = plugin.getServer().createInventory(null, 27, Component.text("Delete home '" + homeName + "'?"));
 
         ItemStack confirmItem = new ItemStack(Material.GREEN_WOOL);
-        org.bukkit.inventory.meta.ItemMeta confirmMeta = confirmItem.getItemMeta();
-        confirmMeta.setDisplayName(ChatColor.GREEN + "Confirm");
+        ItemMeta confirmMeta = confirmItem.getItemMeta();
+        confirmMeta.displayName(Component.text("Confirm", NamedTextColor.GREEN));
         confirmItem.setItemMeta(confirmMeta);
 
         ItemStack cancelItem = new ItemStack(Material.RED_WOOL);
-        org.bukkit.inventory.meta.ItemMeta cancelMeta = cancelItem.getItemMeta();
-        cancelMeta.setDisplayName(ChatColor.RED + "Cancel");
+        ItemMeta cancelMeta = cancelItem.getItemMeta();
+        cancelMeta.displayName(Component.text("Cancel", NamedTextColor.RED));
         cancelItem.setItemMeta(cancelMeta);
 
         confirmationGUI.setItem(11, confirmItem);
