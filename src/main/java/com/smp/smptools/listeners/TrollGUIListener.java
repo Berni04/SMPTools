@@ -86,7 +86,6 @@ public class TrollGUIListener implements Listener {
         trollIdMap.put(25, "temp_block_replace");
         trollIdMap.put(26, "sound_loop");
         trollIdMap.put(99, "close"); // Unique ID for close button
-        Bukkit.getLogger().info("TrollGUIListener: trollIdMap initialized with " + trollIdMap.size() + " entries.");
     }
 
     public static void openTrollGUI(Player opener, Player target) {
@@ -195,7 +194,6 @@ public class TrollGUIListener implements Listener {
         }
 
         int trollId = clickedItem.getItemMeta().getCustomModelData(); // Retrieve explicit integer ID
-        Bukkit.getLogger().info("TrollGUIListener: Clicked item CustomModelData (explicit ID): " + trollId);
 
         if (trollId == 99) { // Check for close button ID
             opener.closeInventory();
@@ -203,7 +201,6 @@ public class TrollGUIListener implements Listener {
         }
 
         String originalTrollId = trollIdMap.get(trollId); // Use explicit ID directly for lookup
-        Bukkit.getLogger().info("TrollGUIListener: Looked up originalTrollId: " + originalTrollId);
         if (originalTrollId == null) { // Should not happen if trollIdMap is correctly populated
             opener.sendMessage(MiniMessage.miniMessage()
                     .deserialize("<red>Error: Unknown troll option (ID: " + trollId + ").</red>"));

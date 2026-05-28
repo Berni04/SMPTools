@@ -275,7 +275,6 @@ public class MissionGUIListener implements Listener {
         playerData.getClaimedMissions().add(missionId);
         player.closeInventory();
         player.sendMessage(Component.text("Chromatic Elytra received!", NamedTextColor.GOLD));
-        player.sendMessage(Component.text("Chromatic Elytra received!", NamedTextColor.GOLD));
     }
 
     private void handleQuestlineSelectionClick(InventoryClickEvent event, Player player) {
@@ -436,7 +435,6 @@ public class MissionGUIListener implements Listener {
         gui.setItem(6, createGuiItem(Material.BLACK_WOOL, "&0Black Trail", List.of("mission_id:" + missionId)));
         gui.setItem(7, createGuiItem(Material.WHITE_WOOL, "&fWhite Trail", List.of("mission_id:" + missionId)));
         gui.setItem(8, createGuiItem(Material.CYAN_WOOL, "&bRainbow Trail", List.of("mission_id:" + missionId)));
-        player.openInventory(gui);
         player.openInventory(gui);
     }
 
@@ -600,7 +598,7 @@ public class MissionGUIListener implements Listener {
 
         @Override
         public Inventory getInventory() {
-            return null;
+            return Bukkit.createInventory(this, 54);
         }
     }
 }
