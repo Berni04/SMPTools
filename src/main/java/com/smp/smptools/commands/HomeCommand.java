@@ -1,6 +1,8 @@
 package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
+import com.smp.smptools.utils.Constants;
+import com.smp.smptools.utils.InputValidator;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -29,9 +31,15 @@ public class HomeCommand implements CommandExecutor {
             return true;
         }
 
+        String homeName = args[0].toLowerCase();
+
+        if (!InputValidator.isValidHomeName(homeName)) {
+            sender.sendMessage(ChatColor.RED + "Invalid home name. Use only letters, numbers, _ and - (max " + Constants.MAX_HOME_NAME_LENGTH + " characters).");
+            return true;
+        }
+
         Player player = (Player) sender;
         String playerUUID = player.getUniqueId().toString();
-        String homeName = args[0].toLowerCase();
 
         if (plugin.getConfig().contains("homes." + playerUUID + "." + homeName)) {
             String worldName = plugin.getConfig().getString("homes." + playerUUID + "." + homeName + ".world");
@@ -40,6 +48,11 @@ public class HomeCommand implements CommandExecutor {
             double z = plugin.getConfig().getDouble("homes." + playerUUID + "." + homeName + ".z");
             float yaw = (float) plugin.getConfig().getDouble("homes." + playerUUID + "." + homeName + ".yaw");
             float pitch = (float) plugin.getConfig().getDouble("homes." + playerUUID + "." + homeName + ".pitch");
+
+            if (worldName == null) {
+                player.sendMessage(ChatColor.RED + "Error: Home world not found.");
+                return true;
+            }
 
             Location homeLocation = new Location(Bukkit.getWorld(worldName), x, y, z, yaw, pitch);
             plugin.getTeleportManager().startTeleport(player, homeLocation, "'" + homeName + "'");

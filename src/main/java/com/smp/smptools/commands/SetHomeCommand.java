@@ -1,6 +1,8 @@
 package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
+import com.smp.smptools.utils.Constants;
+import com.smp.smptools.utils.InputValidator;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
@@ -29,9 +31,15 @@ public class SetHomeCommand implements CommandExecutor {
             return true;
         }
 
+        String homeName = args[0].toLowerCase();
+
+        if (!InputValidator.isValidHomeName(homeName)) {
+            sender.sendMessage(ChatColor.RED + "Invalid home name. Use only letters, numbers, _ and - (max " + Constants.MAX_HOME_NAME_LENGTH + " characters).");
+            return true;
+        }
+
         Player player = (Player) sender;
         String playerUUID = player.getUniqueId().toString();
-        String homeName = args[0].toLowerCase();
 
         int homeLimit = getHomeLimit(player);
         int currentHomes = 0;
@@ -62,7 +70,7 @@ public class SetHomeCommand implements CommandExecutor {
     private int getHomeLimit(Player player) {
         ConfigurationSection limitsSection = plugin.getConfig().getConfigurationSection("home-limits");
         if (limitsSection == null) {
-            return 1; // Default limit if section is missing
+            return 1;
         }
 
         int maxLimit = 0;
