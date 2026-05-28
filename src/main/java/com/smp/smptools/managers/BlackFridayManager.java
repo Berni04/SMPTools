@@ -1,8 +1,9 @@
 package com.smp.smptools.managers;
 
 import com.smp.smptools.SMPTools;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -55,9 +56,9 @@ public class BlackFridayManager {
 
     public void broadcastToggle(boolean enabled) {
         String message = config.getString("announcement-message",
-                "&6&l[Black Friday] &eVillager trades are now {status}!");
-        String status = enabled ? "&aON SALE - " + getDiscountPercentage() + "% OFF!" : "&cdiscounted";
+                "<gold><bold>[Black Friday]</bold></gold> <yellow>Villager trades are now {status}!</yellow>");
+        String status = enabled ? "<green>ON SALE - " + getDiscountPercentage() + "% OFF!</green>" : "<red>discounted</red>";
         message = message.replace("{status}", status);
-        Bukkit.broadcastMessage(ChatColor.translateAlternateColorCodes('&', message));
+        Bukkit.broadcast(MiniMessage.miniMessage().deserialize(message));
     }
 }
