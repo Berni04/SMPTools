@@ -1,9 +1,11 @@
 package com.smp.smptools.commands;
 
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+
 import java.lang.management.ManagementFactory;
 import java.util.concurrent.TimeUnit;
 
@@ -18,16 +20,17 @@ public class UptimeCommand implements CommandExecutor {
         long minutes = TimeUnit.MILLISECONDS.toMinutes(uptimeMillis) % 60;
         long seconds = TimeUnit.MILLISECONDS.toSeconds(uptimeMillis) % 60;
 
-        StringBuilder uptimeMessage = new StringBuilder(ChatColor.GREEN + "Server Uptime: " + ChatColor.WHITE);
+        StringBuilder uptimeString = new StringBuilder();
         if (days > 0)
-            uptimeMessage.append(days).append("d ");
+            uptimeString.append(days).append("d ");
         if (hours > 0)
-            uptimeMessage.append(hours).append("h ");
+            uptimeString.append(hours).append("h ");
         if (minutes > 0)
-            uptimeMessage.append(minutes).append("m ");
-        uptimeMessage.append(seconds).append("s");
+            uptimeString.append(minutes).append("m ");
+        uptimeString.append(seconds).append("s");
 
-        sender.sendMessage(uptimeMessage.toString());
+        sender.sendMessage(Component.text("Server Uptime: ", NamedTextColor.GREEN)
+                .append(Component.text(uptimeString.toString(), NamedTextColor.WHITE)));
 
         return true;
     }
