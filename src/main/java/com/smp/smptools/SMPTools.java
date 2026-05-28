@@ -211,6 +211,10 @@ public class SMPTools extends JavaPlugin {
     @Override
     public void onDisable() {
         getLogger().info("SMPTools has been disabled!");
+        
+        // Cancel all scheduled tasks to prevent firing during/after disable
+        Bukkit.getScheduler().cancelTasks(this);
+        
         if (chunkLoaderManager != null) {
             chunkLoaderManager.unloadAllChunks(); // Unload all force-loaded chunks
         }
