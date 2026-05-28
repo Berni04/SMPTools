@@ -68,14 +68,12 @@ public class PrivateVaultCommand implements CommandExecutor {
     }
 
     public static String encodeInventory(ItemStack[] items) throws IllegalStateException {
-        try {
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            BukkitObjectOutputStream dataOutput = new BukkitObjectOutputStream(outputStream);
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+             BukkitObjectOutputStream dataOutput = new BukkitObjectOutputStream(outputStream)) {
             dataOutput.writeInt(items.length);
             for (ItemStack item : items) {
                 dataOutput.writeObject(item);
             }
-            dataOutput.close();
             return Base64.getEncoder().encodeToString(outputStream.toByteArray());
         } catch (Exception e) {
             throw new IllegalStateException("Unable to save item stacks.", e);
@@ -83,14 +81,12 @@ public class PrivateVaultCommand implements CommandExecutor {
     }
 
     public static ItemStack[] decodeInventory(String data) throws IOException, ClassNotFoundException {
-        try {
-            ByteArrayInputStream inputStream = new ByteArrayInputStream(Base64.getDecoder().decode(data));
-            BukkitObjectInputStream dataInput = new BukkitObjectInputStream(inputStream);
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(Base64.getDecoder().decode(data));
+             BukkitObjectInputStream dataInput = new BukkitObjectInputStream(inputStream)) {
             ItemStack[] items = new ItemStack[dataInput.readInt()];
             for (int i = 0; i < items.length; i++) {
                 items[i] = (ItemStack) dataInput.readObject();
             }
-            dataInput.close();
             return items;
         } catch (ClassNotFoundException e) {
             throw new IOException("Unable to decode class type.", e);
