@@ -4,6 +4,7 @@ import com.smp.smptools.commands.*;
 import com.smp.smptools.config.CommandRegistry;
 import com.smp.smptools.config.ConfigDefaults;
 import com.smp.smptools.config.ListenerRegistry;
+import com.smp.smptools.config.MessageManager;
 import com.smp.smptools.enchants.EnchantmentManager;
 import com.smp.smptools.leaderboard.LeaderboardManager;
 import com.smp.smptools.skills.SkillsManager;
@@ -81,6 +82,7 @@ public class SMPTools extends JavaPlugin {
     private NPCManager npcManager;
     private DialogueManager dialogueManager;
     private BlackFridayManager blackFridayManager;
+    private MessageManager messageManager;
 
     @Override
     public void onEnable() {
@@ -120,6 +122,7 @@ public class SMPTools extends JavaPlugin {
         this.npcManager = new NPCManager(this);
         this.dialogueManager = new DialogueManager(this);
         this.blackFridayManager = new BlackFridayManager(this);
+        this.messageManager = new MessageManager(this);
 
         // Register Listeners and Commands
         this.nameTagListener = new NameTagListener(this);
@@ -459,5 +462,9 @@ public class SMPTools extends JavaPlugin {
 
     public BlackFridayManager getBlackFridayManager() {
         return blackFridayManager;
+    }
+
+    public MessageManager getMessageManager() {
+        return messageManager;
     }
 }
