@@ -1,6 +1,7 @@
 package com.smp.smptools.commands;
 
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -11,7 +12,7 @@ public class PingCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "Only players can use this command!");
+            sender.sendMessage(Component.text("Only players can use this command!", NamedTextColor.RED));
             return true;
         }
 
@@ -20,7 +21,7 @@ public class PingCommand implements CommandExecutor {
         if (args.length > 0) {
             Player foundPlayer = org.bukkit.Bukkit.getPlayer(args[0]);
             if (foundPlayer == null) {
-                sender.sendMessage(ChatColor.RED + "Player not found.");
+                sender.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
                 return true;
             }
             target = foundPlayer;
@@ -28,19 +29,21 @@ public class PingCommand implements CommandExecutor {
 
         int ping = target.getPing();
 
-        String color;
+        NamedTextColor color;
         if (ping < 50) {
-            color = ChatColor.GREEN.toString();
+            color = NamedTextColor.GREEN;
         } else if (ping < 100) {
-            color = ChatColor.YELLOW.toString();
+            color = NamedTextColor.YELLOW;
         } else {
-            color = ChatColor.RED.toString();
+            color = NamedTextColor.RED;
         }
 
         if (target.equals(sender)) {
-            sender.sendMessage(ChatColor.GRAY + "Your ping is: " + color + ping + "ms");
+            sender.sendMessage(Component.text("Your ping is: ", NamedTextColor.GRAY)
+                    .append(Component.text(ping + "ms", color)));
         } else {
-            sender.sendMessage(ChatColor.GRAY + target.getName() + "'s ping is: " + color + ping + "ms");
+            sender.sendMessage(Component.text(target.getName() + "'s ping is: ", NamedTextColor.GRAY)
+                    .append(Component.text(ping + "ms", color)));
         }
 
         return true;
