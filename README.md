@@ -134,6 +134,7 @@ SMPTools is a comprehensive Minecraft Paper plugin designed to enhance the survi
     *   `stats.yml` - Player statistics
     *   `tags.yml` - Tag/title milestones
     *   `imagemaps.yml` - Image map URLs
+    *   `messages.yml` - Customizable messages (NEW)
     *   `missions.yml` - Mission definitions
     *   `dialogues.yml` - NPC dialogue trees
     *   `npcs.yml` - NPC spawn locations
@@ -143,6 +144,39 @@ SMPTools is a comprehensive Minecraft Paper plugin designed to enhance the survi
     *   `blackfriday.yml` - Black Friday event settings
     *   `chunkloaders.yml` - Chunk loader locations
     *   `player_missions.yml` - Player mission progress
+
+## Message Customization
+
+All player-facing messages can be customized in `messages.yml`. The plugin uses [MiniMessage format](https://docs.advntr.dev/minimessage/format.html) for rich text styling.
+
+### Dynamic Player Tags
+
+The following tags are available in messages and will be automatically replaced with player-specific values:
+
+| Tag | Description | Example Output |
+|-----|-------------|----------------|
+| `<player>` | Full formatted name (color + prefix + name + title) | `[Pro] PlayerName [Builder]` |
+| `<player_name>` | Just the raw player name | `PlayerName` |
+| `<player_name_color>` | Player name with their chosen color | `PlayerName` (in red) |
+| `<player_color>` | Just the color tag | `<red>` |
+| `<player_prefix>` | Just the prefix | `[Pro]` |
+| `<player_title>` | Just the equipped title | `[Builder]` |
+
+### Placeholder Variables
+
+Messages can contain `{placeholder}` variables that are replaced at runtime:
+
+```yaml
+homes:
+  set: "<player_name_color>, your home '<gold>{name}</gold>' has been set!"
+```
+
+Common placeholders:
+- `{name}` - Home name, item name, etc.
+- `{target}` - Target player name
+- `{level}` - Skill level
+- `{skill_name}` - Skill display name
+- `{message}` - Chat message content
 
 ## Commands
 
@@ -220,6 +254,7 @@ SMPTools is a comprehensive Minecraft Paper plugin designed to enhance the survi
 *   **`config.yml`**: General plugin configuration including feature toggles, skill formulas, daily rewards, custom enchantments, music player settings, and meme sound resource pack URL.
 *   **`stats.yml`**: Player statistics storage. Managed by the plugin - avoid manual editing.
 *   **`tags.yml`**: Defines milestone tags and their unlock requirements.
+*   **`messages.yml`**: Customizable player-facing messages with MiniMessage support and dynamic player tags.
 
 ### Mission & NPC Configuration
 *   **`missions.yml`**: Mission definitions including objectives, rewards, and questlines.
@@ -254,6 +289,30 @@ SMPTools uses Maven for dependency management and building. To build the plugin:
 ## Requirements
 *   Minecraft Paper server (1.21+)
 *   Java 17 or higher
+
+## Contributing
+
+This project uses:
+*   **Adventure API** for text components and MiniMessage formatting
+*   **Maven** for build management
+*   **JUnit 5** for unit testing
+
+### Building
+```bash
+mvn clean package
+```
+
+### Running Tests
+```bash
+mvn test
+```
+
+### Code Style
+*   Use Adventure API (`Component`, `MiniMessage`) instead of legacy `ChatColor`
+*   Follow existing patterns for GUI listeners (extend `AbstractGUIListener`)
+*   Follow existing patterns for commands (extend `AbstractPlayerCommand`)
+*   Use `ConcurrentHashMap` for thread-safe collections
+*   Add Javadocs to all public methods
 
 ## Author
 berni
