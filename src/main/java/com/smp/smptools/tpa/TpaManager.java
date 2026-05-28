@@ -14,16 +14,46 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Manages player teleportation requests (TPA system).
+ * Handles sending, accepting, denying, and toggling teleport requests
+ * with automatic timeout functionality.
+ *
+ * <p>Features:</p>
+ * <ul>
+ *   <li>Thread-safe request tracking using ConcurrentHashMap</li>
+ *   <li>Automatic request timeout after 60 seconds</li>
+ *   <li>Toggleable request acceptance per player</li>
+ *   <li>Clickable accept/deny buttons in chat</li>
+ * </ul>
+ *
+ * @author berni
+ * @since 1.0-SNAPSHOT
+ */
 public class TpaManager {
 
     private final SMPTools plugin;
-    private final Map<UUID, UUID> pendingRequests = new ConcurrentHashMap<>(); // Target UUID -> Requester UUID
-    private final Set<UUID> tpaToggledOff = ConcurrentHashMap.newKeySet(); // Players who have /tptoggle off
+    /** Map of pending requests: Target UUID -> Requester UUID */
+    private final Map<UUID, UUID> pendingRequests = new ConcurrentHashMap<>();
+    /** Set of players who have toggled off TPA requests */
+    private final Set<UUID> tpaToggledOff = ConcurrentHashMap.newKeySet();
 
+    /**
+     * Constructs a new TpaManager.
+     *
+     * @param plugin the SMPTools plugin instance
+     */
     public TpaManager(SMPTools plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Sends a teleport request from the requester to the target player.
+     * The request will timeout after {@link Constants#TPA_TIMEOUT_SECONDS} seconds.
+     *
+     * @param requester the player requesting to teleport
+     * @param target the player to teleport to
+     */
     public void sendTeleportRequest(@NotNull Player requester, @NotNull Player target) {
         if (tpaToggledOff.contains(target.getUniqueId())) {
             requester.sendMessage(Component.text(target.getName() + " is not accepting teleport requests at this time.", NamedTextColor.RED));
@@ -62,6 +92,12 @@ public class TpaManager {
         }.runTaskLater(plugin, Constants.TPA_TIMEOUT_TICKS);
     }
 
+    /**
+     * Accepts a pending teleport request for the given player.
+     * The requester will begin teleporting to the acceptor's location.
+     *
+     * @param acceptor the player accepting the request
+     */
     public void acceptTeleportRequest(@NotNull Player acceptor) {
         if (!pendingRequests.containsKey(acceptor.getUniqueId())) {
             acceptor.sendMessage(Component.text("You have no pending teleport requests.", NamedTextColor.RED));
@@ -80,6 +116,11 @@ public class TpaManager {
         acceptor.sendMessage(Component.text(requester.getName() + " has started teleporting to you.", NamedTextColor.GREEN));
     }
 
+    /**
+     * Denies a pending teleport request for the given player.
+     *
+     * @param denier the player denying the request
+     */
     public void denyTeleportRequest(@NotNull Player denier) {
         if (!pendingRequests.containsKey(denier.getUniqueId())) {
             denier.sendMessage(Component.text("You have no pending teleport requests.", NamedTextColor.RED));
@@ -95,6 +136,11 @@ public class TpaManager {
         denier.sendMessage(Component.text("Teleport request denied.", NamedTextColor.GREEN));
     }
 
+    /**
+     * Toggles whether a player accepts teleport requests.
+     *
+     * @param player the player to toggle TPA acceptance for
+     */
     public void toggleTpa(@NotNull Player player) {
         if (tpaToggledOff.contains(player.getUniqueId())) {
             tpaToggledOff.remove(player.getUniqueId());
