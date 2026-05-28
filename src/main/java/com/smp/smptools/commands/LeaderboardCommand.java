@@ -1,8 +1,9 @@
 package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -26,7 +27,7 @@ public class LeaderboardCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("This command can only be used by players.");
+            sender.sendMessage(Component.text("This command can only be used by players.", NamedTextColor.RED));
             return true;
         }
         openLeaderboardHub((Player) sender);
@@ -34,36 +35,36 @@ public class LeaderboardCommand implements CommandExecutor {
     }
 
     private void openLeaderboardHub(Player player) {
-        Inventory hubGUI = Bukkit.createInventory(null, 54, "Leaderboards");
+        Inventory hubGUI = Bukkit.createInventory(null, 54, Component.text("Leaderboards"));
 
         // General Stats
-        createDisplayItem(hubGUI, Material.CLOCK, 20, ChatColor.GOLD + "Playtime", "playtime");
-        createDisplayItem(hubGUI, Material.DIAMOND_SWORD, 21, ChatColor.GOLD + "Player Kills", "player_kills");
-        createDisplayItem(hubGUI, Material.SKELETON_SKULL, 22, ChatColor.GOLD + "Total Deaths", "deaths");
+        createDisplayItem(hubGUI, Material.CLOCK, 20, Component.text("Playtime", NamedTextColor.GOLD), "playtime");
+        createDisplayItem(hubGUI, Material.DIAMOND_SWORD, 21, Component.text("Player Kills", NamedTextColor.GOLD), "player_kills");
+        createDisplayItem(hubGUI, Material.SKELETON_SKULL, 22, Component.text("Total Deaths", NamedTextColor.GOLD), "deaths");
         
         // Block Stats
-        createDisplayItem(hubGUI, Material.DIAMOND_PICKAXE, 23, ChatColor.GOLD + "Blocks Broken", "blocks_broken");
-        createDisplayItem(hubGUI, Material.GRASS_BLOCK, 24, ChatColor.GOLD + "Blocks Placed", "blocks_placed");
+        createDisplayItem(hubGUI, Material.DIAMOND_PICKAXE, 23, Component.text("Blocks Broken", NamedTextColor.GOLD), "blocks_broken");
+        createDisplayItem(hubGUI, Material.GRASS_BLOCK, 24, Component.text("Blocks Placed", NamedTextColor.GOLD), "blocks_placed");
 
         // Ores Mined
-        createDisplayItem(hubGUI, Material.COAL_ORE, 37, ChatColor.GOLD + "Coal Mined", "ores_mined.coal");
-        createDisplayItem(hubGUI, Material.IRON_ORE, 38, ChatColor.GOLD + "Iron Mined", "ores_mined.iron");
-        createDisplayItem(hubGUI, Material.GOLD_ORE, 39, ChatColor.GOLD + "Gold Mined", "ores_mined.gold");
-        createDisplayItem(hubGUI, Material.LAPIS_LAZULI, 40, ChatColor.GOLD + "Lapis Mined", "ores_mined.lapis");
-        createDisplayItem(hubGUI, Material.REDSTONE, 41, ChatColor.GOLD + "Redstone Mined", "ores_mined.redstone");
-        createDisplayItem(hubGUI, Material.DIAMOND, 42, ChatColor.GOLD + "Diamonds Mined", "ores_mined.diamond");
-        createDisplayItem(hubGUI, Material.EMERALD, 43, ChatColor.GOLD + "Emeralds Mined", "ores_mined.emerald");
+        createDisplayItem(hubGUI, Material.COAL_ORE, 37, Component.text("Coal Mined", NamedTextColor.GOLD), "ores_mined.coal");
+        createDisplayItem(hubGUI, Material.IRON_ORE, 38, Component.text("Iron Mined", NamedTextColor.GOLD), "ores_mined.iron");
+        createDisplayItem(hubGUI, Material.GOLD_ORE, 39, Component.text("Gold Mined", NamedTextColor.GOLD), "ores_mined.gold");
+        createDisplayItem(hubGUI, Material.LAPIS_LAZULI, 40, Component.text("Lapis Mined", NamedTextColor.GOLD), "ores_mined.lapis");
+        createDisplayItem(hubGUI, Material.REDSTONE, 41, Component.text("Redstone Mined", NamedTextColor.GOLD), "ores_mined.redstone");
+        createDisplayItem(hubGUI, Material.DIAMOND, 42, Component.text("Diamonds Mined", NamedTextColor.GOLD), "ores_mined.diamond");
+        createDisplayItem(hubGUI, Material.EMERALD, 43, Component.text("Emeralds Mined", NamedTextColor.GOLD), "ores_mined.emerald");
 
         player.openInventory(hubGUI);
     }
 
-    private void createDisplayItem(Inventory inv, Material material, int slot, String name, String statKey) {
+    private void createDisplayItem(Inventory inv, Material material, int slot, Component name, String statKey) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(name);
-        List<String> lore = new ArrayList<>();
-        lore.add(ChatColor.GRAY + statKey); // Store the key in lore to identify the stat
-        meta.setLore(lore);
+        meta.displayName(name);
+        List<Component> lore = new ArrayList<>();
+        lore.add(Component.text(statKey, NamedTextColor.GRAY));
+        meta.lore(lore);
         item.setItemMeta(meta);
         inv.setItem(slot, item);
     }
