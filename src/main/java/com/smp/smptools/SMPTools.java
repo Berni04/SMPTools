@@ -1,6 +1,7 @@
 package com.smp.smptools;
 
 import com.smp.smptools.commands.*;
+import com.smp.smptools.config.ConfigDefaults;
 import com.smp.smptools.enchants.EnchantmentManager;
 import com.smp.smptools.leaderboard.LeaderboardManager;
 import com.smp.smptools.skills.SkillsManager;
@@ -85,109 +86,7 @@ public class SMPTools extends JavaPlugin {
         getLogger().info("SMPTools has been enabled!");
 
         // Setup configs
-        getConfig().addDefault("features.daily-rewards.enabled", true);
-        getConfig().addDefault("features.custom-enchants.enabled", true);
-        getConfig().addDefault("features.mmo-skills.enabled", true);
-
-        // Default Daily Rewards Config
-        getConfig().addDefault("features.daily-rewards.cooldown-hours", 22);
-        List<String> defaultRewards = new ArrayList<>();
-        defaultRewards.add("eco give %player% 100");
-        defaultRewards.add("item:diamond 5");
-        getConfig().addDefault("features.daily-rewards.rewards", defaultRewards);
-
-        // Default MMO-Skills Config
-        getConfig().addDefault("features.mmo-skills.mining.enabled", true);
-        getConfig().addDefault("features.mmo-skills.mining.double-drop-chance", "0.0015 * level"); // 7.5% at Lvl 50
-        getConfig().addDefault("features.mmo-skills.woodcutting.enabled", true);
-        getConfig().addDefault("features.mmo-skills.woodcutting.double-drop-chance", "0.0015 * level");
-        getConfig().addDefault("features.mmo-skills.excavation.enabled", true);
-        getConfig().addDefault("features.mmo-skills.excavation.double-drop-chance", "0.0015 * level");
-        // Treasure Hunter Perk
-        getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.enabled", true);
-        getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.chance", "0.0005 * level"); // 2.5% at
-                                                                                                           // Lvl 50
-        getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.loot.common",
-                List.of("IRON_NUGGET 1", "GOLD_NUGGET 1"));
-        getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.loot.uncommon",
-                List.of("GLOWSTONE_DUST 2", "QUARTZ 1"));
-        getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.loot.rare",
-                List.of("DIAMOND 1", "NAME_TAG 1"));
-
-        // Default Combat Skill Config
-        getConfig().addDefault("features.mmo-skills.combat.enabled", true);
-        getConfig().addDefault("features.mmo-skills.combat.critical-strike.enabled", true);
-        getConfig().addDefault("features.mmo-skills.combat.critical-strike.chance", "0.002 * level"); // 10% at Lvl 50
-        getConfig().addDefault("features.mmo-skills.combat.critical-strike.damage-multiplier", "1.0 + (level / 10.0)"); // 1.0x
-                                                                                                                        // +
-                                                                                                                        // 5.0x
-                                                                                                                        // =
-                                                                                                                        // 6.0x
-                                                                                                                        // at
-                                                                                                                        // Lvl
-                                                                                                                        // 50
-
-        // Sit on Stairs
-        getConfig().addDefault("features.sit-on-stairs.enabled", true);
-
-        // Player Graves
-        getConfig().addDefault("features.player-graves.enabled", true);
-
-        // Default Custom Enchants Config
-        getConfig().addDefault("features.custom-enchants.telekinesis.enabled", true);
-        getConfig().addDefault("features.custom-enchants.telekinesis.description",
-                "Automatically sends block drops to your inventory.");
-        List<String> telekinesisApplicable = new ArrayList<>();
-        telekinesisApplicable.add("PICKAXE");
-        telekinesisApplicable.add("AXE");
-        telekinesisApplicable.add("SHOVEL");
-        telekinesisApplicable.add("HOE");
-        getConfig().addDefault("features.custom-enchants.telekinesis.applicable-items", telekinesisApplicable);
-
-        // Lumberjack Enchant
-        getConfig().addDefault("features.custom-enchants.lumberjack.enabled", true);
-        getConfig().addDefault("features.custom-enchants.lumberjack.description", "Breaks an entire tree at once.");
-        List<String> lumberjackApplicable = new ArrayList<>();
-        lumberjackApplicable.add("AXE");
-        getConfig().addDefault("features.custom-enchants.lumberjack.applicable-items", lumberjackApplicable);
-
-        // Image to Map
-        getConfig().addDefault("features.image-to-map.enabled", true);
-
-        // Music Player
-        getConfig().addDefault("features.music-player.enabled", true);
-        getConfig().addDefault("features.music-player.base-url",
-                "https://raw.githubusercontent.com/YourUser/YourRepo/main/");
-
-        // Funny Death Messages
-        getConfig().addDefault("features.funny-death-messages.enabled", true);
-
-        // Ride Command
-        getConfig().addDefault("features.ride.enabled", true);
-
-        // Meme Sounds
-        getConfig().addDefault("features.meme-sounds.enabled", true);
-        getConfig().addDefault("features.meme-sounds.resource-pack-url", "YOUR_RESOURCE_PACK_URL_HERE");
-        if (!getConfig().contains("features.meme-sounds.sounds")) {
-            getConfig().set("features.meme-sounds.sounds.vine_boom", "custom.vine_boom");
-            getConfig().set("features.meme-sounds.sounds.goofy_yell", "custom.goofy_yell");
-            getConfig().set("features.meme-sounds.sounds.crickets", "custom.crickets");
-        }
-
-        // Sleep Voting
-        getConfig().addDefault("features.sleep-voting.enabled", true);
-
-        // Chunk Loaders
-        getConfig().addDefault("features.chunk-loaders.enabled", true);
-        getConfig().addDefault("features.chunk-loaders.item.material", "BEACON");
-        getConfig().addDefault("features.chunk-loaders.item.name", "<gold>Chunk Loader</gold>");
-        List<String> chunkLoaderLore = new ArrayList<>();
-        chunkLoaderLore.add("<gray>Place this to keep the chunk loaded.</gray>");
-        chunkLoaderLore.add("<gray>Works even when no players are online!</gray>");
-        getConfig().addDefault("features.chunk-loaders.item.lore", chunkLoaderLore);
-
-        getConfig().options().copyDefaults(true);
-        saveConfig();
+        ConfigDefaults.applyDefaults(this);
 
         setupStatsConfig();
         setupTagsConfig();
