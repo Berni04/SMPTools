@@ -1,6 +1,7 @@
 package com.smp.smptools.commands;
 
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -11,7 +12,7 @@ public class FlyCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "Only players can use this command!");
+            sender.sendMessage(Component.text("Only players can use this command!", NamedTextColor.RED));
             return true;
         }
 
@@ -21,14 +22,14 @@ public class FlyCommand implements CommandExecutor {
             if (player.getAllowFlight()) {
                 player.setAllowFlight(false);
                 player.setFlying(false);
-                player.sendMessage(ChatColor.YELLOW + "Flight disabled.");
+                player.sendMessage(Component.text("Flight disabled.", NamedTextColor.YELLOW));
             } else {
                 player.setAllowFlight(true);
                 player.setFlying(true);
-                player.sendMessage(ChatColor.YELLOW + "Flight enabled.");
+                player.sendMessage(Component.text("Flight enabled.", NamedTextColor.YELLOW));
             }
         } else {
-            player.sendMessage(ChatColor.RED + "You don't have permission to use this command.");
+            player.sendMessage(Component.text("You don't have permission to use this command.", NamedTextColor.RED));
         }
 
         return true;

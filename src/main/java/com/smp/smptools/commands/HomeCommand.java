@@ -3,8 +3,9 @@ package com.smp.smptools.commands;
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.utils.Constants;
 import com.smp.smptools.utils.InputValidator;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -22,19 +23,19 @@ public class HomeCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "Only players can use this command!");
+            sender.sendMessage(Component.text("Only players can use this command!", NamedTextColor.RED));
             return true;
         }
 
         if (args.length == 0) {
-            sender.sendMessage(ChatColor.RED + "Please specify a home name. Usage: /home <name>");
+            sender.sendMessage(Component.text("Please specify a home name. Usage: /home <name>", NamedTextColor.RED));
             return true;
         }
 
         String homeName = args[0].toLowerCase();
 
         if (!InputValidator.isValidHomeName(homeName)) {
-            sender.sendMessage(ChatColor.RED + "Invalid home name. Use only letters, numbers, _ and - (max " + Constants.MAX_HOME_NAME_LENGTH + " characters).");
+            sender.sendMessage(Component.text("Invalid home name. Use only letters, numbers, _ and - (max " + Constants.MAX_HOME_NAME_LENGTH + " characters).", NamedTextColor.RED));
             return true;
         }
 
@@ -50,14 +51,14 @@ public class HomeCommand implements CommandExecutor {
             float pitch = (float) plugin.getConfig().getDouble("homes." + playerUUID + "." + homeName + ".pitch");
 
             if (worldName == null) {
-                player.sendMessage(ChatColor.RED + "Error: Home world not found.");
+                player.sendMessage(Component.text("Error: Home world not found.", NamedTextColor.RED));
                 return true;
             }
 
             Location homeLocation = new Location(Bukkit.getWorld(worldName), x, y, z, yaw, pitch);
             plugin.getTeleportManager().startTeleport(player, homeLocation, "'" + homeName + "'");
         } else {
-            player.sendMessage(ChatColor.RED + "You don't have a home named '" + homeName + "'.");
+            player.sendMessage(Component.text("You don't have a home named '" + homeName + "'.", NamedTextColor.RED));
         }
         return true;
     }
