@@ -1,8 +1,9 @@
 package com.smp.smptools.imagemap;
 
 import com.smp.smptools.SMPTools;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -26,12 +27,12 @@ public class MapCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("This command can only be used by players.");
+            sender.sendMessage(Component.text("This command can only be used by players.", NamedTextColor.RED));
             return true;
         }
 
         if (args.length == 0) {
-            sender.sendMessage(ChatColor.RED + "Usage: /tomap <url> [width] [height]");
+            sender.sendMessage(Component.text("Usage: /tomap <url> [width] [height]", NamedTextColor.RED));
             return true;
         }
 
@@ -46,12 +47,12 @@ public class MapCommand implements CommandExecutor {
                 widthGrid = Integer.parseInt(args[1]);
                 heightGrid = Integer.parseInt(args[2]);
             } catch (NumberFormatException e) {
-                player.sendMessage(ChatColor.RED + "Width and Height must be numbers.");
+                player.sendMessage(Component.text("Width and Height must be numbers.", NamedTextColor.RED));
                 return true;
             }
         }
 
-        player.sendMessage(ChatColor.GRAY + "Downloading and processing image... this may take a moment.");
+        player.sendMessage(Component.text("Downloading and processing image... this may take a moment.", NamedTextColor.GRAY));
 
         int finalWidthGrid = widthGrid;
         int finalHeightGrid = heightGrid;
@@ -65,8 +66,7 @@ public class MapCommand implements CommandExecutor {
                 BufferedImage fullImage = ImageProcessor.getImage(url, totalWidth, totalHeight);
 
                 if (fullImage == null) {
-                    player.sendMessage(
-                            ChatColor.RED + "Failed to download or process the image. Please check the URL.");
+                    player.sendMessage(Component.text("Failed to download or process the image. Please check the URL.", NamedTextColor.RED));
                     return;
                 }
 
@@ -78,7 +78,7 @@ public class MapCommand implements CommandExecutor {
                             BufferedImage subImage = ImageProcessor.getSubImage(fullImage, x * 128, y * 128, 128, 128);
 
                             MapView mapView = Bukkit.createMap(player.getWorld());
-                            mapView.getRenderers().forEach(mapView::removeRenderer); // Clear default renderers
+                            mapView.getRenderers().forEach(mapView::removeRenderer);
                             mapView.addRenderer(new ImageMapRenderer(subImage));
 
                             ItemStack mapItem = new ItemStack(Material.FILLED_MAP);
@@ -98,11 +98,11 @@ public class MapCommand implements CommandExecutor {
                         }
                     }
                     plugin.saveImageMapsConfig();
-                    player.sendMessage(ChatColor.GREEN + "Your map(s) have been created!");
+                    player.sendMessage(Component.text("Your map(s) have been created!", NamedTextColor.GREEN));
                 });
 
             } catch (Exception e) {
-                player.sendMessage(ChatColor.RED + "An error occurred: " + e.getMessage());
+                player.sendMessage(Component.text("An error occurred: " + e.getMessage(), NamedTextColor.RED));
                 plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to create map", e);
             }
         });
