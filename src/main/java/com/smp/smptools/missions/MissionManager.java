@@ -13,12 +13,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class MissionManager {
 
     private final SMPTools plugin;
-    private final Map<String, Mission> missions = new HashMap<>();
-    private final Map<UUID, PlayerMissionData> playerData = new HashMap<>();
+    private final Map<String, Mission> missions = new ConcurrentHashMap<>();
+    private final Map<UUID, PlayerMissionData> playerData = new ConcurrentHashMap<>();
     private File playerMissionsFile;
     private FileConfiguration playerMissionsConfig;
 
@@ -47,7 +48,20 @@ public class MissionManager {
         for (String missionId : missionsSection.getKeys(false)) {
             String name = missionsSection.getString(missionId + ".name");
             String description = missionsSection.getString(missionId + ".description");
-            MissionType type = MissionType.valueOf(missionsSection.getString(missionId + ".type"));
+            String typeStr = missionsSection.getString(missionId + ".type");
+            if (typeStr == null) {
+                plugin.getLogger().warning("Missing type for mission: " + missionId);
+                continue;
+            }
+
+            MissionType type;
+            try {
+                type = MissionType.valueOf(typeStr);
+            } catch (IllegalArgumentException e) {
+                plugin.getLogger().warning("Invalid mission type '" + typeStr + "' for mission: " + missionId);
+                continue;
+            }
+
             String objective = missionsSection.getString(missionId + ".objective");
             int amount = missionsSection.getInt(missionId + ".amount");
             List<String> rewards = missionsSection.getStringList(missionId + ".rewards");

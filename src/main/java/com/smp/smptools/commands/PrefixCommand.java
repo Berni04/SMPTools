@@ -1,7 +1,10 @@
 package com.smp.smptools.commands;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -21,17 +24,17 @@ public class PrefixCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "Only players can use this command!");
+            sender.sendMessage(Component.text("Only players can use this command!", NamedTextColor.RED));
             return true;
         }
 
         Player player = (Player) sender;
-        Inventory prefixGUI = Bukkit.createInventory(null, 9, ChatColor.DARK_PURPLE + "Choose a Prefix");
+        Inventory prefixGUI = Bukkit.createInventory(null, 9, Component.text("Choose a Prefix"));
 
         for (int i = 0; i < prefixes.size(); i++) {
             ItemStack item = new ItemStack(Material.NAME_TAG);
             ItemMeta meta = item.getItemMeta();
-            meta.setDisplayName(ChatColor.RESET + prefixes.get(i));
+            meta.displayName(Component.text(prefixes.get(i)).decoration(TextDecoration.ITALIC, false));
             item.setItemMeta(meta);
             prefixGUI.setItem(i, item);
         }

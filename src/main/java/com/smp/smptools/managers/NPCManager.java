@@ -26,7 +26,9 @@ import org.bukkit.profile.PlayerTextures;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
 public class NPCManager {
@@ -34,6 +36,7 @@ public class NPCManager {
     private final SMPTools plugin;
     private File npcsFile;
     private FileConfiguration npcsConfig;
+    private final Map<String, Entity> npcRegistry = new ConcurrentHashMap<>();
 
     public static final NamespacedKey STORY_NPC_KEY = new NamespacedKey("smptools", "story_npc");
     public static final NamespacedKey SANTA_NPC_KEY = new NamespacedKey("smptools", "santa_npc");
@@ -159,6 +162,7 @@ public class NPCManager {
                     "NPC " + id + " is not a Player or Mannequin (" + npc.getType() + "), skipping skin application.");
         }
         addEntityToTeam(npc);
+        npcRegistry.put(id, npc);
     }
 
     public void createNPC(String id, Location loc, String type, String skin, String name) {
@@ -176,13 +180,9 @@ public class NPCManager {
         npcsConfig.set("npcs." + id, null);
         saveConfig();
 
-        for (World world : Bukkit.getWorlds()) {
-            for (Entity entity : world.getEntities()) {
-                if (entity.getPersistentDataContainer().has(NPC_ID_KEY, PersistentDataType.STRING) &&
-                        entity.getPersistentDataContainer().get(NPC_ID_KEY, PersistentDataType.STRING).equals(id)) {
-                    entity.remove();
-                }
-            }
+        Entity npc = npcRegistry.remove(id);
+        if (npc != null && !npc.isDead()) {
+            npc.remove();
         }
     }
 
@@ -256,7 +256,9 @@ public class NPCManager {
             if (skinName != null && !skinName.isEmpty()) {
                 ItemStack head = new ItemStack(Material.PLAYER_HEAD);
                 org.bukkit.inventory.meta.SkullMeta meta = (org.bukkit.inventory.meta.SkullMeta) head.getItemMeta();
-                meta.setOwner(skinName);
+                PlayerProfile profile = Bukkit.createProfile(skinName);
+                profile.complete(true);
+                meta.setPlayerProfile(profile);
                 head.setItemMeta(meta);
                 z.getEquipment().setHelmet(head);
             }

@@ -1,12 +1,17 @@
 package com.smp.smptools.music;
 
 import java.io.DataInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class NBSParser {
 
-    public static Song parse(InputStream inputStream) {
+    private static final Logger logger = Logger.getLogger(NBSParser.class.getName());
+
+    public static Song parse(InputStream inputStream) throws MusicParseException {
         try (DataInputStream dataInputStream = new DataInputStream(inputStream)) {
             // Header
             short length = readShort(dataInputStream);
@@ -66,19 +71,22 @@ public class NBSParser {
 
             return song;
 
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, "Failed to parse NBS file", e);
+            throw new MusicParseException("Failed to read NBS file: " + e.getMessage(), e);
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            logger.log(Level.SEVERE, "Unexpected error parsing NBS file", e);
+            throw new MusicParseException("Invalid NBS file format: " + e.getMessage(), e);
         }
     }
 
-    private static short readShort(DataInputStream dataInputStream) throws Exception {
+    private static short readShort(DataInputStream dataInputStream) throws IOException {
         int byte1 = dataInputStream.readUnsignedByte();
         int byte2 = dataInputStream.readUnsignedByte();
         return (short) (byte1 + (byte2 << 8));
     }
 
-    private static int readInt(DataInputStream dataInputStream) throws Exception {
+    private static int readInt(DataInputStream dataInputStream) throws IOException {
         int byte1 = dataInputStream.readUnsignedByte();
         int byte2 = dataInputStream.readUnsignedByte();
         int byte3 = dataInputStream.readUnsignedByte();
@@ -86,7 +94,7 @@ public class NBSParser {
         return byte1 + (byte2 << 8) + (byte3 << 16) + (byte4 << 24);
     }
 
-    private static String readString(DataInputStream dataInputStream) throws Exception {
+    private static String readString(DataInputStream dataInputStream) throws IOException {
         int length = readInt(dataInputStream);
         byte[] bytes = new byte[length];
         dataInputStream.readFully(bytes);

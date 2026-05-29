@@ -1,13 +1,18 @@
 package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
-import org.bukkit.ChatColor;
+import com.smp.smptools.utils.Constants;
+import com.smp.smptools.utils.InputValidator;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+
+import java.util.Locale;
 
 public class SetHomeCommand implements CommandExecutor {
 
@@ -20,18 +25,24 @@ public class SetHomeCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "Only players can use this command!");
+            sender.sendMessage(Component.text("Only players can use this command!", NamedTextColor.RED));
             return true;
         }
 
         if (args.length == 0) {
-            sender.sendMessage(ChatColor.RED + "Please specify a name for your home. Usage: /sethome <name>");
+            sender.sendMessage(Component.text("Please specify a name for your home. Usage: /sethome <name>", NamedTextColor.RED));
+            return true;
+        }
+
+        String homeName = args[0].toLowerCase(Locale.ROOT);
+
+        if (!InputValidator.isValidHomeName(homeName)) {
+            sender.sendMessage(Component.text("Invalid home name. Use only letters, numbers, _ and - (max " + Constants.MAX_HOME_NAME_LENGTH + " characters).", NamedTextColor.RED));
             return true;
         }
 
         Player player = (Player) sender;
         String playerUUID = player.getUniqueId().toString();
-        String homeName = args[0].toLowerCase();
 
         int homeLimit = getHomeLimit(player);
         int currentHomes = 0;
@@ -41,7 +52,7 @@ public class SetHomeCommand implements CommandExecutor {
         }
 
         if (currentHomes >= homeLimit && !plugin.getConfig().contains("homes." + playerUUID + "." + homeName)) {
-            player.sendMessage(ChatColor.RED + "You have reached your home limit of " + homeLimit + " homes.");
+            player.sendMessage(Component.text("You have reached your home limit of " + homeLimit + " homes.", NamedTextColor.RED));
             return true;
         }
 
@@ -55,14 +66,14 @@ public class SetHomeCommand implements CommandExecutor {
         plugin.getConfig().set("homes." + playerUUID + "." + homeName + ".pitch", location.getPitch());
         plugin.saveConfig();
 
-        player.sendMessage(ChatColor.GREEN + "Your home '" + homeName + "' has been set!");
+        player.sendMessage(Component.text("Your home '" + homeName + "' has been set!", NamedTextColor.GREEN));
         return true;
     }
 
     private int getHomeLimit(Player player) {
         ConfigurationSection limitsSection = plugin.getConfig().getConfigurationSection("home-limits");
         if (limitsSection == null) {
-            return 1; // Default limit if section is missing
+            return 1;
         }
 
         int maxLimit = 0;

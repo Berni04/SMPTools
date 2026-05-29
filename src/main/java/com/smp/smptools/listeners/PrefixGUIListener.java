@@ -2,7 +2,9 @@ package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.commands.PrefixCommand;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -20,7 +22,7 @@ public class PrefixGUIListener implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!event.getView().getTitle().equals(ChatColor.DARK_PURPLE + "Choose a Prefix")) {
+        if (!event.getView().title().equals(Component.text("Choose a Prefix"))) {
             return;
         }
 
@@ -33,13 +35,13 @@ public class PrefixGUIListener implements Listener {
             return;
         }
 
-        String prefix = ChatColor.stripColor(clickedItem.getItemMeta().getDisplayName());
+        String prefix = PlainTextComponentSerializer.plainText().serialize(clickedItem.getItemMeta().displayName());
 
         if (PrefixCommand.prefixes.contains(prefix)) {
             plugin.getStatsConfig().set("players." + player.getUniqueId() + ".prefix", prefix);
             plugin.saveStatsConfig();
             plugin.getNameTagListener().updatePlayerName(player);
-            player.sendMessage(ChatColor.GREEN + "Your prefix has been set to: " + prefix);
+            player.sendMessage(Component.text("Your prefix has been set to: " + prefix, NamedTextColor.GREEN));
             player.closeInventory();
         }
     }

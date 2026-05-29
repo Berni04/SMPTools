@@ -1,23 +1,52 @@
 package com.smp.smptools.skills;
 
 import com.smp.smptools.SMPTools;
+import com.smp.smptools.utils.Constants;
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Random;
 
+/**
+ * Manages the MMO-style skill system for players.
+ * Handles experience gain, level progression, and skill-based abilities.
+ *
+ * <p>Features:</p>
+ * <ul>
+ *   <li>Exponential level progression formula</li>
+ *   <li>Configurable double-drop chances for gathering skills</li>
+ *   <li>Treasure hunter perk for excavation</li>
+ *   <li>Critical strike chance for combat skill</li>
+ * </ul>
+ *
+ * @author berni
+ * @since 1.0-SNAPSHOT
+ */
 public class SkillsManager {
 
     private final SMPTools plugin;
     private final Random random = new Random();
 
+    /**
+     * Constructs a new SkillsManager.
+     *
+     * @param plugin the SMPTools plugin instance
+     */
     public SkillsManager(SMPTools plugin) {
         this.plugin = plugin;
     }
 
-    public void addExperience(Player player, SkillType skill, int amount) {
+    /**
+     * Adds experience to a player's skill and handles level-ups.
+     *
+     * @param player the player to add experience to
+     * @param skill the skill type to add experience to
+     * @param amount the amount of experience to add
+     */
+    public void addExperience(@NotNull Player player, @NotNull SkillType skill, int amount) {
         if (!isSkillEnabled(skill)) {
             return;
         }
@@ -43,15 +72,36 @@ public class SkillsManager {
         plugin.saveStatsConfig();
     }
 
-    public int getLevel(Player player, SkillType skill) {
+    /**
+     * Gets the current level of a skill for a player.
+     *
+     * @param player the player to get the level for
+     * @param skill the skill type to get the level for
+     * @return the skill level (defaults to 1 if not found)
+     */
+    public int getLevel(@NotNull Player player, @NotNull SkillType skill) {
         return plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".skills." + skill.name().toLowerCase() + ".level", 1);
     }
 
-    public int getCurrentExperience(Player player, SkillType skill) {
+    /**
+     * Gets the current experience points in a skill for a player.
+     *
+     * @param player the player to get experience for
+     * @param skill the skill type to get experience for
+     * @return the current experience points (defaults to 0 if not found)
+     */
+    public int getCurrentExperience(@NotNull Player player, @NotNull SkillType skill) {
         return plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".skills." + skill.name().toLowerCase() + ".experience", 0);
     }
 
-    public boolean attemptDoubleDrop(Player player, SkillType skill) {
+    /**
+     * Attempts to trigger a double drop based on the player's skill level.
+     *
+     * @param player the player to check for double drops
+     * @param skill the skill type to check
+     * @return true if a double drop should occur, false otherwise
+     */
+    public boolean attemptDoubleDrop(@NotNull Player player, @NotNull SkillType skill) {
         if (!isSkillEnabled(skill)) {
             return false;
         }
@@ -63,11 +113,8 @@ public class SkillsManager {
             return false;
         }
 
-        // Simple formula parser
         try {
-            String[] parts = chanceFormula.split("\\*");
-            double baseChance = Double.parseDouble(parts[0].trim());
-            double chance = baseChance * level;
+            double chance = parseFormula(chanceFormula, level);
             return random.nextDouble() < chance;
         } catch (Exception e) {
             plugin.getLogger().warning("Invalid double-drop-chance formula for " + skill.name() + ": " + chanceFormula);
@@ -75,9 +122,15 @@ public class SkillsManager {
         }
     }
 
+    /**
+     * Calculates the experience required to reach the next level.
+     * Uses an exponential growth formula: base * growthRate^(level-1)
+     *
+     * @param currentLevel the current skill level
+     * @return the experience required for the next level
+     */
     public int getExpToNextLevel(int currentLevel) {
-        // A simple exponential growth formula
-        return (int) (100 * Math.pow(1.2, currentLevel - 1));
+        return (int) (Constants.SKILL_BASE_EXP * Math.pow(Constants.SKILL_GROWTH_RATE, currentLevel - 1));
     }
 
     private boolean isSkillEnabled(SkillType skill) {
@@ -164,12 +217,9 @@ public class SkillsManager {
         if (chanceFormula == null) return;
 
         try {
-            String[] parts = chanceFormula.split("\\*");
-            double baseChance = Double.parseDouble(parts[0].trim());
-            double chance = baseChance * level;
+            double chance = parseFormula(chanceFormula, level);
 
             if (random.nextDouble() < chance) {
-                // Success! Find a treasure.
                 List<String> common = plugin.getConfig().getStringList("features.mmo-skills.excavation.treasure-hunter.loot.common");
                 List<String> uncommon = plugin.getConfig().getStringList("features.mmo-skills.excavation.treasure-hunter.loot.uncommon");
                 List<String> rare = plugin.getConfig().getStringList("features.mmo-skills.excavation.treasure-hunter.loot.rare");
@@ -177,13 +227,13 @@ public class SkillsManager {
                 String itemString;
                 double rarityRoll = random.nextDouble();
 
-                if (rarityRoll < 0.05) { // 5% chance for rare
+                if (rarityRoll < 0.05) {
                     itemString = rare.get(random.nextInt(rare.size()));
                     player.sendMessage("§6§lRARE! §eYou found a rare treasure!");
-                } else if (rarityRoll < 0.25) { // 20% chance for uncommon (25-5)
+                } else if (rarityRoll < 0.25) {
                     itemString = uncommon.get(random.nextInt(uncommon.size()));
                     player.sendMessage("§aYou found an uncommon treasure!");
-                } else { // 75% chance for common
+                } else {
                     itemString = common.get(random.nextInt(common.size()));
                 }
 
@@ -262,19 +312,10 @@ public class SkillsManager {
         }
 
         try {
-            // Calculate chance
-            String[] chanceParts = chanceFormula.split("\\*");
-            double baseChance = Double.parseDouble(chanceParts[0].trim());
-            double chance = baseChance * level;
+            double chance = parseFormula(chanceFormula, level);
 
             if (random.nextDouble() < chance) {
-                // Calculate damage multiplier
-                double multiplier = 1.0;
-                if (damageMultiplierFormula.contains("level")) {
-                    multiplier = Double.parseDouble(damageMultiplierFormula.replace("level", String.valueOf(level)).replace(" ", ""));
-                } else {
-                    multiplier = Double.parseDouble(damageMultiplierFormula);
-                }
+                double multiplier = parseDamageMultiplier(damageMultiplierFormula, level);
                 player.sendMessage("§c§lCRITICAL STRIKE! §r§7(" + String.format("%.1f", multiplier) + "x Damage)");
                 return baseDamage * multiplier;
             }
@@ -282,5 +323,26 @@ public class SkillsManager {
             plugin.getLogger().warning("Could not execute Critical Strike due to an error: " + e.getMessage());
         }
         return baseDamage;
+    }
+
+    private double parseFormula(String formula, int level) {
+        if (formula == null || formula.isEmpty()) {
+            throw new IllegalArgumentException("Formula cannot be null or empty");
+        }
+
+        if (!formula.matches("\\d+\\.?\\d*\\s*\\*\\s*level")) {
+            throw new IllegalArgumentException("Invalid formula format: " + formula);
+        }
+
+        String[] parts = formula.split("\\*");
+        double base = Double.parseDouble(parts[0].trim());
+        return base * level;
+    }
+
+    private double parseDamageMultiplier(String formula, int level) {
+        if (formula.contains("level")) {
+            return Double.parseDouble(formula.replace("level", String.valueOf(level)).replace(" ", ""));
+        }
+        return Double.parseDouble(formula);
     }
 }

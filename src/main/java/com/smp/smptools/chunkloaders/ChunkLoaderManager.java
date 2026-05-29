@@ -25,13 +25,34 @@ public class ChunkLoaderManager {
     private File chunkLoadersFile;
     private FileConfiguration chunkLoadersConfig;
     private final List<Location> activeChunkLoaders = new ArrayList<>();
-    private static SMPTools staticPluginInstance; // To access config from static method
+    private static SMPTools staticPluginInstance;
+
+    // Cached config values
+    private static Material cachedMaterial;
+    private static Component cachedName;
+    private static List<Component> cachedLore;
 
     public ChunkLoaderManager(SMPTools plugin) {
         this.plugin = plugin;
-        staticPluginInstance = plugin; // Set the static instance
+        staticPluginInstance = plugin;
         setupChunkLoadersConfig();
         loadChunkLoaders();
+        cacheConfigValues();
+    }
+
+    private void cacheConfigValues() {
+        String materialStr = plugin.getConfig().getString("features.chunk-loaders.item.material", "BEACON");
+        cachedMaterial = Material.matchMaterial(materialStr);
+        if (cachedMaterial == null) {
+            cachedMaterial = Material.BEACON;
+        }
+
+        cachedName = MiniMessage.miniMessage().deserialize(
+                plugin.getConfig().getString("features.chunk-loaders.item.name", "<gold>Chunk Loader</gold>"));
+
+        cachedLore = plugin.getConfig().getStringList("features.chunk-loaders.item.lore").stream()
+                .map(MiniMessage.miniMessage()::deserialize)
+                .collect(java.util.ArrayList::new, java.util.ArrayList::add, java.util.ArrayList::addAll);
     }
 
     private void setupChunkLoadersConfig() {
@@ -130,44 +151,30 @@ public class ChunkLoaderManager {
         return null;
     }
 
-    // Utility method to create the chunk loader item
     public static ItemStack getChunkLoaderItem() {
-        if (staticPluginInstance == null) {
-            // Fallback or error handling if plugin instance is not set
+        if (cachedMaterial == null) {
             return new ItemStack(Material.BEACON);
         }
-        Material material = Material.matchMaterial(staticPluginInstance.getConfig().getString("features.chunk-loaders.item.material", "BEACON"));
-        ItemStack item = new ItemStack(material != null ? material : Material.BEACON);
+
+        ItemStack item = new ItemStack(cachedMaterial);
         ItemMeta meta = item.getItemMeta();
 
-        Component name = MiniMessage.miniMessage().deserialize(staticPluginInstance.getConfig().getString("features.chunk-loaders.item.name", "<gold>Chunk Loader</gold>"));
-        List<Component> lore = staticPluginInstance.getConfig().getStringList("features.chunk-loaders.item.lore").stream()
-                .map(MiniMessage.miniMessage()::deserialize)
-                .collect(java.util.ArrayList::new, java.util.ArrayList::add, java.util.ArrayList::addAll);
-
-        meta.displayName(name);
-        meta.lore(lore);
+        meta.displayName(cachedName);
+        meta.lore(cachedLore);
         item.setItemMeta(meta);
         return item;
     }
 
-    // Utility method to check if an item is a chunk loader item
     public static boolean isChunkLoaderItem(ItemStack item) {
-        if (staticPluginInstance == null || item == null || !item.hasItemMeta()) {
+        if (item == null || !item.hasItemMeta() || cachedMaterial == null) {
             return false;
         }
+
+        if (item.getType() != cachedMaterial) {
+            return false;
+        }
+
         ItemMeta meta = item.getItemMeta();
-        Material configuredMaterial = Material.matchMaterial(staticPluginInstance.getConfig().getString("features.chunk-loaders.item.material", "BEACON"));
-        
-        if (item.getType() != configuredMaterial) {
-            return false;
-        }
-
-        Component configuredName = MiniMessage.miniMessage().deserialize(staticPluginInstance.getConfig().getString("features.chunk-loaders.item.name", "<gold>Chunk Loader</gold>"));
-        List<Component> configuredLore = staticPluginInstance.getConfig().getStringList("features.chunk-loaders.item.lore").stream()
-                .map(MiniMessage.miniMessage()::deserialize)
-                .collect(java.util.ArrayList::new, java.util.ArrayList::add, java.util.ArrayList::addAll);
-
-        return Objects.equals(meta.displayName(), configuredName) && Objects.equals(meta.lore(), configuredLore);
+        return Objects.equals(meta.displayName(), cachedName) && Objects.equals(meta.lore(), cachedLore);
     }
 }

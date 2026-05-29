@@ -2,8 +2,10 @@ package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.leaderboard.LeaderboardManager;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
@@ -18,7 +20,6 @@ import org.bukkit.inventory.meta.SkullMeta;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class LeaderboardGUIListener implements Listener {
@@ -31,7 +32,7 @@ public class LeaderboardGUIListener implements Listener {
 
     @EventHandler
     public void onHubClick(InventoryClickEvent event) {
-        if (!event.getView().getTitle().equals("Leaderboards")) {
+        if (!event.getView().title().equals(Component.text("Leaderboards"))) {
             return;
         }
 
@@ -39,17 +40,17 @@ public class LeaderboardGUIListener implements Listener {
         Player player = (Player) event.getWhoClicked();
         ItemStack clickedItem = event.getCurrentItem();
 
-        if (clickedItem == null || clickedItem.getItemMeta().getLore() == null || clickedItem.getItemMeta().getLore().isEmpty()) {
+        if (clickedItem == null || clickedItem.getItemMeta().lore() == null || clickedItem.getItemMeta().lore().isEmpty()) {
             return;
         }
 
-        String statKey = ChatColor.stripColor(clickedItem.getItemMeta().getLore().get(0));
+        String statKey = PlainTextComponentSerializer.plainText().serialize(clickedItem.getItemMeta().lore().get(0));
         openLeaderboardGUI(player, statKey);
     }
 
     @EventHandler
     public void onLeaderboardClick(InventoryClickEvent event) {
-        if (!event.getView().getTitle().startsWith("Top 10 -")) {
+        if (!PlainTextComponentSerializer.plainText().serialize(event.getView().title()).startsWith("Top 10 -")) {
             return;
         }
         event.setCancelled(true);
@@ -60,10 +61,10 @@ public class LeaderboardGUIListener implements Listener {
         Map<String, Long> leaderboard = manager.getLeaderboard(statKey);
 
         String title = statKey.replace('_', ' ').toUpperCase();
-        Inventory leaderboardGUI = Bukkit.createInventory(null, 54, "Top 10 - " + title);
+        Inventory leaderboardGUI = Bukkit.createInventory(null, 54, Component.text("Top 10 - " + title));
 
         if (leaderboard.isEmpty()) {
-            player.sendMessage(ChatColor.YELLOW + "No leaderboard data available for this stat.");
+            player.sendMessage(Component.text("No leaderboard data available for this stat.", NamedTextColor.YELLOW));
             return;
         }
 
@@ -77,10 +78,10 @@ public class LeaderboardGUIListener implements Listener {
                 headMeta.setOwningPlayer(offlinePlayer);
             }
 
-            headMeta.setDisplayName(ChatColor.GOLD + "#" + rank.get() + " " + playerName);
-            List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.YELLOW + "Score: " + formatScore(statKey, score));
-            headMeta.setLore(lore);
+            headMeta.displayName(Component.text("#" + rank.get() + " " + playerName, NamedTextColor.GOLD));
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.text("Score: " + formatScore(statKey, score), NamedTextColor.YELLOW));
+            headMeta.lore(lore);
             playerHead.setItemMeta(headMeta);
             leaderboardGUI.addItem(playerHead);
             rank.getAndIncrement();

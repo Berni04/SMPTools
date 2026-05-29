@@ -1,8 +1,9 @@
 package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -27,23 +28,23 @@ public class TabHealthListener implements Listener {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 updatePlayerHealth(player);
             }
-        }, 0L, 20L); // Update every second
+        }, 0L, 20L);
     }
 
     private void updatePlayerHealth(Player player) {
         double health = player.getHealth();
-        String healthDisplay = getHealthDisplay(health);
-        player.setPlayerListName(player.getDisplayName() + " " + healthDisplay);
+        Component healthDisplay = getHealthDisplay(health);
+        player.playerListName(player.displayName().append(Component.text(" ")).append(healthDisplay));
     }
 
-    private String getHealthDisplay(double health) {
-        ChatColor healthColor;
+    private Component getHealthDisplay(double health) {
+        NamedTextColor healthColor;
         if (health < 6) {
-            healthColor = ChatColor.RED;
+            healthColor = NamedTextColor.RED;
         } else if (health < 14) {
-            healthColor = ChatColor.YELLOW;
+            healthColor = NamedTextColor.YELLOW;
         } else {
-            healthColor = ChatColor.GREEN;
+            healthColor = NamedTextColor.GREEN;
         }
 
         int hearts = (int) Math.round(health / 2.0);
@@ -52,6 +53,6 @@ public class TabHealthListener implements Listener {
             heartString.append("❤");
         }
 
-        return healthColor + heartString.toString();
+        return Component.text(heartString.toString(), healthColor);
     }
 }

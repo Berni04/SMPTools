@@ -1,0 +1,85 @@
+# SMPTools Messages Configuration
+# Uses MiniMessage format: https://docs.advntr.dev/minimessage/format.html
+# 
+# Dynamic Player Tags:
+#   <player>           - Full formatted name (color + prefix + name + title)
+#   <player_name>      - Just the raw player name
+#   <player_name_color> - Player name with their chosen color
+#   <player_color>     - Just the color tag
+#   <player_prefix>    - Just the prefix
+#   <player_title>     - Just the equipped title
+#
+# Placeholders: Use {name}, {target}, {level}, etc. for dynamic values
+
+# Errors
+errors:
+  player-only: "<red>Only players can use this command!</red>"
+  no-permission: "<red>You don't have permission to do that.</red>"
+  player-not-found: "<red>Player not found.</red>"
+  invalid-arguments: "<red>Invalid arguments. Usage: {usage}</red>"
+
+# Homes
+homes:
+  set: "<player_name_color>, your home '<gold>{name}</gold>' has been set!"
+  teleported: "<player_name_color>, teleporting to '<gold>{name}</gold>'..."
+  deleted: "<player_name_color>, home '<gold>{name}</gold>' deleted."
+  not-found: "<player_name_color>, you don't have a home named '<red>{name}</red>'."
+  limit-reached: "<red>You have reached your home limit of {limit} homes.</red>"
+  invalid-name: "<red>Invalid home name. Use only letters, numbers, _ and - (max {max} characters).</red>"
+
+# TPA
+tpa:
+  request-sent: "<player_name_color>, teleport request sent to <gold>{target}</gold>."
+  request-received: "<player_name_color> has requested to teleport to you."
+  expired: "<red>Your teleport request to {target} has expired.</red>"
+  accepted: "<player_name_color> has started teleporting to you."
+  denied: "<red>Teleport request denied.</red>"
+  toggle-on: "<green>You are now accepting teleport requests.</green>"
+  toggle-off: "<red>You are no longer accepting teleport requests.</red>"
+  no-pending: "<red>You have no pending teleport requests.</red>"
+  target-offline: "<red>The requester is no longer online.</red>"
+
+# Skills
+skills:
+  level-up: "<player_name_color>, your <gold>{skill_name}</gold> skill has reached level <green>{level}</green>!"
+  rare-treasure: "<gold><bold>RARE!</bold></gold> <player_name_color> found a rare treasure!"
+  uncommon-treasure: "<player_name_color> found an uncommon treasure!"
+  critical-strike: "<red><bold>CRITICAL STRIKE!</bold></red> <gray>({multiplier}x Damage)</gray>"
+
+# Sleep
+sleep:
+  vote-started: "<player_name_color> wants to skip the night."
+  vote-accepted: "<green>Night skipped!</green>"
+  already-voting: "<red>A sleep vote is already in progress.</red>"
+  combat-blocked: "<red>You can't sleep while in combat!</red>"
+
+# Music
+music:
+  song-not-found: "<red>Song not found: {song_name}</red>"
+  now-playing: "<green>Now playing: {song_title}</green>"
+  stopped: "<yellow>Music stopped.</yellow>"
+
+# Missions
+missions:
+  completed: "<green>Mission completed: {mission_name}</green>"
+  reward-claimed: "<player_name_color>, reward claimed!"
+  no-missions: "<yellow>No missions available.</yellow>"
+
+# Stats
+stats:
+  cleared: "<player_name_color>'s statistics have been cleared."
+
+# Leaderboard
+leaderboard:
+  header: "<gold><bold>{title}</bold></gold>"
+  entry: "<gray>{position}.</gray> <player_name_color> - <gold>{value}</gold>"
+
+# Chat
+chat:
+  private-message-sent: "<gray>[<aqua>You</aqua> -> <aqua>{target}</aqua>] {message}</gray>"
+  private-message-received: "<gray>[<aqua>{sender}</aqua> -> <aqua>You</aqua>] {message}</gray>"
+
+# Join/Leave
+join-leave:
+  joined: "<player> joined the server."
+  left: "<player> left the server."

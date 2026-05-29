@@ -4,7 +4,6 @@ import com.smp.smptools.SMPTools;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Sound;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -22,18 +21,18 @@ public class MsgCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "Only players can use this command!");
+            sender.sendMessage(Component.text("Only players can use this command!", NamedTextColor.RED));
             return true;
         }
 
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Usage: /msg <player> <message>");
+            sender.sendMessage(Component.text("Usage: /msg <player> <message>", NamedTextColor.RED));
             return true;
         }
 
         Player recipient = Bukkit.getPlayer(args[0]);
         if (recipient == null) {
-            sender.sendMessage(ChatColor.RED + "Player not found.");
+            sender.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
             return true;
         }
 

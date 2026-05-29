@@ -275,7 +275,6 @@ public class MissionGUIListener implements Listener {
         playerData.getClaimedMissions().add(missionId);
         player.closeInventory();
         player.sendMessage(Component.text("Chromatic Elytra received!", NamedTextColor.GOLD));
-        player.sendMessage(Component.text("Chromatic Elytra received!", NamedTextColor.GOLD));
     }
 
     private void handleQuestlineSelectionClick(InventoryClickEvent event, Player player) {
@@ -437,7 +436,6 @@ public class MissionGUIListener implements Listener {
         gui.setItem(7, createGuiItem(Material.WHITE_WOOL, "&fWhite Trail", List.of("mission_id:" + missionId)));
         gui.setItem(8, createGuiItem(Material.CYAN_WOOL, "&bRainbow Trail", List.of("mission_id:" + missionId)));
         player.openInventory(gui);
-        player.openInventory(gui);
     }
 
     public static void openQuestlineSelectionGUI(Player player) {
@@ -580,6 +578,7 @@ public class MissionGUIListener implements Listener {
     public static class MissionGUIHolder implements org.bukkit.inventory.InventoryHolder {
         private final boolean isNpc;
         private final String category;
+        private Inventory inventory;
 
         public MissionGUIHolder(boolean isNpc, String category) {
             this.isNpc = isNpc;
@@ -588,6 +587,10 @@ public class MissionGUIListener implements Listener {
 
         public MissionGUIHolder(boolean isNpc) {
             this(isNpc, "NORMAL");
+        }
+
+        public void setInventory(Inventory inventory) {
+            this.inventory = inventory;
         }
 
         public boolean isNpc() {
@@ -600,7 +603,10 @@ public class MissionGUIListener implements Listener {
 
         @Override
         public Inventory getInventory() {
-            return null;
+            if (inventory == null) {
+                inventory = Bukkit.createInventory(this, 54);
+            }
+            return inventory;
         }
     }
 }

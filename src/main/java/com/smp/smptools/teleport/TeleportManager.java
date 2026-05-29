@@ -1,23 +1,24 @@
 package com.smp.smptools.teleport;
 
 import com.smp.smptools.SMPTools;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.logging.Level; // Import Level for logging
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 
 public class TeleportManager {
 
     private final SMPTools plugin;
-    private final Map<UUID, BukkitTask> pendingTeleports = new HashMap<>();
-    private final Map<UUID, Location> initialLocations = new HashMap<>();
-    private final java.util.Set<UUID> teleportingSafely = new java.util.HashSet<>(); // New set to track safe teleports
+    private final Map<UUID, BukkitTask> pendingTeleports = new ConcurrentHashMap<>();
+    private final Map<UUID, Location> initialLocations = new ConcurrentHashMap<>();
+    private final java.util.Set<UUID> teleportingSafely = ConcurrentHashMap.newKeySet();
 
     public TeleportManager(SMPTools plugin) {
         this.plugin = plugin;
@@ -34,7 +35,7 @@ public class TeleportManager {
             cancelTeleport(player, "You started a new teleport.", false);
         }
 
-        player.sendMessage(ChatColor.GREEN + "Teleporting to " + destinationName + " in 3 seconds... Don't move or take damage!");
+        player.sendMessage(Component.text("Teleporting to " + destinationName + " in 3 seconds... Don't move or take damage!", NamedTextColor.GREEN));
         initialLocations.put(player.getUniqueId(), player.getLocation());
         plugin.getLogger().log(Level.INFO, "Initial location for " + player.getName() + ": " + player.getLocation());
 
@@ -44,21 +45,21 @@ public class TeleportManager {
             @Override
             public void run() {
                 if (countdown > 0) {
-                    player.sendMessage(ChatColor.GRAY + "Teleporting in " + countdown + "...");
+                    player.sendMessage(Component.text("Teleporting in " + countdown + "...", NamedTextColor.GRAY));
                     plugin.getLogger().log(Level.INFO, "Teleport countdown for " + player.getName() + ": " + countdown);
                     countdown--;
                 } else {
                     plugin.getLogger().log(Level.INFO, "Teleport countdown finished for " + player.getName() + ". Performing teleport.");
-                    teleportingSafely.add(player.getUniqueId()); // Mark player as safely teleporting
+                    teleportingSafely.add(player.getUniqueId());
                     player.teleport(location);
                     plugin.getLogger().log(Level.INFO, "Player " + player.getName() + " teleported to " + location);
-                    teleportingSafely.remove(player.getUniqueId()); // Unmark after teleport
-                    player.sendMessage(ChatColor.GREEN + "Teleport successful!");
+                    teleportingSafely.remove(player.getUniqueId());
+                    player.sendMessage(Component.text("Teleport successful!", NamedTextColor.GREEN));
                     finishTeleport(player);
-                    this.cancel(); // Ensure the runnable stops after teleporting
+                    this.cancel();
                 }
             }
-        }.runTaskTimer(plugin, 0L, 20L); // Run every second
+        }.runTaskTimer(plugin, 0L, 20L);
 
         pendingTeleports.put(player.getUniqueId(), task);
         plugin.getLogger().log(Level.INFO, "Teleport task started for " + player.getName());
@@ -70,7 +71,7 @@ public class TeleportManager {
             pendingTeleports.get(player.getUniqueId()).cancel();
             plugin.getLogger().log(Level.INFO, "Teleport task cancelled for " + player.getName());
             if (showMessage) {
-                player.sendMessage(ChatColor.RED + "Teleport cancelled: " + reason);
+                player.sendMessage(Component.text("Teleport cancelled: " + reason, NamedTextColor.RED));
             }
             finishTeleport(player);
         } else {
@@ -82,7 +83,7 @@ public class TeleportManager {
         plugin.getLogger().log(Level.INFO, "finishTeleport called for " + player.getName());
         pendingTeleports.remove(player.getUniqueId());
         initialLocations.remove(player.getUniqueId());
-        teleportingSafely.remove(player.getUniqueId()); // Ensure player is removed from safe teleporting set
+        teleportingSafely.remove(player.getUniqueId());
         plugin.getLogger().log(Level.INFO, "Teleport state cleared for " + player.getName());
     }
 

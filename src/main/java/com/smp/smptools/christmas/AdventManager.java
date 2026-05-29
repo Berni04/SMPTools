@@ -35,8 +35,7 @@ public class AdventManager {
         try {
             config.save(configFile);
         } catch (IOException e) {
-            plugin.getLogger().severe("Could not save advent.yml!");
-            e.printStackTrace();
+            plugin.getLogger().log(java.util.logging.Level.SEVERE, "Could not save advent.yml!", e);
         }
     }
 

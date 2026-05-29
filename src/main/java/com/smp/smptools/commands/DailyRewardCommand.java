@@ -1,8 +1,9 @@
 package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -25,7 +26,7 @@ public class DailyRewardCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("Only players can use this command.");
+            sender.sendMessage(Component.text("Only players can use this command.", NamedTextColor.RED));
             return true;
         }
 
@@ -33,7 +34,7 @@ public class DailyRewardCommand implements CommandExecutor {
         String uuid = player.getUniqueId().toString();
 
         if (!plugin.getConfig().getBoolean("features.daily-rewards.enabled")) {
-            player.sendMessage(ChatColor.RED + "The daily reward system is currently disabled.");
+            player.sendMessage(Component.text("The daily reward system is currently disabled.", NamedTextColor.RED));
             return true;
         }
 
@@ -49,7 +50,7 @@ public class DailyRewardCommand implements CommandExecutor {
                 long hoursRemaining = cooldownHours - timeSinceClaimed.toHours();
                 long minutesRemaining = (cooldownHours * 60) - timeSinceClaimed.toMinutes();
                 minutesRemaining %= 60;
-                player.sendMessage(ChatColor.RED + "You have already claimed your daily reward. Please wait " + hoursRemaining + "h " + minutesRemaining + "m.");
+                player.sendMessage(Component.text("You have already claimed your daily reward. Please wait " + hoursRemaining + "h " + minutesRemaining + "m.", NamedTextColor.RED));
                 return true;
             }
         }
@@ -75,7 +76,7 @@ public class DailyRewardCommand implements CommandExecutor {
         plugin.getRewardsConfig().set("players." + uuid + ".last-claimed", Instant.now().toString());
         plugin.saveRewardsConfig();
 
-        player.sendMessage(ChatColor.GREEN + "You have successfully claimed your daily reward!");
+        player.sendMessage(Component.text("You have successfully claimed your daily reward!", NamedTextColor.GREEN));
 
         return true;
     }

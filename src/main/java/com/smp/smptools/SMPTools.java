@@ -1,6 +1,13 @@
 package com.smp.smptools;
 
-import com.smp.smptools.commands.*;
+import com.smp.smptools.commands.LeaderboardCommand;
+import com.smp.smptools.commands.StatsCommand;
+import com.smp.smptools.commands.TpaCommand;
+import com.smp.smptools.commands.SecretSantaCommand;
+import com.smp.smptools.config.CommandRegistry;
+import com.smp.smptools.config.ConfigDefaults;
+import com.smp.smptools.config.ListenerRegistry;
+import com.smp.smptools.config.MessageManager;
 import com.smp.smptools.enchants.EnchantmentManager;
 import com.smp.smptools.leaderboard.LeaderboardManager;
 import com.smp.smptools.skills.SkillsManager;
@@ -9,6 +16,7 @@ import com.smp.smptools.tpa.TpaManager;
 import com.smp.smptools.teleport.TeleportManager;
 import com.smp.smptools.teleport.TeleportListener;
 import com.smp.smptools.sleep.SleepManager;
+import com.smp.smptools.sleep.SleepListener;
 import com.smp.smptools.chat.ChatManager;
 import com.smp.smptools.chunkloaders.ChunkLoaderManager;
 import com.smp.smptools.missions.MissionManager;
@@ -23,13 +31,16 @@ import com.smp.smptools.listeners.HomesGUIListener;
 import com.smp.smptools.listeners.PrefixGUIListener;
 import com.smp.smptools.listeners.LeaderboardGUIListener;
 import com.smp.smptools.listeners.SkillsGUIListener;
-import com.smp.smptools.listeners.*;
-import com.smp.smptools.listeners.NameTagListener;
+import com.smp.smptools.listeners.AdventGUIListener;
+import com.smp.smptools.listeners.EnchantmentListener;
 import com.smp.smptools.listeners.MissionGUIListener;
 import com.smp.smptools.listeners.MissionNPCListener;
-import com.smp.smptools.listeners.PortalListener;
 import com.smp.smptools.listeners.NPCListener;
-import com.smp.smptools.listeners.AdventGUIListener;
+import com.smp.smptools.listeners.NameTagListener;
+import com.smp.smptools.listeners.PortalListener;
+import com.smp.smptools.listeners.ResourcePackListener;
+import com.smp.smptools.listeners.SitListener;
+import com.smp.smptools.listeners.SkillsListener;
 import com.smp.smptools.managers.NPCManager;
 import com.smp.smptools.managers.DialogueManager;
 import com.smp.smptools.managers.BlackFridayManager;
@@ -39,6 +50,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.smp.smptools.utils.AsyncConfigHelper;
 import java.io.File;
 import java.io.IOException;
 
@@ -77,6 +89,7 @@ public class SMPTools extends JavaPlugin {
     private NPCManager npcManager;
     private DialogueManager dialogueManager;
     private BlackFridayManager blackFridayManager;
+    private MessageManager messageManager;
 
     @Override
     public void onEnable() {
@@ -84,109 +97,7 @@ public class SMPTools extends JavaPlugin {
         getLogger().info("SMPTools has been enabled!");
 
         // Setup configs
-        getConfig().addDefault("features.daily-rewards.enabled", true);
-        getConfig().addDefault("features.custom-enchants.enabled", true);
-        getConfig().addDefault("features.mmo-skills.enabled", true);
-
-        // Default Daily Rewards Config
-        getConfig().addDefault("features.daily-rewards.cooldown-hours", 22);
-        List<String> defaultRewards = new ArrayList<>();
-        defaultRewards.add("eco give %player% 100");
-        defaultRewards.add("item:diamond 5");
-        getConfig().addDefault("features.daily-rewards.rewards", defaultRewards);
-
-        // Default MMO-Skills Config
-        getConfig().addDefault("features.mmo-skills.mining.enabled", true);
-        getConfig().addDefault("features.mmo-skills.mining.double-drop-chance", "0.0015 * level"); // 7.5% at Lvl 50
-        getConfig().addDefault("features.mmo-skills.woodcutting.enabled", true);
-        getConfig().addDefault("features.mmo-skills.woodcutting.double-drop-chance", "0.0015 * level");
-        getConfig().addDefault("features.mmo-skills.excavation.enabled", true);
-        getConfig().addDefault("features.mmo-skills.excavation.double-drop-chance", "0.0015 * level");
-        // Treasure Hunter Perk
-        getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.enabled", true);
-        getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.chance", "0.0005 * level"); // 2.5% at
-                                                                                                           // Lvl 50
-        getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.loot.common",
-                List.of("IRON_NUGGET 1", "GOLD_NUGGET 1"));
-        getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.loot.uncommon",
-                List.of("GLOWSTONE_DUST 2", "QUARTZ 1"));
-        getConfig().addDefault("features.mmo-skills.excavation.treasure-hunter.loot.rare",
-                List.of("DIAMOND 1", "NAME_TAG 1"));
-
-        // Default Combat Skill Config
-        getConfig().addDefault("features.mmo-skills.combat.enabled", true);
-        getConfig().addDefault("features.mmo-skills.combat.critical-strike.enabled", true);
-        getConfig().addDefault("features.mmo-skills.combat.critical-strike.chance", "0.002 * level"); // 10% at Lvl 50
-        getConfig().addDefault("features.mmo-skills.combat.critical-strike.damage-multiplier", "1.0 + (level / 10.0)"); // 1.0x
-                                                                                                                        // +
-                                                                                                                        // 5.0x
-                                                                                                                        // =
-                                                                                                                        // 6.0x
-                                                                                                                        // at
-                                                                                                                        // Lvl
-                                                                                                                        // 50
-
-        // Sit on Stairs
-        getConfig().addDefault("features.sit-on-stairs.enabled", true);
-
-        // Player Graves
-        getConfig().addDefault("features.player-graves.enabled", true);
-
-        // Default Custom Enchants Config
-        getConfig().addDefault("features.custom-enchants.telekinesis.enabled", true);
-        getConfig().addDefault("features.custom-enchants.telekinesis.description",
-                "Automatically sends block drops to your inventory.");
-        List<String> telekinesisApplicable = new ArrayList<>();
-        telekinesisApplicable.add("PICKAXE");
-        telekinesisApplicable.add("AXE");
-        telekinesisApplicable.add("SHOVEL");
-        telekinesisApplicable.add("HOE");
-        getConfig().addDefault("features.custom-enchants.telekinesis.applicable-items", telekinesisApplicable);
-
-        // Lumberjack Enchant
-        getConfig().addDefault("features.custom-enchants.lumberjack.enabled", true);
-        getConfig().addDefault("features.custom-enchants.lumberjack.description", "Breaks an entire tree at once.");
-        List<String> lumberjackApplicable = new ArrayList<>();
-        lumberjackApplicable.add("AXE");
-        getConfig().addDefault("features.custom-enchants.lumberjack.applicable-items", lumberjackApplicable);
-
-        // Image to Map
-        getConfig().addDefault("features.image-to-map.enabled", true);
-
-        // Music Player
-        getConfig().addDefault("features.music-player.enabled", true);
-        getConfig().addDefault("features.music-player.base-url",
-                "https://raw.githubusercontent.com/YourUser/YourRepo/main/");
-
-        // Funny Death Messages
-        getConfig().addDefault("features.funny-death-messages.enabled", true);
-
-        // Ride Command
-        getConfig().addDefault("features.ride.enabled", true);
-
-        // Meme Sounds
-        getConfig().addDefault("features.meme-sounds.enabled", true);
-        getConfig().addDefault("features.meme-sounds.resource-pack-url", "YOUR_RESOURCE_PACK_URL_HERE");
-        if (!getConfig().contains("features.meme-sounds.sounds")) {
-            getConfig().set("features.meme-sounds.sounds.vine_boom", "custom.vine_boom");
-            getConfig().set("features.meme-sounds.sounds.goofy_yell", "custom.goofy_yell");
-            getConfig().set("features.meme-sounds.sounds.crickets", "custom.crickets");
-        }
-
-        // Sleep Voting
-        getConfig().addDefault("features.sleep-voting.enabled", true);
-
-        // Chunk Loaders
-        getConfig().addDefault("features.chunk-loaders.enabled", true);
-        getConfig().addDefault("features.chunk-loaders.item.material", "BEACON");
-        getConfig().addDefault("features.chunk-loaders.item.name", "<gold>Chunk Loader</gold>");
-        List<String> chunkLoaderLore = new ArrayList<>();
-        chunkLoaderLore.add("<gray>Place this to keep the chunk loaded.</gray>");
-        chunkLoaderLore.add("<gray>Works even when no players are online!</gray>");
-        getConfig().addDefault("features.chunk-loaders.item.lore", chunkLoaderLore);
-
-        getConfig().options().copyDefaults(true);
-        saveConfig();
+        ConfigDefaults.applyDefaults(this);
 
         setupStatsConfig();
         setupTagsConfig();
@@ -218,39 +129,18 @@ public class SMPTools extends JavaPlugin {
         this.npcManager = new NPCManager(this);
         this.dialogueManager = new DialogueManager(this);
         this.blackFridayManager = new BlackFridayManager(this);
+        this.messageManager = new MessageManager(this);
 
-        // Register Listeners
-        Bukkit.getPluginManager().registerEvents(new VaultListener(this), this);
+        // Register Listeners and Commands
         this.nameTagListener = new NameTagListener(this);
         Bukkit.getPluginManager().registerEvents(nameTagListener, this);
-        Bukkit.getPluginManager().registerEvents(new StatsListener(this), this);
+
         StatsCommand statsCommand = new StatsCommand(this);
         this.getCommand("stats").setExecutor(statsCommand);
-        Bukkit.getPluginManager().registerEvents(new StatsGUIListener(statsCommand), this);
-        Bukkit.getPluginManager().registerEvents(new JoinLeaveListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new ChatListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new HomesGUIListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new PrefixGUIListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new LeaderboardGUIListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new TagsGUIListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new TabHealthListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new TeleportListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new AdvancementListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new ChunkLoaderListener(this), this); // Register ChunkLoaderListener
-        Bukkit.getPluginManager().registerEvents(new InvseeGUIListener(this), this); // Register InvseeGUIListener
-        Bukkit.getPluginManager().registerEvents(new TrollGUIListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new MissionNPCListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new NPCListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new MissionGUIListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new ElytraTrailListener(), this);
-        Bukkit.getPluginManager().registerEvents(new MissionTrackerListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new ChristmasWorldListener(this), this);
-
-        Bukkit.getPluginManager().registerEvents(new com.smp.smptools.graves.GraveManager(this), this);
 
         AdventGUIListener adventGUIListener = new AdventGUIListener(this, adventManager);
-        Bukkit.getPluginManager().registerEvents(adventGUIListener, this);
-        Bukkit.getPluginManager().registerEvents(new PortalListener(this), this);
+
+        ListenerRegistry.registerCoreListeners(this, statsCommand, adventGUIListener);
 
         // Register Accelerators
         if (getConfig().getBoolean("features.accelerated-growth.enabled", true)) {
@@ -259,47 +149,30 @@ public class SMPTools extends JavaPlugin {
             this.cropAccelerator.runTaskTimer(this, 0L, 20L); // Run every second
         }
 
+        // Conditional listeners
         if (getConfig().getBoolean("features.sleep-voting.enabled")) {
             Bukkit.getPluginManager().registerEvents(new SleepListener(this), this);
-            this.getCommand("sleepvote").setExecutor(new com.smp.smptools.sleep.SleepVoteCommand(this));
         }
-
         if (getConfig().getBoolean("features.sit-on-stairs.enabled")) {
             Bukkit.getPluginManager().registerEvents(new SitListener(this), this);
         }
+        if (getConfig().getBoolean("features.mmo-skills.enabled")) {
+            Bukkit.getPluginManager().registerEvents(new SkillsListener(this), this);
+            Bukkit.getPluginManager().registerEvents(new SkillsGUIListener(), this);
+            Bukkit.getPluginManager().registerEvents(new CombatListener(this), this);
+        }
+        if (getConfig().getBoolean("features.custom-enchants.enabled")) {
+            Bukkit.getPluginManager().registerEvents(new EnchantmentListener(this), this);
+        }
+        if (getConfig().getBoolean("features.meme-sounds.enabled")) {
+            Bukkit.getPluginManager().registerEvents(new ResourcePackListener(this), this);
+        }
 
         // Register Commands
-        this.getCommand("fly").setExecutor(new FlyCommand());
-        this.getCommand("pv").setExecutor(new PrivateVaultCommand(this));
-        this.getCommand("sethome").setExecutor(new SetHomeCommand(this));
-        this.getCommand("home").setExecutor(new HomeCommand(this));
-        this.getCommand("delhome").setExecutor(new DelHomeCommand(this));
-        this.getCommand("homes").setExecutor(new HomesCommand(this));
-        this.getCommand("msg").setExecutor(new MsgCommand(this));
-        this.getCommand("stats").setExecutor(new StatsCommand(this));
-        this.getCommand("clearstats").setExecutor(new ClearStatsCommand(this));
-        this.getCommand("prefix").setExecutor(new PrefixCommand());
-        this.getCommand("color").setExecutor(new ColorCommand());
-        this.getCommand("tags").setExecutor(new TagsCommand(this));
         TpaCommand tpaCommand = new TpaCommand(this);
-        this.getCommand("tpr").setExecutor(tpaCommand);
-        this.getCommand("tpa").setExecutor(tpaCommand);
-        this.getCommand("tpd").setExecutor(tpaCommand);
-        this.getCommand("tptoggle").setExecutor(tpaCommand);
         this.leaderboardCommand = new LeaderboardCommand(this);
-        this.getCommand("leaderboard").setExecutor(leaderboardCommand);
-        Objects.requireNonNull(getCommand("givechunkloader")).setExecutor(new ChunkLoaderCommand(this)); // Register
-                                                                                                         // ChunkLoaderCommand
-        Objects.requireNonNull(getCommand("invsee")).setExecutor(new InvseeCommand(this));
-        Objects.requireNonNull(getCommand("troll")).setExecutor(new TrollCommand(this));
-        Objects.requireNonNull(getCommand("missions")).setExecutor(new MissionCommand(this));
-        Objects.requireNonNull(getCommand("sudo")).setExecutor(new SudoCommand(this));
-        Objects.requireNonNull(getCommand("customitem")).setExecutor(new CustomItemCommand());
-        Objects.requireNonNull(getCommand("r")).setExecutor(new ReplyCommand(this));
-        Objects.requireNonNull(getCommand("rename")).setExecutor(new RenameCommand(this));
-        Objects.requireNonNull(getCommand("rename")).setExecutor(new RenameCommand(this));
-        Objects.requireNonNull(getCommand("advent")).setExecutor(new AdventCommand(adventGUIListener));
-        Objects.requireNonNull(getCommand("npc")).setExecutor(new NPCCommand(this));
+        CommandRegistry.registerAll(this, leaderboardCommand, tpaCommand, adventGUIListener);
+        CommandRegistry.registerConditionalCommands(this);
 
         // Load NPCs
         npcManager.loadNPCs();
@@ -307,43 +180,6 @@ public class SMPTools extends JavaPlugin {
         // Secret Santa
         SecretSantaManager secretSantaManager = new SecretSantaManager(this);
         Objects.requireNonNull(getCommand("secretsanta")).setExecutor(new SecretSantaCommand(this, secretSantaManager));
-
-        // Register conditional features
-        if (getConfig().getBoolean("features.daily-rewards.enabled")) {
-            this.getCommand("daily").setExecutor(new DailyRewardCommand(this));
-        }
-
-        if (getConfig().getBoolean("features.mmo-skills.enabled")) {
-            Bukkit.getPluginManager().registerEvents(new SkillsListener(this), this);
-            Bukkit.getPluginManager().registerEvents(new SkillsGUIListener(), this);
-            Bukkit.getPluginManager().registerEvents(new CombatListener(this), this); // Register CombatListener
-            this.getCommand("skills").setExecutor(new SkillsCommand(this));
-        }
-
-        if (getConfig().getBoolean("features.custom-enchants.enabled")) {
-            Bukkit.getPluginManager().registerEvents(new EnchantmentListener(this), this);
-            this.getCommand("cenchant").setExecutor(new CustomEnchantCommand(this));
-        }
-
-        if (getConfig().getBoolean("features.image-to-map.enabled")) {
-            this.getCommand("tomap").setExecutor(new com.smp.smptools.imagemap.MapCommand(this));
-        }
-
-        if (getConfig().getBoolean("features.music-player.enabled")) {
-            this.getCommand("music").setExecutor(new com.smp.smptools.music.MusicCommand(this));
-        }
-
-        if (getConfig().getBoolean("features.ride.enabled")) {
-            this.getCommand("ride").setExecutor(new RideCommand());
-        }
-
-        if (getConfig().getBoolean("features.meme-sounds.enabled")) {
-            this.getCommand("sound").setExecutor(new SoundCommand(this));
-            Bukkit.getPluginManager().registerEvents(new ResourcePackListener(this), this);
-        }
-
-        this.getCommand("uptime").setExecutor(new UptimeCommand());
-        this.getCommand("ping").setExecutor(new PingCommand());
 
         // Present Hunt
         com.smp.smptools.christmas.PresentManager presentManager = new com.smp.smptools.christmas.PresentManager(this);
@@ -385,6 +221,10 @@ public class SMPTools extends JavaPlugin {
     @Override
     public void onDisable() {
         getLogger().info("SMPTools has been disabled!");
+        
+        // Cancel all scheduled tasks to prevent firing during/after disable
+        Bukkit.getScheduler().cancelTasks(this);
+        
         if (chunkLoaderManager != null) {
             chunkLoaderManager.unloadAllChunks(); // Unload all force-loaded chunks
         }
@@ -418,11 +258,7 @@ public class SMPTools extends JavaPlugin {
     }
 
     public void saveStatsConfig() {
-        try {
-            statsConfig.save(statsFile);
-        } catch (IOException e) {
-            getLogger().severe("Could not save stats.yml file!");
-        }
+        AsyncConfigHelper.saveConfigAsync(this, statsConfig, statsFile, "stats.yml");
     }
 
     public void setupTagsConfig() {
@@ -516,11 +352,7 @@ public class SMPTools extends JavaPlugin {
     }
 
     public void saveTagsConfig() {
-        try {
-            tagsConfig.save(tagsFile);
-        } catch (IOException e) {
-            getLogger().severe("Could not save tags.yml file!");
-        }
+        AsyncConfigHelper.saveConfigAsync(this, tagsConfig, tagsFile, "tags.yml");
     }
 
     public void setupRewardsConfig() {
@@ -540,11 +372,7 @@ public class SMPTools extends JavaPlugin {
     }
 
     public void saveRewardsConfig() {
-        try {
-            rewardsConfig.save(rewardsFile);
-        } catch (IOException e) {
-            getLogger().severe("Could not save rewards.yml file!");
-        }
+        AsyncConfigHelper.saveConfigAsync(this, rewardsConfig, rewardsFile, "rewards.yml");
     }
 
     public void setupImageMapsConfig() {
@@ -564,11 +392,7 @@ public class SMPTools extends JavaPlugin {
     }
 
     public void saveImageMapsConfig() {
-        try {
-            imageMapsConfig.save(imageMapsFile);
-        } catch (IOException e) {
-            getLogger().severe("Could not save imagemaps.yml file!");
-        }
+        AsyncConfigHelper.saveConfigAsync(this, imageMapsConfig, imageMapsFile, "imagemaps.yml");
     }
 
     public static SMPTools getInstance() {
@@ -645,5 +469,9 @@ public class SMPTools extends JavaPlugin {
 
     public BlackFridayManager getBlackFridayManager() {
         return blackFridayManager;
+    }
+
+    public MessageManager getMessageManager() {
+        return messageManager;
     }
 }

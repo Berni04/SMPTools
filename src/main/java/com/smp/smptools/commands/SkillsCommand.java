@@ -2,8 +2,9 @@ package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.skills.SkillType;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -27,7 +28,7 @@ public class SkillsCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("Only players can use this command.");
+            sender.sendMessage(Component.text("Only players can use this command.", NamedTextColor.RED));
             return true;
         }
 
@@ -36,7 +37,7 @@ public class SkillsCommand implements CommandExecutor {
     }
 
     private void openSkillsGUI(Player player) {
-        Inventory skillsGUI = Bukkit.createInventory(null, 27, "Your Skills");
+        Inventory skillsGUI = Bukkit.createInventory(null, 27, Component.text("Your Skills"));
 
         int slot = 11; // Start in the middle of the top row
         for (SkillType skill : SkillType.values()) {
@@ -47,12 +48,13 @@ public class SkillsCommand implements CommandExecutor {
             ItemStack skillItem = new ItemStack(getMaterialForSkill(skill));
             ItemMeta meta = skillItem.getItemMeta();
 
-            meta.setDisplayName(ChatColor.GREEN + skill.getDisplayName() + " - Level " + level);
+            meta.displayName(Component.text(skill.getDisplayName() + " - Level " + level, NamedTextColor.GREEN));
 
-            List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.GRAY + "Experience: " + ChatColor.YELLOW + currentXp + " / " + xpToNextLevel);
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.text("Experience: ", NamedTextColor.GRAY)
+                    .append(Component.text(currentXp + " / " + xpToNextLevel, NamedTextColor.YELLOW)));
             lore.add(generateProgressBar(currentXp, xpToNextLevel));
-            meta.setLore(lore);
+            meta.lore(lore);
 
             skillItem.setItemMeta(meta);
             skillsGUI.setItem(slot, skillItem);
@@ -72,24 +74,24 @@ public class SkillsCommand implements CommandExecutor {
         }
     }
 
-    private String generateProgressBar(int current, int max) {
-        if (max == 0) return "";
+    private Component generateProgressBar(int current, int max) {
+        if (max == 0) return Component.empty();
         float percent = (float) current / max;
         int barWidth = 20; // The total width of the progress bar in characters
 
         StringBuilder progressBar = new StringBuilder();
-        progressBar.append(ChatColor.GREEN);
         for (int i = 0; i < barWidth; i++) {
             if (i < percent * barWidth) {
                 progressBar.append("|");
             } else {
-                if (progressBar.toString().contains(ChatColor.GRAY.toString())) {
-                    progressBar.append("|");
-                } else {
-                    progressBar.append(ChatColor.GRAY).append("|");
-                }
+                progressBar.append("|");
             }
         }
-        return progressBar.toString();
+
+        String filled = progressBar.substring(0, (int) (percent * barWidth));
+        String empty = progressBar.substring((int) (percent * barWidth));
+
+        return Component.text(filled, NamedTextColor.GREEN)
+                .append(Component.text(empty, NamedTextColor.GRAY));
     }
 }

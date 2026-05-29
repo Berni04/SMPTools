@@ -2,9 +2,9 @@ package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
@@ -30,7 +30,7 @@ public class TagsCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("Only players can use this command!");
+            sender.sendMessage(Component.text("Only players can use this command!", NamedTextColor.RED));
             return true;
         }
 
@@ -43,17 +43,17 @@ public class TagsCommand implements CommandExecutor {
 
         if (args[0].equalsIgnoreCase("set")) {
             if (!player.hasPermission("smptools.tags.set")) {
-                player.sendMessage(ChatColor.RED + "You don't have permission to use this command.");
+                player.sendMessage(Component.text("You don't have permission to use this command.", NamedTextColor.RED));
                 return true;
             }
             if (args.length < 3) {
-                player.sendMessage(ChatColor.RED + "Usage: /tags set <player> <title>");
+                player.sendMessage(Component.text("Usage: /tags set <player> <title>", NamedTextColor.RED));
                 return true;
             }
 
             OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
             if (!target.hasPlayedBefore()) {
-                player.sendMessage(ChatColor.RED + "Player not found.");
+                player.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
                 return true;
             }
 
@@ -64,11 +64,11 @@ public class TagsCommand implements CommandExecutor {
             title = title.trim();
 
             plugin.getTagManager().unlockTitle((Player) target, title);
-            player.sendMessage(ChatColor.GREEN + "Title '" + title + "' unlocked for " + target.getName());
+            player.sendMessage(Component.text("Title '" + title + "' unlocked for " + target.getName(), NamedTextColor.GREEN));
             return true;
         }
 
-        player.sendMessage(ChatColor.RED + "Unknown subcommand. Usage: /tags [set <player> <title>]");
+        player.sendMessage(Component.text("Unknown subcommand. Usage: /tags [set <player> <title>]", NamedTextColor.RED));
         return true;
     }
 
@@ -80,40 +80,41 @@ public class TagsCommand implements CommandExecutor {
         if (milestones != null) {
             for (String key : milestones.getKeys(false)) {
                 ConfigurationSection milestone = milestones.getConfigurationSection(key);
+                if (milestone == null) continue;
+
                 String title = milestone.getString("title");
                 String description = milestone.getString("description");
+                if (title == null) continue;
 
-                if (unlockedTitles.contains(title)) {
-                    // Unlocked
-                    ItemStack titleItem = new ItemStack(Material.NAME_TAG);
-                    ItemMeta meta = titleItem.getItemMeta();
-                    meta.setDisplayName(ChatColor.GOLD + title);
-                    List<String> lore = new ArrayList<>();
-                    lore.add(ChatColor.GRAY + description); // Add original description
-                    lore.add(ChatColor.GREEN + "Unlocked!"); // Add "Unlocked!"
-                    meta.setLore(lore);
-                    titleItem.setItemMeta(meta);
-                    tagsGUI.addItem(titleItem);
+                boolean unlocked = unlockedTitles.contains(title);
+
+                ItemStack item = new ItemStack(unlocked ? Material.LIME_DYE : Material.GRAY_DYE);
+                ItemMeta meta = item.getItemMeta();
+
+                if (unlocked) {
+                    meta.displayName(Component.text(title, NamedTextColor.GOLD));
+                    List<Component> lore = new ArrayList<>();
+                    lore.add(Component.text(description != null ? description : "", NamedTextColor.GRAY));
+                    lore.add(Component.text("Unlocked!", NamedTextColor.GREEN));
+                    meta.lore(lore);
                 } else {
-                    // Locked
-                    ItemStack titleItem = new ItemStack(Material.BARRIER);
-                    ItemMeta meta = titleItem.getItemMeta();
-                    meta.setDisplayName(ChatColor.RED + title);
-                    List<String> lore = new ArrayList<>();
-                    lore.add(ChatColor.GRAY + "How to unlock: " + description);
-                    meta.setLore(lore);
-                    titleItem.setItemMeta(meta);
-                    tagsGUI.addItem(titleItem);
+                    meta.displayName(Component.text(title, NamedTextColor.RED));
+                    List<Component> lore = new ArrayList<>();
+                    lore.add(Component.text("How to unlock: " + (description != null ? description : ""), NamedTextColor.GRAY));
+                    meta.lore(lore);
                 }
+
+                item.setItemMeta(meta);
+                tagsGUI.addItem(item);
             }
         }
 
-        // Add an item to clear the current title
+        // Clear title button
         ItemStack clearItem = new ItemStack(Material.BARRIER);
         ItemMeta clearMeta = clearItem.getItemMeta();
-        clearMeta.setDisplayName(ChatColor.RED + "Clear Title");
+        clearMeta.displayName(Component.text("Clear Title", NamedTextColor.RED));
         clearItem.setItemMeta(clearMeta);
-        tagsGUI.setItem(53, clearItem); // Last slot
+        tagsGUI.setItem(53, clearItem);
 
         player.openInventory(tagsGUI);
     }
