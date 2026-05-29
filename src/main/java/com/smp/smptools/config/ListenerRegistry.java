@@ -21,10 +21,10 @@ import com.smp.smptools.listeners.StatsGUIListener;
 import com.smp.smptools.listeners.StatsListener;
 import com.smp.smptools.listeners.TabHealthListener;
 import com.smp.smptools.listeners.TagsGUIListener;
-import com.smp.smptools.listeners.TeleportListener;
+import com.smp.smptools.teleport.TeleportListener;
 import com.smp.smptools.listeners.TrollGUIListener;
 import com.smp.smptools.listeners.VaultListener;
-import com.smp.smptools.managers.AdventGUIListener;
+import com.smp.smptools.listeners.AdventGUIListener;
 import org.bukkit.Bukkit;
 
 public final class ListenerRegistry {

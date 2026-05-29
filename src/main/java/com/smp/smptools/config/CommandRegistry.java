@@ -31,7 +31,7 @@ import com.smp.smptools.commands.TagsCommand;
 import com.smp.smptools.commands.TpaCommand;
 import com.smp.smptools.commands.TrollCommand;
 import com.smp.smptools.commands.UptimeCommand;
-import com.smp.smptools.managers.AdventGUIListener;
+import com.smp.smptools.listeners.AdventGUIListener;
 import org.bukkit.Bukkit;
 
 import java.util.Objects;
