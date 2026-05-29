@@ -8,6 +8,8 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 
+import net.kyori.adventure.text.Component;
+
 /**
  * Abstract base class for GUI listeners.
  * Provides common guard logic for inventory click events,
@@ -33,7 +35,7 @@ public abstract class AbstractGUIListener implements Listener {
      * @return true if this is the GUI's inventory
      */
     protected boolean isGuiEvent(InventoryView view) {
-        return view.getTitle().equals(getGuiTitle());
+        return view.title().equals(Component.text(getGuiTitle()));
     }
 
     /**
@@ -45,6 +47,7 @@ public abstract class AbstractGUIListener implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!isGuiEvent(event.getView())) return;
+        if (event.getClickedInventory() != event.getView().getTopInventory()) return;
         event.setCancelled(true);
 
         if (!(event.getWhoClicked() instanceof Player)) return;

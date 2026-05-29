@@ -3,6 +3,7 @@ package com.smp.smptools.commands;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -28,12 +29,12 @@ public class PrefixCommand implements CommandExecutor {
         }
 
         Player player = (Player) sender;
-        Inventory prefixGUI = Bukkit.createInventory(null, 9, Component.text("Choose a Prefix", TextColor.fromHexString("#5B2C6F")));
+        Inventory prefixGUI = Bukkit.createInventory(null, 9, Component.text("Choose a Prefix"));
 
         for (int i = 0; i < prefixes.size(); i++) {
             ItemStack item = new ItemStack(Material.NAME_TAG);
             ItemMeta meta = item.getItemMeta();
-            meta.displayName(Component.text(prefixes.get(i)));
+            meta.displayName(Component.text(prefixes.get(i)).decoration(TextDecoration.ITALIC, false));
             item.setItemMeta(meta);
             prefixGUI.setItem(i, item);
         }

@@ -50,7 +50,8 @@ public class HomesGUIListener implements Listener {
 
     @EventHandler
     public void onDeleteConfirmationClick(InventoryClickEvent event) {
-        if (!event.getView().title().equals(Component.text("Delete home?"))) {
+        String titlePlain = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (!titlePlain.startsWith("Delete home '")) {
             return;
         }
 

@@ -578,6 +578,7 @@ public class MissionGUIListener implements Listener {
     public static class MissionGUIHolder implements org.bukkit.inventory.InventoryHolder {
         private final boolean isNpc;
         private final String category;
+        private Inventory inventory;
 
         public MissionGUIHolder(boolean isNpc, String category) {
             this.isNpc = isNpc;
@@ -586,6 +587,10 @@ public class MissionGUIListener implements Listener {
 
         public MissionGUIHolder(boolean isNpc) {
             this(isNpc, "NORMAL");
+        }
+
+        public void setInventory(Inventory inventory) {
+            this.inventory = inventory;
         }
 
         public boolean isNpc() {
@@ -598,7 +603,7 @@ public class MissionGUIListener implements Listener {
 
         @Override
         public Inventory getInventory() {
-            return Bukkit.createInventory(this, 54);
+            return inventory != null ? inventory : Bukkit.createInventory(this, 54);
         }
     }
 }

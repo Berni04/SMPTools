@@ -12,6 +12,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
+import java.util.Locale;
+
 public class SetHomeCommand implements CommandExecutor {
 
     private final SMPTools plugin;
@@ -32,7 +34,7 @@ public class SetHomeCommand implements CommandExecutor {
             return true;
         }
 
-        String homeName = args[0].toLowerCase();
+        String homeName = args[0].toLowerCase(Locale.ROOT);
 
         if (!InputValidator.isValidHomeName(homeName)) {
             sender.sendMessage(Component.text("Invalid home name. Use only letters, numbers, _ and - (max " + Constants.MAX_HOME_NAME_LENGTH + " characters).", NamedTextColor.RED));

@@ -7,10 +7,13 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+
+import java.util.Locale;
 
 public class HomeCommand implements CommandExecutor {
 
@@ -32,7 +35,7 @@ public class HomeCommand implements CommandExecutor {
             return true;
         }
 
-        String homeName = args[0].toLowerCase();
+        String homeName = args[0].toLowerCase(Locale.ROOT);
 
         if (!InputValidator.isValidHomeName(homeName)) {
             sender.sendMessage(Component.text("Invalid home name. Use only letters, numbers, _ and - (max " + Constants.MAX_HOME_NAME_LENGTH + " characters).", NamedTextColor.RED));
@@ -55,7 +58,13 @@ public class HomeCommand implements CommandExecutor {
                 return true;
             }
 
-            Location homeLocation = new Location(Bukkit.getWorld(worldName), x, y, z, yaw, pitch);
+            World world = Bukkit.getWorld(worldName);
+            if (world == null) {
+                player.sendMessage(Component.text("Error: Home world not found.", NamedTextColor.RED));
+                return true;
+            }
+
+            Location homeLocation = new Location(world, x, y, z, yaw, pitch);
             plugin.getTeleportManager().startTeleport(player, homeLocation, "'" + homeName + "'");
         } else {
             player.sendMessage(Component.text("You don't have a home named '" + homeName + "'.", NamedTextColor.RED));

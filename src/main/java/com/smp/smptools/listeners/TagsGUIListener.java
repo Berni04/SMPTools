@@ -34,12 +34,12 @@ public class TagsGUIListener implements Listener {
             return;
         }
 
-        if (clickedItem.getType() == Material.LIME_DYE) {
+        if (clickedItem.getType() == Material.LIME_DYE && event.getSlot() < 54 && clickedItem.getItemMeta().hasDisplayName()) {
             String title = PlainTextComponentSerializer.plainText().serialize(clickedItem.getItemMeta().displayName());
             plugin.getTagManager().setPlayerTitle(player, title);
             player.sendMessage(Component.text("You have equipped the title: " + title, NamedTextColor.GREEN));
             player.closeInventory();
-        } else if (clickedItem.getType() == Material.BARRIER) {
+        } else if (clickedItem.getType() == Material.BARRIER && event.getSlot() == 53) {
             plugin.getTagManager().removePlayerTitle(player);
             player.sendMessage(Component.text("Your title has been cleared.", NamedTextColor.GREEN));
             player.closeInventory();

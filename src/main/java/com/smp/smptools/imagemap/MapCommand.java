@@ -66,7 +66,9 @@ public class MapCommand implements CommandExecutor {
                 BufferedImage fullImage = ImageProcessor.getImage(url, totalWidth, totalHeight);
 
                 if (fullImage == null) {
-                    player.sendMessage(Component.text("Failed to download or process the image. Please check the URL.", NamedTextColor.RED));
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        player.sendMessage(Component.text("Failed to download or process the image. Please check the URL.", NamedTextColor.RED));
+                    });
                     return;
                 }
 
@@ -102,7 +104,9 @@ public class MapCommand implements CommandExecutor {
                 });
 
             } catch (Exception e) {
-                player.sendMessage(Component.text("An error occurred: " + e.getMessage(), NamedTextColor.RED));
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    player.sendMessage(Component.text("An error occurred: " + e.getMessage(), NamedTextColor.RED));
+                });
                 plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to create map", e);
             }
         });
