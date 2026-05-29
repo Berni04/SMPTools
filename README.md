@@ -307,12 +307,5 @@ mvn clean package
 mvn test
 ```
 
-### Code Style
-*   Use Adventure API (`Component`, `MiniMessage`) instead of legacy `ChatColor`
-*   Follow existing patterns for GUI listeners (extend `AbstractGUIListener`)
-*   Follow existing patterns for commands (extend `AbstractPlayerCommand`)
-*   Use `ConcurrentHashMap` for thread-safe collections
-*   Add Javadocs to all public methods
-
 ## Author
 berni
