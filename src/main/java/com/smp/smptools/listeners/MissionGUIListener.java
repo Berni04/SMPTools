@@ -603,7 +603,10 @@ public class MissionGUIListener implements Listener {
 
         @Override
         public Inventory getInventory() {
-            return inventory != null ? inventory : Bukkit.createInventory(this, 54);
+            if (inventory == null) {
+                inventory = Bukkit.createInventory(this, 54);
+            }
+            return inventory;
         }
     }
 }
