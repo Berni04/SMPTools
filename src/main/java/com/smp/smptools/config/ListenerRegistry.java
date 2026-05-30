@@ -48,18 +48,36 @@ public final class ListenerRegistry {
         Bukkit.getPluginManager().registerEvents(new TeleportListener(plugin), plugin);
         Bukkit.getPluginManager().registerEvents(new AdvancementListener(plugin), plugin);
 
-        // Feature listeners
-        Bukkit.getPluginManager().registerEvents(new ChunkLoaderListener(plugin), plugin);
+        // Feature-gated listeners - only register if feature is enabled
+        if (plugin.getConfig().getBoolean("features.chunk-loaders.enabled")) {
+            Bukkit.getPluginManager().registerEvents(new ChunkLoaderListener(plugin), plugin);
+        }
+
+        // Invsee and Troll are admin commands, always register
         Bukkit.getPluginManager().registerEvents(new InvseeGUIListener(plugin), plugin);
         Bukkit.getPluginManager().registerEvents(new TrollGUIListener(plugin), plugin);
-        Bukkit.getPluginManager().registerEvents(new MissionNPCListener(plugin), plugin);
-        Bukkit.getPluginManager().registerEvents(new NPCListener(plugin), plugin);
-        Bukkit.getPluginManager().registerEvents(new MissionGUIListener(plugin), plugin);
+
+        // Mission system listeners
+        if (plugin.getConfig().getBoolean("features.missions.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new MissionNPCListener(plugin), plugin);
+            Bukkit.getPluginManager().registerEvents(new NPCListener(plugin), plugin);
+            Bukkit.getPluginManager().registerEvents(new MissionGUIListener(plugin), plugin);
+            Bukkit.getPluginManager().registerEvents(new MissionTrackerListener(plugin), plugin);
+        }
+
+        // Elytra trail - always register (no config check needed)
         Bukkit.getPluginManager().registerEvents(new ElytraTrailListener(), plugin);
-        Bukkit.getPluginManager().registerEvents(new MissionTrackerListener(plugin), plugin);
-        Bukkit.getPluginManager().registerEvents(new ChristmasWorldListener(plugin), plugin);
-        Bukkit.getPluginManager().registerEvents(new com.smp.smptools.graves.GraveManager(plugin), plugin);
-        Bukkit.getPluginManager().registerEvents(adventGUIListener, plugin);
-        Bukkit.getPluginManager().registerEvents(new PortalListener(plugin), plugin);
+
+        // Christmas features
+        if (plugin.getConfig().getBoolean("features.christmas.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new ChristmasWorldListener(plugin), plugin);
+            Bukkit.getPluginManager().registerEvents(adventGUIListener, plugin);
+            Bukkit.getPluginManager().registerEvents(new PortalListener(plugin), plugin);
+        }
+
+        // Player graves
+        if (plugin.getConfig().getBoolean("features.player-graves.enabled")) {
+            Bukkit.getPluginManager().registerEvents(new com.smp.smptools.graves.GraveManager(plugin), plugin);
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.smp.smptools.music;
 
 import com.smp.smptools.SMPTools;
+import com.smp.smptools.utils.URLValidator;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -11,9 +12,11 @@ import org.bukkit.entity.Player;
 
 import java.io.InputStream;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 
 public class MusicCommand implements CommandExecutor {
 
@@ -85,37 +88,52 @@ public class MusicCommand implements CommandExecutor {
                 urlString = baseUrl + urlPathCompatibleEncodedName + ".nbs";
             } catch (java.io.UnsupportedEncodingException e) {
                 player.sendMessage(Component.text("An internal error occurred while encoding the song name.", NamedTextColor.RED));
-                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to encode song name", e);
+                plugin.getLogger().log(Level.SEVERE, "Failed to encode song name", e);
                 return true;
             }
+        }
+
+        // Validate URL
+        URL url;
+        try {
+            url = URLValidator.validateAndCreate(urlString);
+        } catch (Exception e) {
+            player.sendMessage(Component.text("Invalid URL: " + e.getMessage(), NamedTextColor.RED));
+            return true;
         }
 
         player.sendMessage(Component.text("Downloading and parsing song...", NamedTextColor.GRAY));
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            try (InputStream stream = new URL(urlString).openStream()) {
-                Song song = NBSParser.parse(stream);
-                if (song == null) {
-                    player.sendMessage(Component.text("Failed to parse the song. Please check the file format.", NamedTextColor.RED));
-                    return;
-                }
-
-                Bukkit.getScheduler().runTask(plugin, () -> {
-                    SongPlayer songPlayer;
-                    if (subCommand.equals("broadcast")) {
-                        songPlayer = new SongPlayer(song, Bukkit.getOnlinePlayers());
-                    } else {
-                        songPlayer = new SongPlayer(song, player.getWorld().getPlayers());
+            try {
+                URLConnection conn = URLValidator.openConnection(url);
+                try (InputStream stream = conn.getInputStream()) {
+                    Song song = NBSParser.parse(stream);
+                    if (song == null) {
+                        Bukkit.getScheduler().runTask(plugin, () -> {
+                            player.sendMessage(Component.text("Failed to parse the song. Please check the file format.", NamedTextColor.RED));
+                        });
+                        return;
                     }
-                    
-                    playingTasks.put(player.getUniqueId(), songPlayer);
-                    songPlayer.play(plugin);
-                    player.sendMessage(Component.text("Now playing: " + song.getTitle(), NamedTextColor.GREEN));
-                });
 
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        SongPlayer songPlayer;
+                        if (subCommand.equals("broadcast")) {
+                            songPlayer = new SongPlayer(song, Bukkit.getOnlinePlayers());
+                        } else {
+                            songPlayer = new SongPlayer(song, player.getWorld().getPlayers());
+                        }
+                        
+                        playingTasks.put(player.getUniqueId(), songPlayer);
+                        songPlayer.play(plugin);
+                        player.sendMessage(Component.text("Now playing: " + song.getTitle(), NamedTextColor.GREEN));
+                    });
+                }
             } catch (Exception e) {
-                player.sendMessage(Component.text("Failed to download the song. Please check the URL.", NamedTextColor.RED));
-                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to download song", e);
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    player.sendMessage(Component.text("Failed to download the song. Please check the URL.", NamedTextColor.RED));
+                });
+                plugin.getLogger().log(Level.SEVERE, "Failed to download song", e);
             }
         });
 

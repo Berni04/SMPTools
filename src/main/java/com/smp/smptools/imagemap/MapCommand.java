@@ -1,6 +1,8 @@
 package com.smp.smptools.imagemap;
 
 import com.smp.smptools.SMPTools;
+import com.smp.smptools.utils.Constants;
+import com.smp.smptools.utils.URLValidator;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -15,6 +17,7 @@ import org.bukkit.map.MapView;
 
 import java.awt.image.BufferedImage;
 import java.net.URL;
+import java.net.URLConnection;
 
 public class MapCommand implements CommandExecutor {
 
@@ -39,6 +42,15 @@ public class MapCommand implements CommandExecutor {
         Player player = (Player) sender;
         String urlString = args[0];
 
+        // Validate URL
+        URL url;
+        try {
+            url = URLValidator.validateAndCreate(urlString);
+        } catch (Exception e) {
+            player.sendMessage(Component.text("Invalid URL: " + e.getMessage(), NamedTextColor.RED));
+            return true;
+        }
+
         int widthGrid = 1;
         int heightGrid = 1;
 
@@ -50,6 +62,14 @@ public class MapCommand implements CommandExecutor {
                 player.sendMessage(Component.text("Width and Height must be numbers.", NamedTextColor.RED));
                 return true;
             }
+
+            // Validate grid bounds
+            if (widthGrid < Constants.MIN_MAP_GRID_SIZE || widthGrid > Constants.MAX_MAP_GRID_SIZE ||
+                heightGrid < Constants.MIN_MAP_GRID_SIZE || heightGrid > Constants.MAX_MAP_GRID_SIZE) {
+                player.sendMessage(Component.text("Width and Height must be between " + 
+                    Constants.MIN_MAP_GRID_SIZE + " and " + Constants.MAX_MAP_GRID_SIZE + ".", NamedTextColor.RED));
+                return true;
+            }
         }
 
         player.sendMessage(Component.text("Downloading and processing image... this may take a moment.", NamedTextColor.GRAY));
@@ -59,11 +79,11 @@ public class MapCommand implements CommandExecutor {
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
-                URL url = new URL(urlString);
+                URLConnection conn = URLValidator.openConnection(url);
                 int totalWidth = finalWidthGrid * 128;
                 int totalHeight = finalHeightGrid * 128;
 
-                BufferedImage fullImage = ImageProcessor.getImage(url, totalWidth, totalHeight);
+                BufferedImage fullImage = ImageProcessor.getImage(conn.getInputStream(), totalWidth, totalHeight);
 
                 if (fullImage == null) {
                     Bukkit.getScheduler().runTask(plugin, () -> {

@@ -101,6 +101,30 @@ public final class Constants {
     /** Threshold for uncommon treasure (20%) */
     public static final double TREASURE_UNCOMMON_THRESHOLD = 0.25;
 
+    // Map grid limits
+    /** Minimum map grid size */
+    public static final int MIN_MAP_GRID_SIZE = 1;
+    
+    /** Maximum map grid size */
+    public static final int MAX_MAP_GRID_SIZE = 8;
+
+    // NBS parser limits
+    /** Maximum string length in NBS files (1MB) */
+    public static final int MAX_NBS_STRING_LENGTH = 1024 * 1024;
+    
+    /** Minimum song speed */
+    public static final double MIN_SONG_SPEED = 0.1;
+    
+    /** Maximum song speed */
+    public static final double MAX_SONG_SPEED = 100.0;
+
+    // URL validation
+    /** Connection timeout in milliseconds */
+    public static final int URL_CONNECT_TIMEOUT_MS = 5000;
+    
+    /** Read timeout in milliseconds */
+    public static final int URL_READ_TIMEOUT_MS = 10000;
+
     private Constants() {
         // Prevent instantiation
     }

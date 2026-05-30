@@ -266,7 +266,6 @@ public class SMPTools extends JavaPlugin {
         if (!tagsFile.exists()) {
             try {
                 tagsFile.createNewFile();
-                saveResource("tags.yml", true);
             } catch (IOException e) {
                 getLogger().severe("Could not create tags.yml file!");
             }

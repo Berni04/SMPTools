@@ -1,5 +1,7 @@
 package com.smp.smptools.music;
 
+import com.smp.smptools.utils.Constants;
+
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,12 +17,26 @@ public class NBSParser {
         try (DataInputStream dataInputStream = new DataInputStream(inputStream)) {
             // Header
             short length = readShort(dataInputStream);
+            if (length < 0) {
+                throw new MusicParseException("Invalid song length: " + length);
+            }
+
             short songHeight = readShort(dataInputStream);
+            if (songHeight < 0 || songHeight > 1000) {
+                throw new MusicParseException("Invalid song height: " + songHeight);
+            }
+
             String title = readString(dataInputStream);
             String author = readString(dataInputStream);
             readString(dataInputStream); // Original author
             readString(dataInputStream); // Description
-            float speed = readShort(dataInputStream) / 100f;
+
+            short speedRaw = readShort(dataInputStream);
+            float speed = speedRaw / 100f;
+            if (speed < Constants.MIN_SONG_SPEED || speed > Constants.MAX_SONG_SPEED) {
+                speed = (float) Math.max(Constants.MIN_SONG_SPEED, Math.min(Constants.MAX_SONG_SPEED, speed));
+            }
+
             dataInputStream.readBoolean(); // auto-save
             dataInputStream.readByte(); // auto-save duration
             dataInputStream.readByte(); // time signature
@@ -35,12 +51,17 @@ public class NBSParser {
 
             // Note Blocks
             int tick = -1;
+            int maxTicks = length * 2; // Safety limit
             while (true) {
                 int jumpTicks = readShort(dataInputStream);
                 if (jumpTicks == 0) {
                     break;
                 }
                 tick += jumpTicks;
+
+                if (tick > maxTicks) {
+                    throw new MusicParseException("Song exceeds maximum tick count");
+                }
 
                 int layer = -1;
                 while (true) {
@@ -49,6 +70,11 @@ public class NBSParser {
                         break;
                     }
                     layer += jumpLayers;
+
+                    if (layer > songHeight) {
+                        throw new MusicParseException("Layer index exceeds song height");
+                    }
+
                     byte instrument = dataInputStream.readByte();
                     byte key = dataInputStream.readByte();
                     song.getLayerMap().computeIfAbsent(layer, k -> new Layer())
@@ -74,6 +100,8 @@ public class NBSParser {
         } catch (IOException e) {
             logger.log(Level.SEVERE, "Failed to parse NBS file", e);
             throw new MusicParseException("Failed to read NBS file: " + e.getMessage(), e);
+        } catch (MusicParseException e) {
+            throw e;
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Unexpected error parsing NBS file", e);
             throw new MusicParseException("Invalid NBS file format: " + e.getMessage(), e);
@@ -96,6 +124,9 @@ public class NBSParser {
 
     private static String readString(DataInputStream dataInputStream) throws IOException {
         int length = readInt(dataInputStream);
+        if (length < 0 || length > Constants.MAX_NBS_STRING_LENGTH) {
+            throw new IOException("Invalid string length: " + length);
+        }
         byte[] bytes = new byte[length];
         dataInputStream.readFully(bytes);
         return new String(bytes, StandardCharsets.UTF_8);
