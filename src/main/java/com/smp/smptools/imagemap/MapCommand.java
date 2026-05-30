@@ -83,7 +83,10 @@ public class MapCommand implements CommandExecutor {
                 int totalWidth = finalWidthGrid * 128;
                 int totalHeight = finalHeightGrid * 128;
 
-                BufferedImage fullImage = ImageProcessor.getImage(conn.getInputStream(), totalWidth, totalHeight);
+                BufferedImage fullImage;
+                try (java.io.InputStream is = conn.getInputStream()) {
+                    fullImage = ImageProcessor.getImage(is, totalWidth, totalHeight);
+                }
 
                 if (fullImage == null) {
                     Bukkit.getScheduler().runTask(plugin, () -> {
