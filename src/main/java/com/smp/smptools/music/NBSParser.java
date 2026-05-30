@@ -71,7 +71,7 @@ public class NBSParser {
                     }
                     layer += jumpLayers;
 
-                    if (layer > songHeight) {
+                    if (layer >= songHeight) {
                         throw new MusicParseException("Layer index exceeds song height");
                     }
 
