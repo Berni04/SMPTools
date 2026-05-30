@@ -49,7 +49,7 @@ public final class ListenerRegistry {
         Bukkit.getPluginManager().registerEvents(new AdvancementListener(plugin), plugin);
 
         // Feature-gated listeners - only register if feature is enabled
-        if (plugin.getConfig().getBoolean("features.chunk-loaders.enabled")) {
+        if (plugin.getConfig().getBoolean("features.chunk-loaders.enabled", true)) {
             Bukkit.getPluginManager().registerEvents(new ChunkLoaderListener(plugin), plugin);
         }
 
@@ -76,7 +76,7 @@ public final class ListenerRegistry {
         }
 
         // Player graves
-        if (plugin.getConfig().getBoolean("features.player-graves.enabled")) {
+        if (plugin.getConfig().getBoolean("features.player-graves.enabled", true)) {
             Bukkit.getPluginManager().registerEvents(new com.smp.smptools.graves.GraveManager(plugin), plugin);
         }
     }
