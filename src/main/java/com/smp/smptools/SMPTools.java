@@ -16,7 +16,7 @@ import com.smp.smptools.tpa.TpaManager;
 import com.smp.smptools.teleport.TeleportManager;
 import com.smp.smptools.teleport.TeleportListener;
 import com.smp.smptools.sleep.SleepManager;
-import com.smp.smptools.sleep.SleepListener;
+import com.smp.smptools.listeners.SleepListener;
 import com.smp.smptools.chat.ChatManager;
 import com.smp.smptools.chunkloaders.ChunkLoaderManager;
 import com.smp.smptools.missions.MissionManager;
@@ -177,32 +177,37 @@ public class SMPTools extends JavaPlugin {
         // Load NPCs
         npcManager.loadNPCs();
 
-        // Secret Santa
-        SecretSantaManager secretSantaManager = new SecretSantaManager(this);
-        Objects.requireNonNull(getCommand("secretsanta")).setExecutor(new SecretSantaCommand(this, secretSantaManager));
+        // Christmas features (conditional)
+        if (getConfig().getBoolean("features.christmas.enabled", true)) {
+            // Secret Santa
+            SecretSantaManager secretSantaManager = new SecretSantaManager(this);
+            Objects.requireNonNull(getCommand("secretsanta")).setExecutor(new SecretSantaCommand(this, secretSantaManager));
 
-        // Present Hunt
-        com.smp.smptools.christmas.PresentManager presentManager = new com.smp.smptools.christmas.PresentManager(this);
-        this.getCommand("present").setExecutor(new com.smp.smptools.commands.PresentCommand(presentManager));
-        Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.PresentListener(presentManager), this);
+            // Present Hunt
+            com.smp.smptools.christmas.PresentManager presentManager = new com.smp.smptools.christmas.PresentManager(this);
+            this.getCommand("present").setExecutor(new com.smp.smptools.commands.PresentCommand(presentManager));
+            Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.PresentListener(presentManager), this);
 
-        // Festive Mobs
-        Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.FestiveMobsListener(this), this);
+            // Festive Mobs
+            Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.FestiveMobsListener(this), this);
 
-        // Snowball Warfare
-        Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.SnowballListener(this), this);
+            // Snowball Warfare
+            Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.SnowballListener(this), this);
 
-        // Krampus Night
-        com.smp.smptools.christmas.KrampusManager krampusManager = new com.smp.smptools.christmas.KrampusManager(this);
-        this.getCommand("krampus").setExecutor(new com.smp.smptools.commands.KrampusCommand(krampusManager));
-        Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.KrampusListener(this, krampusManager),
-                this);
+            // Krampus Night
+            com.smp.smptools.christmas.KrampusManager krampusManager = new com.smp.smptools.christmas.KrampusManager(this);
+            this.getCommand("krampus").setExecutor(new com.smp.smptools.commands.KrampusCommand(krampusManager));
+            Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.KrampusListener(this, krampusManager),
+                    this);
+        }
 
-        // Black Friday
-        Bukkit.getPluginManager()
-                .registerEvents(new com.smp.smptools.listeners.BlackFridayListener(this, blackFridayManager), this);
-        Objects.requireNonNull(getCommand("blackfriday"))
-                .setExecutor(new com.smp.smptools.commands.BlackFridayCommand(blackFridayManager));
+        // Black Friday (conditional)
+        if (getConfig().getBoolean("features.blackfriday.enabled", true)) {
+            Bukkit.getPluginManager()
+                    .registerEvents(new com.smp.smptools.listeners.BlackFridayListener(this, blackFridayManager), this);
+            Objects.requireNonNull(getCommand("blackfriday"))
+                    .setExecutor(new com.smp.smptools.commands.BlackFridayCommand(blackFridayManager));
+        }
 
         startStatsSaverTask();
     }
@@ -266,7 +271,6 @@ public class SMPTools extends JavaPlugin {
         if (!tagsFile.exists()) {
             try {
                 tagsFile.createNewFile();
-                saveResource("tags.yml", true);
             } catch (IOException e) {
                 getLogger().severe("Could not create tags.yml file!");
             }

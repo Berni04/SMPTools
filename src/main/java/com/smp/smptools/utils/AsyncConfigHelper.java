@@ -6,12 +6,13 @@ import org.bukkit.plugin.Plugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.logging.Level;
 
 /**
  * Utility class for saving configuration files asynchronously.
- * This prevents blocking the main server thread during file I/O operations,
- * which helps reduce server lag.
+ * Serializes config to String on main thread to prevent race conditions.
  *
  * @author berni
  * @since 1.0-SNAPSHOT
@@ -24,8 +25,8 @@ public final class AsyncConfigHelper {
 
     /**
      * Saves a configuration file asynchronously on a separate thread.
-     * This method schedules the save operation to run asynchronously,
-     * preventing the main server thread from being blocked by file I/O.
+     * Serializes the config to a String on the main thread to create a
+     * deep snapshot, preventing race conditions with mutable collections.
      *
      * @param plugin the plugin instance (used for scheduling)
      * @param config the FileConfiguration to save
@@ -33,9 +34,12 @@ public final class AsyncConfigHelper {
      * @param name the name of the configuration (for error messages)
      */
     public static void saveConfigAsync(Plugin plugin, FileConfiguration config, File file, String name) {
+        // Serialize to string on main thread - this creates a deep snapshot
+        String data = config.saveToString();
+
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
-                config.save(file);
+                Files.write(file.toPath(), data.getBytes(StandardCharsets.UTF_8));
             } catch (IOException e) {
                 plugin.getLogger().log(Level.SEVERE, "Could not save " + name + "!", e);
             }

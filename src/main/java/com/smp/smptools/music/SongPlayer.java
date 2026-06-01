@@ -1,6 +1,7 @@
 package com.smp.smptools.music;
 
 import com.smp.smptools.SMPTools;
+import com.smp.smptools.utils.Constants;
 import org.bukkit.Instrument;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -39,7 +40,10 @@ public class SongPlayer extends BukkitRunnable {
     }
 
     public void play(SMPTools plugin) {
-        this.runTaskTimer(plugin, 0, (long) (20 / song.getSpeed()));
+        double speed = Math.max(Constants.MIN_SONG_SPEED, 
+                       Math.min(Constants.MAX_SONG_SPEED, song.getSpeed()));
+        long period = Math.max(1, (long) (20 / speed));
+        this.runTaskTimer(plugin, 0, period);
     }
 
     private Instrument getInstrument(byte instrument) {
