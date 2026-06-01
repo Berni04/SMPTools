@@ -57,6 +57,13 @@ public class BoundedInputStream extends FilterInputStream {
 
     @Override
     public long skip(long n) throws IOException {
+        if (maxBytes >= 0 && bytesRead >= maxBytes) {
+            throw new IOException("Download exceeded maximum size of " + maxBytes + " bytes");
+        }
+        long remaining = maxBytes - bytesRead;
+        if (maxBytes >= 0 && n > remaining) {
+            n = remaining;
+        }
         long skipped = super.skip(n);
         bytesRead += skipped;
         return skipped;
