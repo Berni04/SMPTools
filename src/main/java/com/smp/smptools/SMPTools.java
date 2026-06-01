@@ -16,7 +16,7 @@ import com.smp.smptools.tpa.TpaManager;
 import com.smp.smptools.teleport.TeleportManager;
 import com.smp.smptools.teleport.TeleportListener;
 import com.smp.smptools.sleep.SleepManager;
-import com.smp.smptools.sleep.SleepListener;
+import com.smp.smptools.listeners.SleepListener;
 import com.smp.smptools.chat.ChatManager;
 import com.smp.smptools.chunkloaders.ChunkLoaderManager;
 import com.smp.smptools.missions.MissionManager;

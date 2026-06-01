@@ -133,6 +133,6 @@ public final class Constants {
     public static final long MAX_NBS_DOWNLOAD_BYTES = 5 * 1024 * 1024;
 
     private Constants() {
-        // Prevent instantiation
+        throw new UnsupportedOperationException("Utility class");
     }
 }

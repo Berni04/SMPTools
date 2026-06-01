@@ -14,10 +14,12 @@ com\smp\smptools\listeners\SkillsListener.class
 com\smp\smptools\music\Song.class
 com\smp\smptools\listeners\TrollGUIListener$2.class
 com\smp\smptools\listeners\NameTagListener.class
+com\smp\smptools\utils\AsyncConfigHelper.class
 com\smp\smptools\commands\MsgCommand.class
 com\smp\smptools\chunkloaders\ChunkLoaderManager.class
 com\smp\smptools\tags\TagManager.class
 com\smp\smptools\listeners\ElytraTrailListener.class
+com\smp\smptools\utils\Constants.class
 com\smp\smptools\listeners\SleepListener.class
 com\smp\smptools\teleport\TeleportManager$1.class
 com\smp\smptools\commands\SetHomeCommand.class
@@ -26,9 +28,11 @@ com\smp\smptools\commands\SoundCommand.class
 com\smp\smptools\managers\NPCManager.class
 com\smp\smptools\listeners\PrefixGUIListener.class
 com\smp\smptools\leaderboard\LeaderboardManager.class
+com\smp\smptools\commands\AbstractPlayerCommand.class
 com\smp\smptools\missions\RewardManager.class
 com\smp\smptools\commands\FlyCommand.class
 com\smp\smptools\commands\PrivateVaultCommand.class
+com\smp\smptools\config\ConfigDefaults.class
 com\smp\smptools\listeners\TrollGUIListener$3.class
 com\smp\smptools\commands\SecretSantaCommand.class
 com\smp\smptools\listeners\AdvancementListener.class
@@ -39,6 +43,7 @@ com\smp\smptools\commands\MissionCommand.class
 com\smp\smptools\listeners\SitListener.class
 com\smp\smptools\commands\AdventCommand.class
 com\smp\smptools\commands\NPCCommand.class
+com\smp\smptools\config\CommandRegistry.class
 com\smp\smptools\enchants\LumberjackEnchant.class
 com\smp\smptools\commands\SkillsCommand$1.class
 com\smp\smptools\listeners\MissionGUIListener$1.class
@@ -77,6 +82,7 @@ com\smp\smptools\commands\PrefixCommand.class
 com\smp\smptools\listeners\HomesGUIListener.class
 com\smp\smptools\missions\MissionType.class
 com\smp\smptools\teleport\TeleportListener.class
+com\smp\smptools\utils\InputValidator.class
 com\smp\smptools\commands\ColorCommand.class
 com\smp\smptools\listeners\StatsGUIListener.class
 com\smp\smptools\listeners\TrollGUIListener$4.class
@@ -90,8 +96,10 @@ com\smp\smptools\music\MusicCommand.class
 com\smp\smptools\commands\StatsCommand.class
 com\smp\smptools\missions\MissionManager$PlayerMissionData.class
 com\smp\smptools\managers\DialogueManager$1.class
+com\smp\smptools\music\MusicParseException.class
 com\smp\smptools\listeners\JoinLeaveListener.class
 com\smp\smptools\commands\SkillsCommand.class
+com\smp\smptools\listeners\AbstractGUIListener.class
 com\smp\smptools\commands\InvseeCommand.class
 com\smp\smptools\graves\GraveManager.class
 com\smp\smptools\managers\BlackFridayManager.class
@@ -112,6 +120,7 @@ com\smp\smptools\commands\HomesCommand.class
 com\smp\smptools\commands\KrampusCommand.class
 com\smp\smptools\listeners\TagsGUIListener.class
 com\smp\smptools\music\Layer.class
+com\smp\smptools\config\MessageManager.class
 com\smp\smptools\listeners\MissionGUIListener$MissionGUIHolder.class
 com\smp\smptools\christmas\AdventManager.class
 com\smp\smptools\tpa\TpaManager$1.class
@@ -123,7 +132,9 @@ com\smp\smptools\managers\PortalManager.class
 com\smp\smptools\christmas\PresentManager.class
 com\smp\smptools\accelerators\CropAccelerator.class
 com\smp\smptools\managers\ChristmasWorldManager.class
+com\smp\smptools\config\ListenerRegistry.class
 com\smp\smptools\missions\Mission.class
+com\smp\smptools\utils\ConfigPaths.class
 com\smp\smptools\listeners\TrollGUIListener.class
 com\smp\smptools\chat\ChatManager.class
 com\smp\smptools\commands\ChunkLoaderCommand.class
