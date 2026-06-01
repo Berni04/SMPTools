@@ -19,6 +19,9 @@ public final class ConfigDefaults {
         config.addDefault("features.daily-rewards.enabled", true);
         config.addDefault("features.custom-enchants.enabled", true);
         config.addDefault("features.mmo-skills.enabled", true);
+        config.addDefault("features.missions.enabled", true);
+        config.addDefault("features.christmas.enabled", true);
+        config.addDefault("features.blackfriday.enabled", true);
 
         // Daily Rewards
         config.addDefault("features.daily-rewards.cooldown-hours", 22);

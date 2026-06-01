@@ -125,6 +125,7 @@ public final class URLValidator {
             if (responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
                 responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
                 responseCode == HttpURLConnection.HTTP_SEE_OTHER ||
+                responseCode == 307 ||
                 responseCode == 308) {
 
                 String location = conn.getHeaderField("Location");

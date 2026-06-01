@@ -125,6 +125,13 @@ public final class Constants {
     /** Read timeout in milliseconds */
     public static final int URL_READ_TIMEOUT_MS = 10000;
 
+    // Download size limits
+    /** Maximum download size for images (10MB) */
+    public static final long MAX_IMAGE_DOWNLOAD_BYTES = 10 * 1024 * 1024;
+    
+    /** Maximum download size for NBS songs (5MB) */
+    public static final long MAX_NBS_DOWNLOAD_BYTES = 5 * 1024 * 1024;
+
     private Constants() {
         // Prevent instantiation
     }

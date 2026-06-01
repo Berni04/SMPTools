@@ -1,6 +1,8 @@
 package com.smp.smptools.music;
 
 import com.smp.smptools.SMPTools;
+import com.smp.smptools.utils.Constants;
+import com.smp.smptools.utils.BoundedInputStream;
 import com.smp.smptools.utils.URLValidator;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -107,8 +109,9 @@ public class MusicCommand implements CommandExecutor {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
                 URLConnection conn = URLValidator.openConnection(url);
-                try (InputStream stream = conn.getInputStream()) {
-                    Song song = NBSParser.parse(stream);
+                try (InputStream rawStream = conn.getInputStream();
+                     InputStream boundedStream = new BoundedInputStream(rawStream, Constants.MAX_NBS_DOWNLOAD_BYTES)) {
+                    Song song = NBSParser.parse(boundedStream);
                     if (song == null) {
                         Bukkit.getScheduler().runTask(plugin, () -> {
                             player.sendMessage(Component.text("Failed to parse the song. Please check the file format.", NamedTextColor.RED));

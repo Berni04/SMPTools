@@ -2,6 +2,7 @@ package com.smp.smptools.imagemap;
 
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.utils.Constants;
+import com.smp.smptools.utils.BoundedInputStream;
 import com.smp.smptools.utils.URLValidator;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -84,7 +85,8 @@ public class MapCommand implements CommandExecutor {
                 int totalHeight = finalHeightGrid * 128;
 
                 BufferedImage fullImage;
-                try (java.io.InputStream is = conn.getInputStream()) {
+                try (BoundedInputStream bis = new BoundedInputStream(conn.getInputStream(), Constants.MAX_IMAGE_DOWNLOAD_BYTES);
+                     java.io.InputStream is = bis) {
                     fullImage = ImageProcessor.getImage(is, totalWidth, totalHeight);
                 }
 

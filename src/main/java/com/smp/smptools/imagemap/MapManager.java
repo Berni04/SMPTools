@@ -1,6 +1,8 @@
 package com.smp.smptools.imagemap;
 
 import com.smp.smptools.SMPTools;
+import com.smp.smptools.utils.Constants;
+import com.smp.smptools.utils.BoundedInputStream;
 import com.smp.smptools.utils.URLValidator;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
@@ -35,10 +37,16 @@ public class MapManager {
                 } else if (mapSection.isConfigurationSection(mapIdString)) {
                     ConfigurationSection section = mapSection.getConfigurationSection(mapIdString);
                     String urlString = section.getString("url");
-                    int x = section.getInt("x", 0);
-                    int y = section.getInt("y", 0);
-                    int width = section.getInt("width", 1);
-                    int height = section.getInt("height", 1);
+                    int x = Math.max(0, section.getInt("x", 0));
+                    int y = Math.max(0, section.getInt("y", 0));
+                    int width = Math.max(1, Math.min(Constants.MAX_MAP_GRID_SIZE, section.getInt("width", 1)));
+                    int height = Math.max(1, Math.min(Constants.MAX_MAP_GRID_SIZE, section.getInt("height", 1)));
+
+                    if (width < 1 || height < 1) {
+                        plugin.getLogger().warning("Invalid dimensions for map " + mapIdString + ", skipping");
+                        continue;
+                    }
+
                     loadImage(mapId, urlString, x, y, width, height);
                 }
 
@@ -58,8 +66,9 @@ public class MapManager {
                 int totalHeight = heightGrid * 128;
 
                 BufferedImage fullImage;
-                try (InputStream stream = conn.getInputStream()) {
-                    fullImage = ImageProcessor.getImage(stream, totalWidth, totalHeight);
+                try (InputStream rawStream = conn.getInputStream();
+                     InputStream boundedStream = new BoundedInputStream(rawStream, Constants.MAX_IMAGE_DOWNLOAD_BYTES)) {
+                    fullImage = ImageProcessor.getImage(boundedStream, totalWidth, totalHeight);
                 }
 
                 if (fullImage != null) {
