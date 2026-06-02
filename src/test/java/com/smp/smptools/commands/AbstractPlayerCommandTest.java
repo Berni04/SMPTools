@@ -182,5 +182,9 @@ class AbstractPlayerCommandTest {
         @Override
         public void removeAttachment(org.bukkit.permissions.PermissionAttachment attachment) {
         }
+
+        @Override
+        public void recalculatePermissions() {
+        }
     }
 }
