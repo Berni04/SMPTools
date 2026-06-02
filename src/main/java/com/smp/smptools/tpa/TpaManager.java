@@ -78,7 +78,7 @@ public class TpaManager {
                 .clickEvent(ClickEvent.runCommand("/tpd"));
 
         target.sendMessage(plugin.getMessageManager().getMessage("tpa.request-received", target,
-                Map.of("target", requester.getName()))
+                Map.of(), requester)
                 .append(Component.text(" "))
                 .append(acceptButton)
                 .append(Component.text(" "))
@@ -125,7 +125,7 @@ public class TpaManager {
 
         plugin.getTeleportManager().startTeleport(requester, acceptor.getLocation(), "to " + acceptor.getName());
         acceptor.sendMessage(plugin.getMessageManager().getMessage("tpa.accepted", acceptor,
-                Map.of("target", requester.getName())));
+                Map.of(), requester));
     }
 
     /**

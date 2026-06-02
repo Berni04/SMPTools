@@ -48,9 +48,9 @@ homes:
 # TPA
 tpa:
   request-sent: "<player_name_color>, teleport request sent to <gold>{target}</gold>."
-  request-received: "<player_name_color> has requested to teleport to you."
+  request-received: "<requester_name_color> has requested to teleport to you."
   expired: "<red>Your teleport request to {target} has expired.</red>"
-  accepted: "<player_name_color> has started teleporting to you."
+  accepted: "<requester_name_color> has started teleporting to you."
   denied: "<red>Teleport request denied.</red>"
   toggle-on: "<green>You are now accepting teleport requests.</green>"
   toggle-off: "<red>You are no longer accepting teleport requests.</red>"

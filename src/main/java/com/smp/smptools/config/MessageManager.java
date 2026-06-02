@@ -69,6 +69,44 @@ public class MessageManager {
     }
 
     /**
+     * Gets a message from the configuration with a primary player context,
+     * an optional secondary player (e.g. the requester in a TPA flow), and
+     * placeholder values.
+     *
+     * <p>Exposes the following MiniMessage tags for the secondary player:</p>
+     * <ul>
+     *   <li>{@code <requester>} - full formatted name (color + prefix + name + title)</li>
+     *   <li>{@code <requester_name>} - just the raw player name</li>
+     *   <li>{@code <requester_name_color>} - player name with their chosen color</li>
+     *   <li>{@code <requester_color>} - just the color tag</li>
+     *   <li>{@code <requester_prefix>} - just the prefix</li>
+     *   <li>{@code <requester_title>} - just the equipped title</li>
+     * </ul>
+     *
+     * @param path the message path in messages.yml
+     * @param context the primary player context (can be null) for {@code <player*...>} tags
+     * @param placeholders the placeholder values to replace ({@code {key}} syntax)
+     * @param secondary the secondary player (can be null) for {@code <requester*...>} tags
+     * @return the formatted Component message
+     */
+    public Component getMessage(String path, Player context, Map<String, String> placeholders, Player secondary) {
+        String msg = messagesConfig.getString(path, "Missing message: " + path);
+
+        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+            msg = msg.replace("{" + entry.getKey() + "}", entry.getValue());
+        }
+
+        TagResolver primary = buildPlayerTagResolver(context);
+        TagResolver secondaryResolver = buildSecondaryPlayerTagResolver(secondary);
+
+        TagResolver combined = TagResolver.builder()
+                .resolvers(primary, secondaryResolver)
+                .build();
+
+        return MiniMessage.miniMessage().deserialize(msg, combined);
+    }
+
+    /**
      * Gets a message from the configuration with player context.
      *
      * @param path the message path in messages.yml
@@ -146,13 +184,13 @@ public class MessageManager {
         Component color = MiniMessage.miniMessage().deserialize(colorTag);
 
         // Just the prefix
-        Component prefixComponent = prefix.isEmpty() 
-            ? Component.empty() 
+        Component prefixComponent = prefix.isEmpty()
+            ? Component.empty()
             : MiniMessage.miniMessage().deserialize(colorTag + prefix);
 
         // Just the title
-        Component titleComponent = title.isEmpty() 
-            ? Component.empty() 
+        Component titleComponent = title.isEmpty()
+            ? Component.empty()
             : Component.text("[" + title + "]");
 
         return TagResolver.builder()
@@ -162,6 +200,48 @@ public class MessageManager {
             .resolver(TagResolver.resolver("player_color", Tag.selfClosingInserting(color)))
             .resolver(TagResolver.resolver("player_prefix", Tag.selfClosingInserting(prefixComponent)))
             .resolver(TagResolver.resolver("player_title", Tag.selfClosingInserting(titleComponent)))
+            .build();
+    }
+
+    /**
+     * Builds a TagResolver with secondary-player (e.g. requester) dynamic tags.
+     * Tag names are prefixed with "requester" to avoid collisions with the primary
+     * {@code <player*...>} tags from {@link #buildPlayerTagResolver(Player)}.
+     *
+     * @param player the secondary player (can be null)
+     * @return the TagResolver with {@code <requester*...>} tags
+     */
+    private TagResolver buildSecondaryPlayerTagResolver(Player player) {
+        if (player == null) {
+            return TagResolver.empty();
+        }
+
+        FileConfiguration statsConfig = plugin.getStatsConfig();
+        FileConfiguration tagsConfig = plugin.getTagsConfig();
+        String uuid = player.getUniqueId().toString();
+
+        String colorTag = statsConfig.getString("players." + uuid + ".name-color", "<white>");
+        String prefix = statsConfig.getString("players." + uuid + ".prefix", "");
+        String title = tagsConfig.getString("player-titles." + uuid, "");
+
+        Component fullPlayer = plugin.getChatManager().getFormattedDisplayName(player);
+        Component nameColor = MiniMessage.miniMessage().deserialize(colorTag + player.getName());
+        Component rawName = Component.text(player.getName());
+        Component color = MiniMessage.miniMessage().deserialize(colorTag);
+        Component prefixComponent = prefix.isEmpty()
+            ? Component.empty()
+            : MiniMessage.miniMessage().deserialize(colorTag + prefix);
+        Component titleComponent = title.isEmpty()
+            ? Component.empty()
+            : Component.text("[" + title + "]");
+
+        return TagResolver.builder()
+            .resolver(TagResolver.resolver("requester", Tag.selfClosingInserting(fullPlayer)))
+            .resolver(TagResolver.resolver("requester_name", Tag.selfClosingInserting(rawName)))
+            .resolver(TagResolver.resolver("requester_name_color", Tag.selfClosingInserting(nameColor)))
+            .resolver(TagResolver.resolver("requester_color", Tag.selfClosingInserting(color)))
+            .resolver(TagResolver.resolver("requester_prefix", Tag.selfClosingInserting(prefixComponent)))
+            .resolver(TagResolver.resolver("requester_title", Tag.selfClosingInserting(titleComponent)))
             .build();
     }
 }

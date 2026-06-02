@@ -2,6 +2,7 @@ package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
 import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.lang.management.ManagementFactory;
@@ -15,7 +16,11 @@ public class UptimeCommand extends AbstractPlayerCommand {
     }
 
     @Override
-    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
+    protected boolean allowConsole() {
+        return true;
+    }
+
+    private boolean execute(CommandSender sender) {
         long uptimeMillis = ManagementFactory.getRuntimeMXBean().getUptime();
 
         long days = TimeUnit.MILLISECONDS.toDays(uptimeMillis);
@@ -32,8 +37,21 @@ public class UptimeCommand extends AbstractPlayerCommand {
             uptimeString.append(minutes).append("m ");
         uptimeString.append(seconds).append("s");
 
-        player.sendMessage(plugin.getMessageManager().getMessage("uptime.server-uptime", player, Map.of("uptime", uptimeString.toString())));
+        sender.sendMessage(plugin.getMessageManager().getMessage(
+                "uptime.server-uptime",
+                sender instanceof Player p ? p : null,
+                Map.of("uptime", uptimeString.toString())));
 
         return true;
+    }
+
+    @Override
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
+        return execute(player);
+    }
+
+    @Override
+    protected boolean onConsoleCommand(CommandSender sender, Command command, String label, String[] args) {
+        return execute(sender);
     }
 }
