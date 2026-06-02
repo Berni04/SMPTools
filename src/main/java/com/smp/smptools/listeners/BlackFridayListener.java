@@ -60,16 +60,15 @@ public class BlackFridayListener implements Listener {
 
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
-        if (!manager.isEnabled()) {
-            return;
-        }
         if (!(event.getInventory().getHolder() instanceof AbstractVillager villager)) {
             return;
         }
         // AbstractVillager implements Merchant
         Merchant merchant = villager;
 
-        List<MerchantRecipe> original = originalRecipes.get(villager.getUniqueId());
+        // Always restore on close, even if Black Friday was disabled mid-session,
+        // to avoid leaving a player stuck with discounted recipes.
+        List<MerchantRecipe> original = originalRecipes.remove(villager.getUniqueId());
         if (original != null) {
             merchant.setRecipes(original);
         }

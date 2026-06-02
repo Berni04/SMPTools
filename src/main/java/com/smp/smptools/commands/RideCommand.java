@@ -1,6 +1,7 @@
 package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
+import com.smp.smptools.utils.InputValidator;
 import org.bukkit.command.Command;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -37,7 +38,7 @@ public class RideCommand extends AbstractPlayerCommand {
         Entity target = targetEntities.get(0);
         target.addPassenger(player);
         player.sendMessage(plugin.getMessageManager().getMessage("ride.riding", player,
-                Map.of("target", target.getName())));
+                Map.of("target", InputValidator.sanitizeMiniMessage(target.getName()))));
 
         return true;
     }

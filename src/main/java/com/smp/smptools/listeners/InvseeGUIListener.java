@@ -2,7 +2,7 @@ package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -14,19 +14,29 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.Collections;
+import java.util.Map;
 
 public class InvseeGUIListener implements Listener {
 
-    private final SMPTools plugin;
-    private static final String GUI_TITLE = "Invsee - ";
+    private static SMPTools pluginInstance;
+    private static String guiTitlePrefix;
 
     public InvseeGUIListener(SMPTools plugin) {
-        this.plugin = plugin;
+        pluginInstance = plugin;
+        // Resolve the configurable title prefix once; the listener matches
+        // against the plain text, so deriving the prefix from the template
+        // allows admins to rename the GUI without code changes.
+        String fullTitle = PlainTextComponentSerializer.plainText().serialize(
+                plugin.getMessageManager().getMessage("invsee.gui-title", null,
+                        Map.of("player", "")));
+        guiTitlePrefix = fullTitle;
     }
 
     public static void openInvseeGUI(Player opener, Player target) {
         // 54 slots: 4 armor, 1 off-hand, 27 inventory, 9 hotbar, plus filler
-        Inventory invseeGUI = Bukkit.createInventory(null, 54, GUI_TITLE + target.getName());
+        Component title = pluginInstance.getMessageManager().getMessage("invsee.gui-title", null,
+                Map.of("player", target.getName()));
+        Inventory invseeGUI = Bukkit.createInventory(null, 54, title);
 
         // Filler item
         ItemStack filler = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
@@ -40,8 +50,6 @@ public class InvseeGUIListener implements Listener {
         }
 
         // --- Place Armor (Helmet, Chestplate, Leggings, Boots) ---
-        // PlayerInventory armor slots: 39 (Helmet), 38 (Chestplate), 37 (Leggings), 36 (Boots)
-        // GUI slots: 0 (Helmet), 1 (Chestplate), 2 (Leggings), 3 (Boots)
         ItemStack[] armorContents = target.getInventory().getArmorContents();
         if (armorContents.length >= 4) {
             invseeGUI.setItem(0, armorContents[3]); // Helmet
@@ -51,50 +59,42 @@ public class InvseeGUIListener implements Listener {
         }
 
         // --- Place Off-hand ---
-        // PlayerInventory off-hand slot: 40
-        // GUI slot: 8
         invseeGUI.setItem(8, target.getInventory().getItemInOffHand());
 
         // --- Place Main Inventory (27 slots) ---
-        // PlayerInventory slots: 9-35
-        // GUI slots: 18-44 (3 rows of 9)
         for (int i = 0; i < 27; i++) {
             invseeGUI.setItem(i + 18, target.getInventory().getItem(i + 9));
         }
 
         // --- Place Hotbar (9 slots) ---
-        // PlayerInventory slots: 0-8
-        // GUI slots: 45-53 (last row)
         for (int i = 0; i < 9; i++) {
             invseeGUI.setItem(i + 45, target.getInventory().getItem(i));
         }
 
-        // --- Add Labels for Armor and Off-hand ---
-        invseeGUI.setItem(9, createLabel(Material.LEATHER_HELMET, "<gold>Helmet</gold>", SMPTools.getInstance()));
-        invseeGUI.setItem(10, createLabel(Material.LEATHER_CHESTPLATE, "<gold>Chestplate</gold>", SMPTools.getInstance()));
-        invseeGUI.setItem(11, createLabel(Material.LEATHER_LEGGINGS, "<gold>Leggings</gold>", SMPTools.getInstance()));
-        invseeGUI.setItem(12, createLabel(Material.LEATHER_BOOTS, "<gold>Boots</gold>", SMPTools.getInstance()));
-        invseeGUI.setItem(17, createLabel(Material.SHIELD, "<gold>Off-hand</gold>", SMPTools.getInstance())); // Label for off-hand
+        // --- Add Labels for Armor and Off-hand (externalized) ---
+        invseeGUI.setItem(9, createLabel(Material.LEATHER_HELMET, "invsee.label-helmet"));
+        invseeGUI.setItem(10, createLabel(Material.LEATHER_CHESTPLATE, "invsee.label-chestplate"));
+        invseeGUI.setItem(11, createLabel(Material.LEATHER_LEGGINGS, "invsee.label-leggings"));
+        invseeGUI.setItem(12, createLabel(Material.LEATHER_BOOTS, "invsee.label-boots"));
+        invseeGUI.setItem(17, createLabel(Material.SHIELD, "invsee.label-offhand"));
 
         opener.openInventory(invseeGUI);
     }
 
-    private static ItemStack createLabel(Material material, String name, SMPTools plugin) {
+    private static ItemStack createLabel(Material material, String messageKey) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(MiniMessage.miniMessage().deserialize(name));
+        meta.displayName(pluginInstance.getMessageManager().getMessage(messageKey));
         meta.lore(Collections.singletonList(
-                plugin.getMessageManager().getMessage("invsee.armor-slot-lore")));
+                pluginInstance.getMessageManager().getMessage("invsee.armor-slot-lore")));
         item.setItemMeta(meta);
         return item;
     }
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        // Get the plain text title of the inventory
-        String clickedTitle = event.getView().getTitle();
-        
-        if (!clickedTitle.startsWith(GUI_TITLE)) {
+        String clickedTitle = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (!clickedTitle.startsWith(guiTitlePrefix)) {
             return;
         }
 

@@ -278,7 +278,12 @@ rename:
 invsee:
   viewing: "<green>Viewing {target}'s inventory.</green>"
   self-use: "<red>You cannot invsee yourself. Use /inv to open your own inventory.</red>"
-  gui-title: "{player}'s Inventory"
+  gui-title: "Invsee - {player}"
+  label-helmet: "<gold>Helmet</gold>"
+  label-chestplate: "<gold>Chestplate</gold>"
+  label-leggings: "<gold>Leggings</gold>"
+  label-boots: "<gold>Boots</gold>"
+  label-offhand: "<gold>Off-hand</gold>"
   armor-slot-lore: "<gray>Armor Slot</gray>"
 
 # Troll

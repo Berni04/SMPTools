@@ -3,7 +3,6 @@ package com.smp.smptools.listeners;
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.leaderboard.LeaderboardManager;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -18,6 +17,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -25,14 +25,23 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class LeaderboardGUIListener implements Listener {
 
     private final SMPTools plugin;
+    private final String hubTitle;
+    private final String statTitlePrefix;
 
     public LeaderboardGUIListener(SMPTools plugin) {
         this.plugin = plugin;
+        // Resolve configurable titles once at construction so renaming the
+        // GUI does not require code changes.
+        this.hubTitle = PlainTextComponentSerializer.plainText().serialize(
+                plugin.getMessageManager().getMessage("leaderboard.gui-title"));
+        this.statTitlePrefix = PlainTextComponentSerializer.plainText().serialize(
+                plugin.getMessageManager().getMessage("leaderboard.stat-title", null,
+                        Collections.singletonMap("title", "")));
     }
 
     @EventHandler
     public void onHubClick(InventoryClickEvent event) {
-        if (!event.getView().title().equals(Component.text("Leaderboards"))) {
+        if (!PlainTextComponentSerializer.plainText().serialize(event.getView().title()).equals(hubTitle)) {
             return;
         }
 
@@ -50,7 +59,7 @@ public class LeaderboardGUIListener implements Listener {
 
     @EventHandler
     public void onLeaderboardClick(InventoryClickEvent event) {
-        if (!PlainTextComponentSerializer.plainText().serialize(event.getView().title()).startsWith("Top 10 -")) {
+        if (!PlainTextComponentSerializer.plainText().serialize(event.getView().title()).startsWith(statTitlePrefix)) {
             return;
         }
         event.setCancelled(true);

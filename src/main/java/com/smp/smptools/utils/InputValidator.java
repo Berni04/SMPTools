@@ -70,7 +70,8 @@ public final class InputValidator {
      * to prevent social engineering / command injection via display names.
      */
     private static final java.util.regex.Pattern DANGEROUS_MINIMESSAGE_TAGS = java.util.regex.Pattern.compile(
-            "</?(?:hover|click|insert|key|suggest_command|run_command|translatable|font|selector)\\b[^>]*>");
+            "</?(?:hover|click|insert|key|suggest_command|run_command|translatable|font|selector)\\b[^>]*>",
+            java.util.regex.Pattern.CASE_INSENSITIVE);
 
     /**
      * Sanitizes a string intended for use inside a MiniMessage template.

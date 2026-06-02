@@ -17,8 +17,11 @@ public class MsgCommand extends AbstractPlayerCommand {
     @Override
     protected boolean onPlayerCommand(Player senderPlayer, Command command, String label, String[] args) {
         if (args.length < 2) {
+            // Escape angle brackets so MiniMessage does not interpret <player>
+            // and <message> as tags and silently strip them.
+            String usage = net.kyori.adventure.text.minimessage.MiniMessage.escape("/msg <player> <message>");
             senderPlayer.sendMessage(plugin.getMessageManager().getMessage("common.usage", senderPlayer,
-                    java.util.Map.of("usage", "/msg <player> <message>")));
+                    java.util.Map.of("usage", usage)));
             return true;
         }
 

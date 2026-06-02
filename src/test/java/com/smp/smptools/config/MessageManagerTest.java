@@ -65,6 +65,62 @@ class MessageManagerTest {
         assertNotNull(cfg.getString("common.usage"));
     }
 
+    @Test
+    void blackFridayStatusEnabled_hasStatusPlaceholder() throws IOException {
+        FileConfiguration cfg = loadShippedMessages();
+        String template = cfg.getString("blackfriday.status-enabled");
+        assertNotNull(template, "blackfriday.status-enabled template missing from messages.yml");
+        assertTrue(template.contains("{status}"),
+                "blackfriday.status-enabled must reference {status} placeholder so the YES/NO "
+                        + "indicator is rendered. Got: " + template);
+    }
+
+    @Test
+    void blackFridayStatusDiscount_hasDiscountPlaceholder() throws IOException {
+        FileConfiguration cfg = loadShippedMessages();
+        String template = cfg.getString("blackfriday.status-discount");
+        assertNotNull(template, "blackfriday.status-discount template missing from messages.yml");
+        assertTrue(template.contains("{discount}"),
+                "blackfriday.status-discount must reference {discount} placeholder. "
+                        + "Got: " + template);
+    }
+
+    @Test
+    void blackFridayStatusEnabledYes_andNo_exist() throws IOException {
+        FileConfiguration cfg = loadShippedMessages();
+        assertNotNull(cfg.getString("blackfriday.status-enabled-yes"),
+                "blackfriday.status-enabled-yes template missing");
+        assertNotNull(cfg.getString("blackfriday.status-enabled-no"),
+                "blackfriday.status-enabled-no template missing");
+    }
+
+    @Test
+    void invseeLabels_externalized() throws IOException {
+        FileConfiguration cfg = loadShippedMessages();
+        assertNotNull(cfg.getString("invsee.label-helmet"), "invsee.label-helmet missing");
+        assertNotNull(cfg.getString("invsee.label-chestplate"), "invsee.label-chestplate missing");
+        assertNotNull(cfg.getString("invsee.label-leggings"), "invsee.label-leggings missing");
+        assertNotNull(cfg.getString("invsee.label-boots"), "invsee.label-boots missing");
+        assertNotNull(cfg.getString("invsee.label-offhand"), "invsee.label-offhand missing");
+    }
+
+    @Test
+    void invseeGuiTitle_hasPlayerPlaceholder() throws IOException {
+        FileConfiguration cfg = loadShippedMessages();
+        String template = cfg.getString("invsee.gui-title");
+        assertNotNull(template, "invsee.gui-title missing");
+        assertTrue(template.contains("{player}"),
+                "invsee.gui-title must reference {player} placeholder. Got: " + template);
+    }
+
+    @Test
+    void homesGuiTitle_isConfigurable() throws IOException {
+        FileConfiguration cfg = loadShippedMessages();
+        assertNotNull(cfg.getString("homes.gui-title"), "homes.gui-title missing");
+        assertNotNull(cfg.getString("homes.delete-confirm-title"),
+                "homes.delete-confirm-title missing");
+    }
+
     /**
      * Loads the shipped {@code messages.yml} from src/main/resources into a
      * temporary file and returns the parsed configuration.

@@ -51,10 +51,10 @@ public class BlackFridayCommand implements CommandExecutor {
                 boolean enabled = manager.isEnabled();
                 int discount = manager.getDiscountPercentage();
                 sender.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("blackfriday.status-header"));
-                sender.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("blackfriday.status-enabled")
-                        .append(SMPTools.getInstance().getMessageManager().getMessage(enabled ? "blackfriday.status-enabled-yes" : "blackfriday.status-enabled-no")));
-                sender.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("blackfriday.status-discount")
-                        .replaceText(builder -> builder.matchLiteral("{discount}").replacement(String.valueOf(discount))));
+                sender.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("blackfriday.status-enabled", null,
+                        java.util.Map.of("status", SMPTools.getInstance().getMessageManager().getMessage(enabled ? "blackfriday.status-enabled-yes" : "blackfriday.status-enabled-no"))));
+                sender.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("blackfriday.status-discount", null,
+                        java.util.Map.of("discount", String.valueOf(discount))));
                 break;
 
             default:

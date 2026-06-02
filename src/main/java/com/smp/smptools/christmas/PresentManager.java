@@ -136,6 +136,12 @@ public class PresentManager {
             return;
 
         String tier = presentsConfig.getString("presents." + id + ".tier");
+        // Defensive: if the tier stored in presents.yml is missing or unknown
+        // (e.g. christmas.yml was edited), fall back to the "unknown" tier so
+        // the player still gets the "invalid-tier" message instead of an NPE.
+        if (tier == null || !christmasConfig.contains("presents." + tier)) {
+            tier = "unknown";
+        }
         List<String> rewards = christmasConfig.getStringList("presents." + tier + ".rewards");
 
         // Give rewards
@@ -145,7 +151,8 @@ public class PresentManager {
 
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("tier", tier);
-        player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("present.found", player, placeholders));
+        String messageKey = tier.equals("unknown") ? "present.invalid-tier" : "present.found";
+        player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage(messageKey, player, placeholders));
 
         // Remove the block
         location.getBlock().setType(Material.AIR);

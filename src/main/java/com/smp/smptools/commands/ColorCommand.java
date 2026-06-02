@@ -7,8 +7,18 @@ import org.bukkit.command.Command;
 import org.bukkit.entity.Player;
 
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public class ColorCommand extends AbstractPlayerCommand {
+
+    /**
+     * Allowlist of characters permitted in user-supplied color strings. Limits
+     * input to MiniMessage color/formatting tags and standard Minecraft color
+     * codes (e.g. {@code &a}, {@code &#FF00FF}). Anything else is rejected
+     * because {@link MiniMessage#deserialize(String)} is lenient and would not
+     * throw for arbitrary user input.
+     */
+    private static final Pattern COLOR_ALLOWLIST = Pattern.compile("^[a-zA-Z0-9_#!<>\\-/: ]+$");
 
     public ColorCommand(SMPTools plugin) {
         super(plugin);
@@ -32,6 +42,15 @@ public class ColorCommand extends AbstractPlayerCommand {
         }
 
         String sanitizedColor = InputValidator.sanitizeMiniMessage(colorInput);
+
+        // Reject any input that contains characters outside the allowlist,
+        // since MiniMessage is lenient and silently accepts most invalid
+        // structures without throwing.
+        if (!COLOR_ALLOWLIST.matcher(sanitizedColor).matches()) {
+            player.sendMessage(plugin.getMessageManager().getMessage("color.invalid", player));
+            return true;
+        }
+
         try {
             MiniMessage.miniMessage().deserialize(sanitizedColor);
         } catch (Exception e) {
