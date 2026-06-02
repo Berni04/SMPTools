@@ -54,7 +54,9 @@ public final class ListenerRegistry {
         }
 
         // Invsee and Troll are admin commands, always register
-        Bukkit.getPluginManager().registerEvents(new InvseeGUIListener(plugin), plugin);
+        InvseeGUIListener invseeGUIListener = new InvseeGUIListener(plugin);
+        plugin.setInvseeGUIListener(invseeGUIListener);
+        Bukkit.getPluginManager().registerEvents(invseeGUIListener, plugin);
         Bukkit.getPluginManager().registerEvents(new TrollGUIListener(plugin), plugin);
 
         // Mission system listeners

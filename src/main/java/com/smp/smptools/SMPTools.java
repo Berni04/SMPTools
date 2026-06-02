@@ -91,6 +91,7 @@ public class SMPTools extends JavaPlugin {
     private DialogueManager dialogueManager;
     private BlackFridayManager blackFridayManager;
     private MessageManager messageManager;
+    private com.smp.smptools.listeners.InvseeGUIListener invseeGUIListener;
 
     @Override
     public void onEnable() {
@@ -479,5 +480,13 @@ public class SMPTools extends JavaPlugin {
 
     public MessageManager getMessageManager() {
         return messageManager;
+    }
+
+    public com.smp.smptools.listeners.InvseeGUIListener getInvseeGUIListener() {
+        return invseeGUIListener;
+    }
+
+    public void setInvseeGUIListener(com.smp.smptools.listeners.InvseeGUIListener listener) {
+        this.invseeGUIListener = listener;
     }
 }

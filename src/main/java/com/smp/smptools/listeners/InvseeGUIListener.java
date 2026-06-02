@@ -2,7 +2,6 @@ package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -18,25 +17,18 @@ import java.util.Map;
 
 public class InvseeGUIListener implements Listener {
 
-    private static SMPTools pluginInstance;
-    private static String guiTitlePrefix;
+    private final SMPTools plugin;
 
     public InvseeGUIListener(SMPTools plugin) {
-        pluginInstance = plugin;
-        // Resolve the configurable title prefix once; the listener matches
-        // against the plain text, so deriving the prefix from the template
-        // allows admins to rename the GUI without code changes.
-        String fullTitle = PlainTextComponentSerializer.plainText().serialize(
-                plugin.getMessageManager().getMessage("invsee.gui-title", null,
-                        Map.of("player", "")));
-        guiTitlePrefix = fullTitle;
+        this.plugin = plugin;
     }
 
-    public static void openInvseeGUI(Player opener, Player target) {
-        // 54 slots: 4 armor, 1 off-hand, 27 inventory, 9 hotbar, plus filler
-        Component title = pluginInstance.getMessageManager().getMessage("invsee.gui-title", null,
+    public void openInvseeGUI(Player opener, Player target) {
+        InvseeHolder holder = new InvseeHolder(target.getUniqueId());
+        Component title = plugin.getMessageManager().getMessage("invsee.gui-title", null,
                 Map.of("player", target.getName()));
-        Inventory invseeGUI = Bukkit.createInventory(null, 54, title);
+        Inventory invseeGUI = Bukkit.createInventory(holder, 54, title);
+        holder.setInventory(invseeGUI);
 
         // Filler item
         ItemStack filler = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
@@ -81,24 +73,23 @@ public class InvseeGUIListener implements Listener {
         opener.openInventory(invseeGUI);
     }
 
-    private static ItemStack createLabel(Material material, String messageKey) {
+    private ItemStack createLabel(Material material, String messageKey) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(pluginInstance.getMessageManager().getMessage(messageKey));
+        meta.displayName(plugin.getMessageManager().getMessage(messageKey));
         meta.lore(Collections.singletonList(
-                pluginInstance.getMessageManager().getMessage("invsee.armor-slot-lore")));
+                plugin.getMessageManager().getMessage("invsee.armor-slot-lore")));
         item.setItemMeta(meta);
         return item;
     }
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        String clickedTitle = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (!clickedTitle.startsWith(guiTitlePrefix)) {
-            return;
+        // Primary check: our InventoryHolder. This is the only reliable
+        // way to recognise an invsee GUI regardless of the configured
+        // invsee.gui-title format.
+        if (event.getInventory().getHolder() instanceof InvseeHolder) {
+            event.setCancelled(true);
         }
-
-        // Prevent any interaction with the inventory
-        event.setCancelled(true);
     }
 }

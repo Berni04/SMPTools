@@ -39,7 +39,7 @@ public class InvseeCommand extends AbstractPlayerCommand {
 
         player.sendMessage(plugin.getMessageManager().getMessage("invsee.viewing", player,
                 java.util.Map.of("target", target.getName())));
-        InvseeGUIListener.openInvseeGUI(player, target);
+        plugin.getInvseeGUIListener().openInvseeGUI(player, target);
 
         return true;
     }

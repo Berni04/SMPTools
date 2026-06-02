@@ -17,7 +17,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -26,23 +25,26 @@ public class LeaderboardGUIListener implements Listener {
 
     private final SMPTools plugin;
     private final String hubTitle;
-    private final String statTitlePrefix;
 
     public LeaderboardGUIListener(SMPTools plugin) {
         this.plugin = plugin;
-        // Resolve configurable titles once at construction so renaming the
-        // GUI does not require code changes.
+        // Resolve the configurable hub title for fallback compatibility
+        // with other plugins that may open the same GUI without using
+        // our InventoryHolder.
         this.hubTitle = PlainTextComponentSerializer.plainText().serialize(
                 plugin.getMessageManager().getMessage("leaderboard.gui-title"));
-        this.statTitlePrefix = PlainTextComponentSerializer.plainText().serialize(
-                plugin.getMessageManager().getMessage("leaderboard.stat-title", null,
-                        Collections.singletonMap("title", "")));
     }
 
     @EventHandler
     public void onHubClick(InventoryClickEvent event) {
-        if (!PlainTextComponentSerializer.plainText().serialize(event.getView().title()).equals(hubTitle)) {
-            return;
+        // Primary check: our InventoryHolder. This is the only reliable
+        // way to recognise the hub regardless of the configured title.
+        if (!(event.getInventory().getHolder() instanceof LeaderboardHubHolder)) {
+            // Fallback: legacy title-based check (other plugins may open
+            // a similar GUI without our holder).
+            if (!PlainTextComponentSerializer.plainText().serialize(event.getView().title()).equals(hubTitle)) {
+                return;
+            }
         }
 
         event.setCancelled(true);
@@ -59,7 +61,17 @@ public class LeaderboardGUIListener implements Listener {
 
     @EventHandler
     public void onLeaderboardClick(InventoryClickEvent event) {
-        if (!PlainTextComponentSerializer.plainText().serialize(event.getView().title()).startsWith(statTitlePrefix)) {
+        // Primary check: our InventoryHolder. This is robust against any
+        // customisation of the leaderboard.stat-title template.
+        if (event.getInventory().getHolder() instanceof LeaderboardStatHolder) {
+            event.setCancelled(true);
+            return;
+        }
+
+        // Fallback: prefix-based check for compatibility with title-based
+        // detection (e.g. the {title} placeholder may have been empty or
+        // the GUI was opened by a third-party tool).
+        if (!PlainTextComponentSerializer.plainText().serialize(event.getView().title()).startsWith("Top 10 -")) {
             return;
         }
         event.setCancelled(true);
@@ -70,9 +82,11 @@ public class LeaderboardGUIListener implements Listener {
         Map<String, Long> leaderboard = manager.getLeaderboard(statKey);
 
         String title = statKey.replace('_', ' ').toUpperCase();
-        Inventory leaderboardGUI = Bukkit.createInventory(null, 54,
+        LeaderboardStatHolder holder = new LeaderboardStatHolder(statKey);
+        Inventory leaderboardGUI = Bukkit.createInventory(holder, 54,
                 plugin.getMessageManager().getMessage("leaderboard.stat-title", player,
                         Map.of("title", title)));
+        holder.setInventory(leaderboardGUI);
 
         if (leaderboard.isEmpty()) {
             player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("leaderboard.no-data"));

@@ -51,8 +51,11 @@ public class BlackFridayCommand implements CommandExecutor {
                 boolean enabled = manager.isEnabled();
                 int discount = manager.getDiscountPercentage();
                 sender.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("blackfriday.status-header"));
+                // Pass the raw MiniMessage string for the YES/NO indicator so
+                // it can be substituted into the parent template and parsed
+                // alongside the surrounding MiniMessage tags.
                 sender.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("blackfriday.status-enabled", null,
-                        java.util.Map.of("status", SMPTools.getInstance().getMessageManager().getMessage(enabled ? "blackfriday.status-enabled-yes" : "blackfriday.status-enabled-no"))));
+                        java.util.Map.of("status", SMPTools.getInstance().getMessageManager().getRawMessage(enabled ? "blackfriday.status-enabled-yes" : "blackfriday.status-enabled-no"))));
                 sender.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("blackfriday.status-discount", null,
                         java.util.Map.of("discount", String.valueOf(discount))));
                 break;

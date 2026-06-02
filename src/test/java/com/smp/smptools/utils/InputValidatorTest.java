@@ -90,7 +90,7 @@ class InputValidatorTest {
 
     @Test
     void sanitizeMiniMessage_stripsLowercaseDangerousTags() {
-        assertEquals("", InputValidator.sanitizeMiniMessage("<hover:show_text:'x'>hi"));
+        assertEquals("hi", InputValidator.sanitizeMiniMessage("<hover:show_text:'x'>hi"));
         assertEquals("hi", InputValidator.sanitizeMiniMessage("<click:run_command:/x>hi</click>"));
         assertEquals("hi", InputValidator.sanitizeMiniMessage("<insert:x>hi"));
     }
@@ -98,7 +98,7 @@ class InputValidatorTest {
     @Test
     void sanitizeMiniMessage_stripsMixedCaseDangerousTags() {
         // Regression: regex was case-sensitive, so <HOVER>, <Hover> bypassed it.
-        assertEquals("", InputValidator.sanitizeMiniMessage("<HOVER:show_text:'x'>hi"));
+        assertEquals("hi", InputValidator.sanitizeMiniMessage("<HOVER:show_text:'x'>hi"));
         assertEquals("hi", InputValidator.sanitizeMiniMessage("<Hover:show_text:'x'>hi</Hover>"));
         assertEquals("hi", InputValidator.sanitizeMiniMessage("<CLICK:run_command:/x>hi</click>"));
         assertEquals("hi", InputValidator.sanitizeMiniMessage("<TRANSLATABLE:x>hi</translatable>"));

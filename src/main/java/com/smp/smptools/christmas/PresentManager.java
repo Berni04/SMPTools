@@ -135,23 +135,25 @@ public class PresentManager {
         if (id == null)
             return;
 
-        String tier = presentsConfig.getString("presents." + id + ".tier");
-        // Defensive: if the tier stored in presents.yml is missing or unknown
-        // (e.g. christmas.yml was edited), fall back to the "unknown" tier so
-        // the player still gets the "invalid-tier" message instead of an NPE.
-        if (tier == null || !christmasConfig.contains("presents." + tier)) {
-            tier = "unknown";
-        }
-        List<String> rewards = christmasConfig.getStringList("presents." + tier + ".rewards");
+        String storedTier = presentsConfig.getString("presents." + id + ".tier");
+        // Validate the stored tier against christmas.yml. If it is null,
+        // empty, or refers to a tier that no longer exists, treat the present
+        // as invalid WITHOUT overwriting the stored value with a sentinel
+        // string (which would collide with a real tier named "unknown").
+        boolean tierValid = storedTier != null
+                && !storedTier.isEmpty()
+                && christmasConfig.contains("presents." + storedTier);
 
-        // Give rewards
-        for (String reward : rewards) {
-            RewardManager.giveReward(player, reward);
+        if (tierValid) {
+            List<String> rewards = christmasConfig.getStringList("presents." + storedTier + ".rewards");
+            for (String reward : rewards) {
+                RewardManager.giveReward(player, reward);
+            }
         }
 
         Map<String, String> placeholders = new HashMap<>();
-        placeholders.put("tier", tier);
-        String messageKey = tier.equals("unknown") ? "present.invalid-tier" : "present.found";
+        placeholders.put("tier", storedTier != null ? storedTier : "unknown");
+        String messageKey = tierValid ? "present.found" : "present.invalid-tier";
         player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage(messageKey, player, placeholders));
 
         // Remove the block

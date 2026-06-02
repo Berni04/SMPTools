@@ -1,6 +1,7 @@
 package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
+import com.smp.smptools.listeners.LeaderboardHubHolder;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -27,7 +28,9 @@ public class LeaderboardCommand extends AbstractPlayerCommand {
     }
 
     private void openLeaderboardHub(Player player) {
-        Inventory hubGUI = Bukkit.createInventory(null, 54, plugin.getMessageManager().getMessage("leaderboard.gui-title", player));
+        LeaderboardHubHolder holder = new LeaderboardHubHolder();
+        Inventory hubGUI = Bukkit.createInventory(holder, 54, plugin.getMessageManager().getMessage("leaderboard.gui-title", player));
+        holder.setInventory(hubGUI);
 
         createDisplayItem(hubGUI, Material.CLOCK, 20, Component.text("Playtime", NamedTextColor.GOLD), "playtime");
         createDisplayItem(hubGUI, Material.DIAMOND_SWORD, 21, Component.text("Player Kills", NamedTextColor.GOLD), "player_kills");

@@ -17,19 +17,22 @@ public class HomesGUIListener implements Listener {
 
     private final SMPTools plugin;
     private final String homesGuiTitle;
-    private final String deleteConfirmPrefix;
 
     public HomesGUIListener(SMPTools plugin) {
         this.plugin = plugin;
-        // Resolve configurable titles once at construction so renaming the GUI
-        // does not require code changes, and so we can match against them here.
+        // Resolve the configurable title once so renaming the GUI does not
+        // require code changes.
         this.homesGuiTitle = PlainTextComponentSerializer.plainText().serialize(
                 plugin.getMessageManager().getMessage("homes.gui-title"));
-        this.deleteConfirmPrefix = "Delete home '";
     }
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
+        if (event.getInventory().getHolder() instanceof HomeDeleteConfirmHolder) {
+            // Delete-confirmation GUIs are handled by the dedicated method
+            // below; ignore them here to avoid double-handling.
+            return;
+        }
         String titlePlain = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
         if (!titlePlain.equals(homesGuiTitle)) {
             return;
@@ -58,8 +61,7 @@ public class HomesGUIListener implements Listener {
 
     @EventHandler
     public void onDeleteConfirmationClick(InventoryClickEvent event) {
-        String titlePlain = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (!titlePlain.startsWith(deleteConfirmPrefix)) {
+        if (!(event.getInventory().getHolder() instanceof HomeDeleteConfirmHolder holder)) {
             return;
         }
 
@@ -72,24 +74,28 @@ public class HomesGUIListener implements Listener {
             return;
         }
 
-        String homeName = titlePlain
-                .substring(deleteConfirmPrefix.length(), titlePlain.length() - 2);
+        // Recover the home name from the holder rather than parsing it out
+        // of the inventory title, so the configurable
+        // homes.delete-confirm-title template can be renamed freely.
+        String homeName = holder.getHomeName();
 
         if (clickedItem.getType() == Material.GREEN_WOOL) {
-            // Confirm delete
             player.performCommand("delhome " + homeName);
             player.closeInventory();
-            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("homes.deleted-confirmation", player, Map.of("name", InputValidator.sanitizeMiniMessage(homeName))));
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage(
+                    "homes.deleted-confirmation", player,
+                    Map.of("name", InputValidator.sanitizeMiniMessage(homeName))));
         } else if (clickedItem.getType() == Material.RED_WOOL) {
-            // Cancel delete
             player.closeInventory();
         }
     }
 
     private void openDeleteConfirmation(Player player, String homeName) {
-        Inventory confirmationGUI = plugin.getServer().createInventory(null, 27,
+        HomeDeleteConfirmHolder holder = new HomeDeleteConfirmHolder(homeName);
+        Inventory confirmationGUI = plugin.getServer().createInventory(holder, 27,
                 plugin.getMessageManager().getMessage("homes.delete-confirm-title", player,
                         Map.of("name", InputValidator.sanitizeMiniMessage(homeName))));
+        holder.setInventory(confirmationGUI);
 
         ItemStack confirmItem = new ItemStack(Material.GREEN_WOOL);
         ItemMeta confirmMeta = confirmItem.getItemMeta();
