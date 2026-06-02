@@ -105,8 +105,8 @@ class AbstractPlayerCommandTest {
         }
 
         @Override
-        public String name() {
-            return "CONSOLE";
+        public Component name() {
+            return Component.text("CONSOLE");
         }
 
         @Override
