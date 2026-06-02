@@ -110,27 +110,13 @@ class AbstractPlayerCommandTest {
         }
 
         @Override
+        public String getName() {
+            return "CONSOLE";
+        }
+
+        @Override
         public CommandSender.Spigot spigot() {
             return new CommandSender.Spigot() {
-                @Override
-                public void sendMessage(net.kyori.adventure.text.Component message) {
-                    StubConsoleSender.this.sendMessage(message);
-                }
-
-                @Override
-                public void sendMessage(net.kyori.adventure.text.Component message, String s) {
-                    StubConsoleSender.this.sendMessage(message);
-                }
-
-                @Override
-                public void sendMessage(String s) {
-                    StubConsoleSender.this.sendMessage(s);
-                }
-
-                @Override
-                public void sendMessage(String[] strings) {
-                    StubConsoleSender.this.sendMessage(strings);
-                }
             };
         }
 
