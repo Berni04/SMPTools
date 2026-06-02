@@ -33,6 +33,12 @@ public class HomesGUIListener implements Listener {
             // below; ignore them here to avoid double-handling.
             return;
         }
+        // Skip the title fallback when the configured title is empty or
+        // blank, because an empty title would otherwise match any
+        // inventory whose plain-text title happens to also be empty.
+        if (homesGuiTitle == null || homesGuiTitle.isBlank()) {
+            return;
+        }
         String titlePlain = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
         if (!titlePlain.equals(homesGuiTitle)) {
             return;

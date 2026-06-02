@@ -47,7 +47,13 @@ public class LeaderboardGUIListener implements Listener {
         // way to recognise the hub regardless of the configured title.
         if (!(event.getInventory().getHolder() instanceof LeaderboardHubHolder)) {
             // Fallback: legacy title-based check (other plugins may open
-            // a similar GUI without our holder).
+            // a similar GUI without our holder). Skip the fallback when
+            // the configured title is empty or blank, because that would
+            // otherwise match any inventory whose plain-text title also
+            // happens to be empty.
+            if (hubTitle == null || hubTitle.isBlank()) {
+                return;
+            }
             if (!PlainTextComponentSerializer.plainText().serialize(event.getView().title()).equals(hubTitle)) {
                 return;
             }
@@ -76,7 +82,13 @@ public class LeaderboardGUIListener implements Listener {
 
         // Fallback: prefix-based check using the configurable
         // leaderboard.stat-title template. Renaming the template in
-        // messages.yml automatically updates this check.
+        // messages.yml automatically updates this check. The fallback is
+        // skipped when the prefix is empty or blank because every string
+        // starts with the empty string, which would otherwise cancel
+        // clicks in unrelated inventories.
+        if (statTitlePrefix == null || statTitlePrefix.isBlank()) {
+            return;
+        }
         if (!PlainTextComponentSerializer.plainText().serialize(event.getView().title()).startsWith(statTitlePrefix)) {
             return;
         }
