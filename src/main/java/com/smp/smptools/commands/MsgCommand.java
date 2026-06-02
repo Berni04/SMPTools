@@ -3,23 +3,12 @@ package com.smp.smptools.commands;
 import com.smp.smptools.SMPTools;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.command.Command;
 import org.bukkit.entity.Player;
 
 public class MsgCommand extends AbstractPlayerCommand {
-
-    /**
-     * MiniMessage instance with no registered tags. Used to render usage
-     * text containing literal {@code <player>} / {@code <message>} placeholders
-     * without those being parsed (and stripped) as unknown tags.
-     */
-    private static final MiniMessage LITERAL = MiniMessage.builder()
-            .tags(TagResolver.empty())
-            .build();
 
     public MsgCommand(SMPTools plugin) {
         super(plugin);
@@ -28,11 +17,12 @@ public class MsgCommand extends AbstractPlayerCommand {
     @Override
     protected boolean onPlayerCommand(Player senderPlayer, Command command, String label, String[] args) {
         if (args.length < 2) {
-            // Build the usage Component directly so the < and > around
-            // <player> and <message> survive without being interpreted as
-            // MiniMessage tags.
-            senderPlayer.sendMessage(LITERAL.deserialize("/msg <player> <message>")
-                    .color(NamedTextColor.RED));
+            // MiniMessage 4.25.0 keeps unknown tags (e.g. <player>, <message>)
+            // as literal text rather than stripping them, so the usage string
+            // can be passed through common.usage ({usage} placeholder) without
+            // escaping and the angle brackets render correctly.
+            senderPlayer.sendMessage(plugin.getMessageManager().getMessage("common.usage", senderPlayer,
+                    java.util.Map.of("usage", "/msg <player> <message>")));
             return true;
         }
 

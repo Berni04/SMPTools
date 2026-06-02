@@ -25,14 +25,20 @@ public class LeaderboardGUIListener implements Listener {
 
     private final SMPTools plugin;
     private final String hubTitle;
+    private final String statTitlePrefix;
 
     public LeaderboardGUIListener(SMPTools plugin) {
         this.plugin = plugin;
-        // Resolve the configurable hub title for fallback compatibility
-        // with other plugins that may open the same GUI without using
-        // our InventoryHolder.
+        // Resolve the configurable titles for fallback compatibility with
+        // other plugins that may open the same GUI without using our
+        // InventoryHolder. The stat-title prefix is derived by deserializing
+        // the template with {title} set to the empty string so the literal
+        // part of the template (e.g. "Top 10 - ") is captured.
         this.hubTitle = PlainTextComponentSerializer.plainText().serialize(
                 plugin.getMessageManager().getMessage("leaderboard.gui-title"));
+        this.statTitlePrefix = PlainTextComponentSerializer.plainText().serialize(
+                plugin.getMessageManager().getMessage("leaderboard.stat-title", null,
+                        Map.of("title", "")));
     }
 
     @EventHandler
@@ -68,10 +74,10 @@ public class LeaderboardGUIListener implements Listener {
             return;
         }
 
-        // Fallback: prefix-based check for compatibility with title-based
-        // detection (e.g. the {title} placeholder may have been empty or
-        // the GUI was opened by a third-party tool).
-        if (!PlainTextComponentSerializer.plainText().serialize(event.getView().title()).startsWith("Top 10 -")) {
+        // Fallback: prefix-based check using the configurable
+        // leaderboard.stat-title template. Renaming the template in
+        // messages.yml automatically updates this check.
+        if (!PlainTextComponentSerializer.plainText().serialize(event.getView().title()).startsWith(statTitlePrefix)) {
             return;
         }
         event.setCancelled(true);
