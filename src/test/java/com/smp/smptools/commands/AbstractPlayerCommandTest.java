@@ -186,5 +186,15 @@ class AbstractPlayerCommandTest {
         @Override
         public void recalculatePermissions() {
         }
+
+        @Override
+        public boolean isPermissionSet(@org.jetbrains.annotations.NotNull String name) {
+            return true;
+        }
+
+        @Override
+        public boolean isPermissionSet(@org.jetbrains.annotations.NotNull org.bukkit.permissions.Permission perm) {
+            return true;
+        }
     }
 }
