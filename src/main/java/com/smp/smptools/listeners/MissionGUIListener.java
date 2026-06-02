@@ -8,6 +8,7 @@ import com.smp.smptools.missions.RewardManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
@@ -22,6 +23,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class MissionGUIListener implements Listener {
@@ -144,12 +146,10 @@ public class MissionGUIListener implements Listener {
             if (currentAmount >= requiredAmount) {
                 removeItems(player, requiredMaterial, requiredAmount);
                 missionManager.forceCompleteMission(player, clickedMission.getId());
-                player.sendMessage(Component.text("Mission completed! Items submitted.", NamedTextColor.GREEN));
+                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.mission-completed-items"));
                 openCompletedMissionsGUI(player, isNpc);
             } else {
-                player.sendMessage(Component.text(
-                        "You don't have enough items! Need " + requiredAmount + " " + requiredMaterial.name(),
-                        NamedTextColor.RED));
+                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.not-enough-items", player, Map.of("amount", String.valueOf(requiredAmount), "material", requiredMaterial.name())));
                 player.closeInventory();
             }
         }
@@ -176,7 +176,7 @@ public class MissionGUIListener implements Listener {
 
             if (!isNpc) {
                 player.sendMessage(
-                        Component.text("Visit the Quest Master to claim your reward!", NamedTextColor.YELLOW));
+                        SMPTools.getInstance().getMessageManager().getMessage("missions.return-to-npc", player, Map.of("npc", "Quest Master")));
                 player.closeInventory();
                 return;
             }
@@ -196,13 +196,13 @@ public class MissionGUIListener implements Listener {
                 for (String reward : clickedMission.getRewards()) {
                     RewardManager.giveReward(player, reward);
                 }
-                player.sendMessage(Component.text("Reward claimed!", NamedTextColor.GREEN));
+                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-claimed", player));
                 playerData.getClaimedMissions().add(clickedMission.getId());
                 // Re-open the GUI to update the item state
                 openCompletedMissionsGUI(player, isNpc);
             }
         } else if (playerData.getClaimedMissions().contains(clickedMission.getId())) {
-            player.sendMessage(Component.text("You have already claimed this reward.", NamedTextColor.RED));
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-already-claimed"));
         }
     }
 
@@ -216,14 +216,13 @@ public class MissionGUIListener implements Listener {
         if (event.getCurrentItem().getType() == Material.GREEN_WOOL) {
             if (!missionManager.getPlayerData(player).getActiveMissions().isEmpty()) {
                 player.sendMessage(
-                        Component.text("You can only have one active mission at a time!", NamedTextColor.RED));
+                        SMPTools.getInstance().getMessageManager().getMessage("missions.only-one-active"));
                 player.closeInventory();
                 return;
             }
 
             missionManager.getPlayerData(player).getActiveMissions().add(clickedMission.getId());
-            player.sendMessage(Component.text("Mission Accepted: ", NamedTextColor.GOLD)
-                    .append(Component.text(clickedMission.getName().replace('&', '§'))));
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.mission-accepted", player, Map.of("mission_name", clickedMission.getName())));
             openInProgressMissionsGUI(player, isNpc);
         } else if (event.getCurrentItem().getType() == Material.RED_WOOL) {
             openAvailableMissionsGUI(player, isNpc);
@@ -274,7 +273,7 @@ public class MissionGUIListener implements Listener {
         MissionManager.PlayerMissionData playerData = missionManager.getPlayerData(player);
         playerData.getClaimedMissions().add(missionId);
         player.closeInventory();
-        player.sendMessage(Component.text("Chromatic Elytra received!", NamedTextColor.GOLD));
+        player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.chromatic-elytra-received"));
     }
 
     private void handleQuestlineSelectionClick(InventoryClickEvent event, Player player) {
@@ -299,7 +298,7 @@ public class MissionGUIListener implements Listener {
             MissionManager.PlayerMissionData playerData = missionManager.getPlayerData(player);
             playerData.setSelectedQuestline(questline);
             missionManager.savePlayerData(); // Save immediately
-            player.sendMessage(Component.text("You have chosen your path!", NamedTextColor.GREEN));
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.path-chosen"));
             openMissionGUI(player, true, questline);
         }
     }
@@ -355,7 +354,7 @@ public class MissionGUIListener implements Listener {
                 }
 
                 if (prerequisitesMet) {
-                    gui.addItem(createMissionItem(mission, 0, MissionStatus.AVAILABLE, false));
+                    gui.addItem(createMissionItem(mission, 0, MissionStatus.AVAILABLE, false, player));
                 }
             }
         }
@@ -383,7 +382,7 @@ public class MissionGUIListener implements Listener {
             if (mission.getType() == MissionType.SUBMIT_ITEM) {
                 progress = countItems(player, Material.valueOf(mission.getObjective()));
             }
-            gui.addItem(createMissionItem(mission, progress, MissionStatus.IN_PROGRESS, false));
+            gui.addItem(createMissionItem(mission, progress, MissionStatus.IN_PROGRESS, false, player));
         }
         addBackButton(gui, 49);
         player.openInventory(gui);
@@ -406,7 +405,7 @@ public class MissionGUIListener implements Listener {
                 continue;
 
             boolean isClaimed = playerData.getClaimedMissions().contains(missionId);
-            gui.addItem(createMissionItem(mission, mission.getAmount(), MissionStatus.COMPLETED, isClaimed));
+            gui.addItem(createMissionItem(mission, mission.getAmount(), MissionStatus.COMPLETED, isClaimed, player));
         }
         addBackButton(gui, 49);
         player.openInventory(gui);
@@ -460,7 +459,7 @@ public class MissionGUIListener implements Listener {
     }
 
     private static ItemStack createMissionItem(Mission mission, int currentProgress, MissionStatus status,
-            boolean isClaimed) {
+            boolean isClaimed, Player player) {
         boolean isClaimable = currentProgress >= mission.getAmount();
         Material material;
         if (status == MissionStatus.COMPLETED) {
@@ -472,46 +471,52 @@ public class MissionGUIListener implements Listener {
 
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text(mission.getName().replace('&', '§')));
+        meta.displayName(legacy(mission.getName()));
         List<Component> lore = new ArrayList<>();
-        lore.add(Component.text(mission.getDescription().replace('&', '§'), NamedTextColor.GRAY));
+                lore.add(legacy(mission.getDescription()));
         lore.add(Component.text(""));
         if (status != MissionStatus.AVAILABLE) {
             double percentage = Math.min(1.0, (double) currentProgress / mission.getAmount());
-            lore.add(Component.text("Progress: " + currentProgress + " / " + mission.getAmount(),
-                    NamedTextColor.YELLOW));
-            lore.add(Component.text(createProgressBar(percentage)));
+            lore.add(SMPTools.getInstance().getMessageManager().getMessage("missions.progress", player,
+                    Map.of("current", String.valueOf(currentProgress), "total", String.valueOf(mission.getAmount()))));
+            lore.add(LEGACY.deserialize(createProgressBar(percentage)));
             lore.add(Component.text(""));
         }
         switch (status) {
             case AVAILABLE:
-                lore.add(Component.text(">» Click to accept mission!", NamedTextColor.GREEN));
+                lore.add(SMPTools.getInstance().getMessageManager().getMessage("missions.click-accept", player));
                 break;
             case COMPLETED:
                 if (isClaimed) {
-                    lore.add(Component.text("Reward Claimed", NamedTextColor.RED, TextDecoration.BOLD));
+                    lore.add(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-claimed-label", player));
                 } else {
-                    lore.add(Component.text(">» Click to claim reward!", NamedTextColor.GREEN, TextDecoration.BOLD));
+                    lore.add(SMPTools.getInstance().getMessageManager().getMessage("missions.click-claim", player));
                     meta.addEnchant(Enchantment.LUCK_OF_THE_SEA, 1, true);
                     meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                 }
                 break;
             case IN_PROGRESS:
-                lore.add(Component.text("Status: In Progress", NamedTextColor.YELLOW));
+                lore.add(SMPTools.getInstance().getMessageManager().getMessage("missions.status-in-progress", player));
                 break;
         }
-        lore.add(Component.text("mission_id:" + mission.getId(), NamedTextColor.DARK_GRAY)
-                .decoration(TextDecoration.ITALIC, false));
+        lore.add(LEGACY.deserialize(SMPTools.getInstance().getMessageManager().getRawMessage("missions.mission-id-lore")
+                .replace("{id}", mission.getId())));
         meta.lore(lore);
         item.setItemMeta(meta);
         return item;
     }
 
+    private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacySection();
+
+    private static Component legacy(String text) {
+        return LEGACY.deserialize(text.replace('&', '§'));
+    }
+
     private static ItemStack createGuiItem(Material material, String name, List<String> lore) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text(name.replace('&', '§')));
-        meta.lore(lore.stream().map(l -> Component.text(l.replace('&', '§'))).collect(Collectors.toList()));
+        meta.displayName(legacy(name));
+        meta.lore(lore.stream().map(MissionGUIListener::legacy).collect(Collectors.toList()));
         item.setItemMeta(meta);
         return item;
     }

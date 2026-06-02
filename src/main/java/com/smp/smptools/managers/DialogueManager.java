@@ -48,7 +48,7 @@ public class DialogueManager {
 
     public void startDialogue(Player player, Entity npc, String dialogueId) {
         if (dialogueConfig.getConfigurationSection("dialogues." + dialogueId) == null) {
-            player.sendMessage(Component.text("This NPC has nothing to say.", NamedTextColor.RED));
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("dialogue.no-dialogue"));
             return;
         }
 
@@ -145,7 +145,7 @@ public class DialogueManager {
     public void handleOptionSelection(Player player, String dialogueId, String lineId, int optionIndex) {
         if (!playerCurrentDialogue.containsKey(player.getUniqueId())
                 || !playerCurrentDialogue.get(player.getUniqueId()).equals(dialogueId)) {
-            player.sendMessage(Component.text("This dialogue has expired.", NamedTextColor.RED));
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("dialogue.expired"));
             return;
         }
 
@@ -156,7 +156,7 @@ public class DialogueManager {
 
         java.util.List<java.util.Map<?, ?>> options = dialogueConfig.getMapList(path);
         if (optionIndex < 0 || optionIndex >= options.size()) {
-            player.sendMessage(Component.text("Invalid option.", NamedTextColor.RED));
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("dialogue.invalid-option"));
             return;
         }
 

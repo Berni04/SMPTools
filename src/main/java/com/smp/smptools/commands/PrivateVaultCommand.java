@@ -1,13 +1,8 @@
 package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -21,22 +16,14 @@ import java.io.IOException;
 import java.util.Base64;
 import java.util.UUID;
 
-public class PrivateVaultCommand implements CommandExecutor {
-
-    private final SMPTools plugin;
+public class PrivateVaultCommand extends AbstractPlayerCommand {
 
     public PrivateVaultCommand(SMPTools plugin) {
-        this.plugin = plugin;
+        super(plugin);
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(Component.text("Only players can use this command!", NamedTextColor.RED));
-            return true;
-        }
-
-        Player player = (Player) sender;
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
         UUID playerUUID = player.getUniqueId();
         FileConfiguration config = plugin.getConfig();
 
@@ -47,9 +34,8 @@ public class PrivateVaultCommand implements CommandExecutor {
                 vaultSize = 54;
             }
 
-            Inventory vault = Bukkit.createInventory(null, vaultSize, Component.text("Private Vault", TextColor.fromHexString("#5B2C6F")));
+            Inventory vault = Bukkit.createInventory(null, vaultSize, plugin.getMessageManager().getMessage("vault.gui-title", player));
 
-            // Load items from config
             String encodedInventory = config.getString("privatevaults." + playerUUID.toString());
             if (encodedInventory != null && !encodedInventory.isEmpty()) {
                 try {
@@ -62,9 +48,9 @@ public class PrivateVaultCommand implements CommandExecutor {
             }
 
             player.openInventory(vault);
-            player.sendMessage(Component.text("Opened your private vault.", NamedTextColor.GREEN));
+            player.sendMessage(plugin.getMessageManager().getMessage("vault.opened"));
         } else {
-            player.sendMessage(Component.text("You don't have permission to use this command.", NamedTextColor.RED));
+            player.sendMessage(plugin.getMessageManager().getMessage("common.no-permission"));
         }
         return true;
     }

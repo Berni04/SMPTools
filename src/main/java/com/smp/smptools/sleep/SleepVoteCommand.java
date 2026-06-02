@@ -1,31 +1,25 @@
 package com.smp.smptools.sleep;
 
 import com.smp.smptools.SMPTools;
+import com.smp.smptools.commands.AbstractPlayerCommand;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-public class SleepVoteCommand implements CommandExecutor {
+public class SleepVoteCommand extends AbstractPlayerCommand {
 
     private final SleepManager sleepManager;
 
     public SleepVoteCommand(SMPTools plugin) {
+        super(plugin);
         this.sleepManager = plugin.getSleepManager();
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage("This command can only be used by players.");
-            return true;
-        }
-
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
         if (args.length == 0) {
-            return false; // Should not happen with clickable chat
+            return false;
         }
 
-        Player player = (Player) sender;
         String vote = args[0].toLowerCase();
 
         if (vote.equals("accept")) {

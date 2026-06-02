@@ -1,39 +1,25 @@
 package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.jetbrains.annotations.NotNull;
 
-public class NPCCommand implements CommandExecutor {
-
-    private final SMPTools plugin;
+public class NPCCommand extends AbstractPlayerCommand {
 
     public NPCCommand(SMPTools plugin) {
-        this.plugin = plugin;
+        super(plugin);
     }
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
-            @NotNull String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(Component.text("Only players can use this command.", NamedTextColor.RED));
-            return true;
-        }
-
-        Player player = (Player) sender;
-
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
         if (!player.hasPermission("smptools.npc.admin")) {
-            player.sendMessage(Component.text("You do not have permission to use this command.", NamedTextColor.RED));
+            player.sendMessage(plugin.getMessageManager().getMessage("common.no-permission"));
             return true;
         }
 
         if (args.length == 0) {
-            player.sendMessage(Component.text("Usage: /npc <spawn|remove|reload>", NamedTextColor.RED));
+            player.sendMessage(plugin.getMessageManager().getMessage("common.usage", player,
+                    java.util.Map.of("usage", "/npc <spawn|remove|reload>")));
             return true;
         }
 
@@ -42,8 +28,8 @@ public class NPCCommand implements CommandExecutor {
         switch (subCommand) {
             case "spawn":
                 if (args.length < 2) {
-                    player.sendMessage(
-                            Component.text("Usage: /npc spawn <id> [type] [skin] [name]", NamedTextColor.RED));
+                    player.sendMessage(plugin.getMessageManager().getMessage("common.usage", player,
+                            java.util.Map.of("usage", "/npc spawn <id> [type] [skin] [name]")));
                     return true;
                 }
                 String id = args[1];
@@ -51,7 +37,6 @@ public class NPCCommand implements CommandExecutor {
                 String skin = args.length > 3 ? args[3] : "Steve";
                 String name = null;
                 if (args.length > 4) {
-                    // Join remaining args for name
                     StringBuilder nameBuilder = new StringBuilder();
                     for (int i = 4; i < args.length; i++) {
                         nameBuilder.append(args[i]).append(" ");
@@ -60,28 +45,31 @@ public class NPCCommand implements CommandExecutor {
                 }
 
                 plugin.getNPCManager().createNPC(id, player.getLocation(), type, skin, name);
-                player.sendMessage(Component.text("NPC " + id + " spawned!", NamedTextColor.GREEN));
+                player.sendMessage(plugin.getMessageManager().getMessage("npc.spawned", player,
+                        java.util.Map.of("id", id)));
                 break;
 
             case "remove":
                 if (args.length < 2) {
-                    player.sendMessage(Component.text("Usage: /npc remove <id>", NamedTextColor.RED));
+                    player.sendMessage(plugin.getMessageManager().getMessage("common.usage", player,
+                            java.util.Map.of("usage", "/npc remove <id>")));
                     return true;
                 }
                 String removeId = args[1];
                 plugin.getNPCManager().removeNPC(removeId);
-                player.sendMessage(Component.text("NPC " + removeId + " removed!", NamedTextColor.GREEN));
+                player.sendMessage(plugin.getMessageManager().getMessage("npc.removed", player,
+                        java.util.Map.of("id", removeId)));
                 break;
 
             case "reload":
                 plugin.getNPCManager().loadNPCs();
-                player.sendMessage(Component.text("NPCs reloaded!", NamedTextColor.GREEN));
+                player.sendMessage(plugin.getMessageManager().getMessage("npc.reloaded"));
                 break;
 
             case "respond":
                 if (args.length < 3) {
-                    player.sendMessage(Component.text("Usage: /npc respond <dialogueId> <lineId> <optionIndex>",
-                            NamedTextColor.RED));
+                    player.sendMessage(plugin.getMessageManager().getMessage("common.usage", player,
+                            java.util.Map.of("usage", "/npc respond <dialogueId> <lineId> <optionIndex>")));
                     return true;
                 }
                 String dialogueId = args[1];
@@ -90,14 +78,15 @@ public class NPCCommand implements CommandExecutor {
                 try {
                     optionIndex = Integer.parseInt(args[3]);
                 } catch (NumberFormatException e) {
-                    player.sendMessage(Component.text("Invalid option index.", NamedTextColor.RED));
+                    player.sendMessage(plugin.getMessageManager().getMessage("npc.invalid-option-index"));
                     return true;
                 }
                 plugin.getDialogueManager().handleOptionSelection(player, dialogueId, lineId, optionIndex);
                 break;
 
             default:
-                player.sendMessage(Component.text("Unknown subcommand.", NamedTextColor.RED));
+                player.sendMessage(plugin.getMessageManager().getMessage("common.unknown-subcommand", player,
+                        java.util.Map.of("usage", "/npc <spawn|remove|reload>")));
                 break;
         }
 

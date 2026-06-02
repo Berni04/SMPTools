@@ -2,46 +2,34 @@ package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.christmas.SecretSantaManager;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class SecretSantaCommand implements CommandExecutor, Listener {
+public class SecretSantaCommand extends AbstractPlayerCommand implements Listener {
 
-    private final SMPTools plugin;
     private final SecretSantaManager manager;
-    private final Map<UUID, UUID> depositSessions = new HashMap<>(); // Santa -> Target
+    private final Map<UUID, UUID> depositSessions = new HashMap<>();
 
     public SecretSantaCommand(SMPTools plugin, SecretSantaManager manager) {
-        this.plugin = plugin;
+        super(plugin);
         this.manager = manager;
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
-            @NotNull String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage("Only players can use this command.");
-            return true;
-        }
-
-        Player player = (Player) sender;
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
         if (args.length == 0) {
             sendHelp(player);
             return true;
@@ -53,50 +41,44 @@ public class SecretSantaCommand implements CommandExecutor, Listener {
         switch (sub) {
             case "join":
                 if (phase != SecretSantaManager.Phase.REGISTRATION) {
-                    player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Registration is closed!</red>"));
+                    player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.registration-closed"));
                     return true;
                 }
                 if (manager.isRegistered(player.getUniqueId())) {
-                    player.sendMessage(MiniMessage.miniMessage().deserialize("<red>You are already registered!</red>"));
+                    player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.already-registered"));
                     return true;
                 }
                 manager.registerPlayer(player.getUniqueId());
-                player.sendMessage(MiniMessage.miniMessage().deserialize(
-                        "<green>You have joined Secret Santa! Come back on Dec 15th to see who your target is.</green>"));
+                player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.registered"));
                 break;
 
             case "target":
                 if (phase == SecretSantaManager.Phase.REGISTRATION) {
-                    player.sendMessage(MiniMessage.miniMessage()
-                            .deserialize("<red>Targets haven't been assigned yet! Wait until Dec 15th.</red>"));
+                    player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.registration-closed"));
                     return true;
                 }
                 UUID targetUUID = manager.getTarget(player.getUniqueId());
                 if (targetUUID == null) {
-                    player.sendMessage(MiniMessage.miniMessage()
-                            .deserialize("<red>You don't have a target! Did you register?</red>"));
+                    player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.not-registered"));
                     return true;
                 }
                 OfflinePlayer target = Bukkit.getOfflinePlayer(targetUUID);
-                player.sendMessage(MiniMessage.miniMessage().deserialize(
-                        "<green>You are the Secret Santa for: <gold>" + target.getName() + "</gold>!</green>"));
+                player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.assignment", player,
+                        Map.of("target", String.valueOf(target.getName()))));
                 break;
 
             case "deposit":
                 if (phase != SecretSantaManager.Phase.PREPARATION) {
-                    player.sendMessage(MiniMessage.miniMessage()
-                            .deserialize("<red>You can only deposit gifts between Dec 15th and Dec 24th!</red>"));
+                    player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.registration-closed"));
                     return true;
                 }
                 UUID depositTarget = manager.getTarget(player.getUniqueId());
                 if (depositTarget == null) {
-                    player.sendMessage(
-                            MiniMessage.miniMessage().deserialize("<red>You are not part of Secret Santa.</red>"));
+                    player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.not-registered"));
                     return true;
                 }
                 if (manager.hasGiftDeposited(depositTarget)) {
-                    player.sendMessage(MiniMessage.miniMessage().deserialize(
-                            "<red>You have already deposited a gift! Contact an admin if you need to change it.</red>"));
+                    player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.already-registered"));
                     return true;
                 }
                 openDepositGUI(player, depositTarget);
@@ -104,17 +86,14 @@ public class SecretSantaCommand implements CommandExecutor, Listener {
 
             case "claim":
                 if (phase != SecretSantaManager.Phase.CELEBRATION) {
-                    player.sendMessage(MiniMessage.miniMessage()
-                            .deserialize("<red>You can't claim your gift yet! Wait until Christmas Day.</red>"));
+                    player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.registration-closed"));
                     return true;
                 }
                 ItemStack[] gift = manager.getGift(player.getUniqueId());
                 if (gift == null || gift.length == 0) {
-                    player.sendMessage(MiniMessage.miniMessage()
-                            .deserialize("<red>Your Secret Santa didn't leave you a gift... :(</red>"));
+                    player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.not-registered"));
                     return true;
                 }
-                // Simple claim logic: dump in inventory or drop at feet
                 for (ItemStack item : gift) {
                     if (item != null && item.getType() != Material.AIR) {
                         HashMap<Integer, ItemStack> left = player.getInventory().addItem(item);
@@ -123,20 +102,17 @@ public class SecretSantaCommand implements CommandExecutor, Listener {
                         }
                     }
                 }
-                player.sendMessage(MiniMessage.miniMessage()
-                        .deserialize("<green>Merry Christmas! You claimed your gift!</green>"));
-                // Prevent double claiming logic could be added here, but for now we assume good
-                // faith or add a 'claimed' flag in manager if needed.
+                player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.gift-deposited"));
                 break;
 
             case "admin":
                 if (!player.hasPermission("smptools.admin")) {
-                    player.sendMessage(MiniMessage.miniMessage().deserialize("<red>No permission.</red>"));
+                    player.sendMessage(plugin.getMessageManager().getMessage("common.no-permission"));
                     return true;
                 }
                 if (args.length > 1 && args[1].equalsIgnoreCase("start")) {
                     manager.generateMatches();
-                    player.sendMessage(MiniMessage.miniMessage().deserialize("<green>Matches generated!</green>"));
+                    player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.matches-generated"));
                 }
                 break;
 
@@ -148,20 +124,17 @@ public class SecretSantaCommand implements CommandExecutor, Listener {
     }
 
     private void sendHelp(Player player) {
-        player.sendMessage(MiniMessage.miniMessage().deserialize("<gold>--- Secret Santa ---</gold>"));
-        player.sendMessage(MiniMessage.miniMessage()
-                .deserialize("<yellow>/secretsanta join</yellow> - Join the event (Dec 1-15)"));
-        player.sendMessage(MiniMessage.miniMessage()
-                .deserialize("<yellow>/secretsanta target</yellow> - See who you are gifting to"));
-        player.sendMessage(
-                MiniMessage.miniMessage().deserialize("<yellow>/secretsanta deposit</yellow> - Deposit your gift"));
-        player.sendMessage(MiniMessage.miniMessage()
-                .deserialize("<yellow>/secretsanta claim</yellow> - Claim your gift (Dec 25)"));
+        player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.help-header", player));
+        player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.help-join", player));
+        player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.help-target", player));
+        player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.help-deposit", player));
+        player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.help-claim", player));
     }
 
     private void openDepositGUI(Player player, UUID targetUUID) {
-        Inventory gui = Bukkit.createInventory(null, 27, MiniMessage.miniMessage()
-                .deserialize("Deposit Gift for " + Bukkit.getOfflinePlayer(targetUUID).getName()));
+        Inventory gui = Bukkit.createInventory(null, 27,
+                plugin.getMessageManager().getMessage("secret-santa.deposit-gui-title", player,
+                        Map.of("target", String.valueOf(Bukkit.getOfflinePlayer(targetUUID).getName()))));
         depositSessions.put(player.getUniqueId(), targetUUID);
         player.openInventory(gui);
     }
@@ -172,14 +145,14 @@ public class SecretSantaCommand implements CommandExecutor, Listener {
             UUID target = depositSessions.remove(event.getPlayer().getUniqueId());
             Inventory inv = event.getInventory();
 
-            // Check if title matches (simple check)
-            if (!event.getView().title().toString().contains("Deposit Gift"))
+            String titlePrefix = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
+                    .plainText().serialize(plugin.getMessageManager().getMessage("secret-santa.deposit-gui-prefix"));
+            if (!event.getView().title().toString().contains(titlePrefix))
                 return;
 
             ItemStack[] items = inv.getContents();
             manager.depositGift(target, items);
-            event.getPlayer().sendMessage(MiniMessage.miniMessage()
-                    .deserialize("<green>Gift deposited safely! Your Secret Santa duty is done.</green>"));
+            event.getPlayer().sendMessage(plugin.getMessageManager().getMessage("secret-santa.gift-deposited"));
         }
     }
 }

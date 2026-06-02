@@ -1,29 +1,21 @@
 package com.smp.smptools.commands;
 
+import com.smp.smptools.SMPTools;
 import com.smp.smptools.listeners.AdventGUIListener;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.jetbrains.annotations.NotNull;
 
-public class AdventCommand implements CommandExecutor {
+public class AdventCommand extends AbstractPlayerCommand {
 
     private final AdventGUIListener guiListener;
 
-    public AdventCommand(AdventGUIListener guiListener) {
+    public AdventCommand(SMPTools plugin, AdventGUIListener guiListener) {
+        super(plugin);
         this.guiListener = guiListener;
     }
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
-            @NotNull String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage("Only players can use this command.");
-            return true;
-        }
-
-        Player player = (Player) sender;
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
         guiListener.openAdventGUI(player);
         return true;
     }

@@ -3,6 +3,7 @@ package com.smp.smptools.christmas;
 import com.smp.smptools.SMPTools;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
@@ -56,7 +57,7 @@ public class KrampusManager {
 
         // Name
         String name = christmasConfig.getString("krampus.name", "&c&lKrampus");
-        krampus.customName(Component.text(name.replace("&", "§"))); // Simple color code support
+        krampus.customName(LegacyComponentSerializer.legacySection().deserialize(name.replace("&", "§")));
         krampus.setCustomNameVisible(true);
 
         // Equipment
@@ -88,8 +89,7 @@ public class KrampusManager {
 
         // Teleport
         player.teleport(cageLoc.clone().add(0.5, 1, 0.5));
-        player.sendMessage(
-                Component.text("You have been kidnapped by Krampus! Defeat the guards to escape!", NamedTextColor.RED));
+        player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("krampus.kidnapped"));
 
         // Spawn Guards
         Set<UUID> guards = new HashSet<>();
@@ -112,7 +112,7 @@ public class KrampusManager {
                     playerGuards.remove(player.getUniqueId());
                 } else {
                     player.sendMessage(
-                            Component.text("Guard defeated! " + guards.size() + " remaining!", NamedTextColor.YELLOW));
+                            SMPTools.getInstance().getMessageManager().getMessage("krampus.guard-defeated").replaceText(builder -> builder.matchLiteral("{remaining}").replacement(String.valueOf(guards.size()))));
                 }
             }
         }
@@ -124,7 +124,7 @@ public class KrampusManager {
 
         Location originalLoc = kidnappedPlayers.remove(player.getUniqueId());
         player.teleport(originalLoc);
-        player.sendMessage(Component.text("You have escaped Krampus's cage!", NamedTextColor.GREEN));
+        player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("krampus.escaped"));
 
         // Cleanup cage (optional, simple removal)
         Location cageLoc = player.getLocation().clone().add(0, 50, 0); // Logic needs to track cage loc if moving, but

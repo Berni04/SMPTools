@@ -1,27 +1,23 @@
 package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
-import net.kyori.adventure.text.Component;
+import com.smp.smptools.utils.InputValidator;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-public class ColorCommand implements CommandExecutor {
+import java.util.Map;
+
+public class ColorCommand extends AbstractPlayerCommand {
+
+    public ColorCommand(SMPTools plugin) {
+        super(plugin);
+    }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage("Only players can use this command!");
-            return true;
-        }
-
-        Player player = (Player) sender;
-        SMPTools plugin = SMPTools.getInstance();
-
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
         if (args.length == 0) {
-            player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Usage: /color <<color>|clear></red>"));
+            player.sendMessage(plugin.getMessageManager().getMessage("common.usage", player, Map.of("usage", "/color <color|clear>")));
             return true;
         }
 
@@ -31,17 +27,23 @@ public class ColorCommand implements CommandExecutor {
             plugin.getStatsConfig().set("players." + player.getUniqueId() + ".name-color", null);
             plugin.saveStatsConfig();
             plugin.getNameTagListener().updatePlayerName(player);
-            player.sendMessage(MiniMessage.miniMessage().deserialize("<green>Your name color has been cleared.</green>"));
+            player.sendMessage(plugin.getMessageManager().getMessage("color.cleared"));
             return true;
         }
 
-        // For a color, we should probably only allow a single color tag, but for now we'll allow any format
-        plugin.getStatsConfig().set("players." + player.getUniqueId() + ".name-color", colorInput);
+        String sanitizedColor = InputValidator.sanitizeMiniMessage(colorInput);
+        try {
+            MiniMessage.miniMessage().deserialize(sanitizedColor);
+        } catch (Exception e) {
+            player.sendMessage(plugin.getMessageManager().getMessage("color.invalid", player));
+            return true;
+        }
+
+        plugin.getStatsConfig().set("players." + player.getUniqueId() + ".name-color", sanitizedColor);
         plugin.saveStatsConfig();
         plugin.getNameTagListener().updatePlayerName(player);
 
-        Component colorPreview = MiniMessage.miniMessage().deserialize(colorInput + player.getName());
-        player.sendMessage(Component.text("Your name color has been set to: ").append(colorPreview));
+        player.sendMessage(plugin.getMessageManager().getMessage("color.set", player, Map.of("color", sanitizedColor)));
 
         return true;
     }

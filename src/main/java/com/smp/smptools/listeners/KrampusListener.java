@@ -63,7 +63,7 @@ public class KrampusListener implements Listener {
                 // Blindness
                 if (random.nextDouble() < 0.2) {
                     player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1));
-                    player.sendMessage(Component.text("Darkness consumes you...", NamedTextColor.DARK_GRAY));
+                    player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("krampus.darkness"));
                 }
 
                 // Kidnap Check (Lethal Damage)

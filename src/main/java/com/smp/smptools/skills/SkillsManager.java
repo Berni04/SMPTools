@@ -63,7 +63,8 @@ public class SkillsManager {
         while (newExp >= expToNextLevel) {
             newExp -= expToNextLevel;
             currentLevel++;
-            player.sendMessage("§aYour " + skill.getDisplayName() + " skill has reached level " + currentLevel + "!");
+            player.sendMessage(plugin.getMessageManager().getMessage("skills.level-up", player,
+                    java.util.Map.of("skill_name", skill.getDisplayName(), "level", String.valueOf(currentLevel))));
             expToNextLevel = getExpToNextLevel(currentLevel);
         }
 
@@ -229,10 +230,10 @@ public class SkillsManager {
 
                 if (rarityRoll < 0.05) {
                     itemString = rare.get(random.nextInt(rare.size()));
-                    player.sendMessage("§6§lRARE! §eYou found a rare treasure!");
+                    player.sendMessage(plugin.getMessageManager().getMessage("skills.rare-treasure"));
                 } else if (rarityRoll < 0.25) {
                     itemString = uncommon.get(random.nextInt(uncommon.size()));
-                    player.sendMessage("§aYou found an uncommon treasure!");
+                    player.sendMessage(plugin.getMessageManager().getMessage("skills.uncommon-treasure"));
                 } else {
                     itemString = common.get(random.nextInt(common.size()));
                 }
@@ -316,7 +317,8 @@ public class SkillsManager {
 
             if (random.nextDouble() < chance) {
                 double multiplier = parseDamageMultiplier(damageMultiplierFormula, level);
-                player.sendMessage("§c§lCRITICAL STRIKE! §r§7(" + String.format("%.1f", multiplier) + "x Damage)");
+                player.sendMessage(plugin.getMessageManager().getMessage("skills.critical-strike", player,
+                        java.util.Map.of("multiplier", String.format("%.1f", multiplier))));
                 return baseDamage * multiplier;
             }
         } catch (Exception e) {

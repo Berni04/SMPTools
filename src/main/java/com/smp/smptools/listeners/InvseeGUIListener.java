@@ -70,20 +70,21 @@ public class InvseeGUIListener implements Listener {
         }
 
         // --- Add Labels for Armor and Off-hand ---
-        invseeGUI.setItem(9, createLabel(Material.LEATHER_HELMET, "<gold>Helmet</gold>"));
-        invseeGUI.setItem(10, createLabel(Material.LEATHER_CHESTPLATE, "<gold>Chestplate</gold>"));
-        invseeGUI.setItem(11, createLabel(Material.LEATHER_LEGGINGS, "<gold>Leggings</gold>"));
-        invseeGUI.setItem(12, createLabel(Material.LEATHER_BOOTS, "<gold>Boots</gold>"));
-        invseeGUI.setItem(17, createLabel(Material.SHIELD, "<gold>Off-hand</gold>")); // Label for off-hand
+        invseeGUI.setItem(9, createLabel(Material.LEATHER_HELMET, "<gold>Helmet</gold>", SMPTools.getInstance()));
+        invseeGUI.setItem(10, createLabel(Material.LEATHER_CHESTPLATE, "<gold>Chestplate</gold>", SMPTools.getInstance()));
+        invseeGUI.setItem(11, createLabel(Material.LEATHER_LEGGINGS, "<gold>Leggings</gold>", SMPTools.getInstance()));
+        invseeGUI.setItem(12, createLabel(Material.LEATHER_BOOTS, "<gold>Boots</gold>", SMPTools.getInstance()));
+        invseeGUI.setItem(17, createLabel(Material.SHIELD, "<gold>Off-hand</gold>", SMPTools.getInstance())); // Label for off-hand
 
         opener.openInventory(invseeGUI);
     }
 
-    private static ItemStack createLabel(Material material, String name) {
+    private static ItemStack createLabel(Material material, String name, SMPTools plugin) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         meta.displayName(MiniMessage.miniMessage().deserialize(name));
-        meta.lore(Collections.singletonList(MiniMessage.miniMessage().deserialize("<gray>Armor Slot</gray>")));
+        meta.lore(Collections.singletonList(
+                plugin.getMessageManager().getMessage("invsee.armor-slot-lore")));
         item.setItemMeta(meta);
         return item;
     }

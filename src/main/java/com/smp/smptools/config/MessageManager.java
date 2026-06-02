@@ -90,6 +90,30 @@ public class MessageManager {
     }
 
     /**
+     * Gets the raw string message from the configuration without parsing.
+     * Useful when the caller wants to deserialize via a different serializer
+     * (e.g. {@code MiniMessage.deserialize(...)} or for lore/displayName fields).
+     *
+     * @param path the message path in messages.yml
+     * @return the raw MiniMessage template string, or empty string if not found
+     */
+    public String getRawMessage(String path) {
+        String msg = messagesConfig.getString(path, "");
+        return msg == null ? "" : msg;
+    }
+
+    /**
+     * Gets a string list from the messages configuration.
+     *
+     * @param path the message path in messages.yml
+     * @return the list of strings, or empty list if not found
+     */
+    public java.util.List<String> getStringList(String path) {
+        java.util.List<String> list = messagesConfig.getStringList(path);
+        return list == null ? java.util.Collections.emptyList() : list;
+    }
+
+    /**
      * Builds a TagResolver with all player-related dynamic tags.
      *
      * @param player the player to build tags for

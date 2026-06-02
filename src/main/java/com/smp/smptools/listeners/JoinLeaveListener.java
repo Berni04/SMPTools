@@ -1,8 +1,6 @@
 package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -20,17 +18,13 @@ public class JoinLeaveListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        Component displayName = plugin.getChatManager().getFormattedDisplayName(player);
-        Component joinMessage = displayName.append(Component.text(" has joined the server.", NamedTextColor.YELLOW));
-        event.joinMessage(joinMessage);
+        event.joinMessage(SMPTools.getInstance().getMessageManager().getMessage("join-leave.joined", player));
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        Component displayName = plugin.getChatManager().getFormattedDisplayName(player);
-        Component quitMessage = displayName.append(Component.text(" has left the server.", NamedTextColor.YELLOW));
-        event.quitMessage(quitMessage);
+        event.quitMessage(SMPTools.getInstance().getMessageManager().getMessage("join-leave.left", player));
 
         // Update playtime on quit
         long totalTicks = player.getStatistic(org.bukkit.Statistic.PLAY_ONE_MINUTE);

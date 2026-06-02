@@ -1,51 +1,40 @@
 package com.smp.smptools.commands;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
+import com.smp.smptools.SMPTools;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-public class PingCommand implements CommandExecutor {
+import java.util.Map;
+
+public class PingCommand extends AbstractPlayerCommand {
+
+    public PingCommand(SMPTools plugin) {
+        super(plugin);
+    }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(Component.text("Only players can use this command!", NamedTextColor.RED));
-            return true;
-        }
-
-        Player target = (Player) sender;
-
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
         if (args.length > 0) {
             Player foundPlayer = org.bukkit.Bukkit.getPlayer(args[0]);
             if (foundPlayer == null) {
-                sender.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
+                player.sendMessage(plugin.getMessageManager().getMessage("common.player-not-found"));
                 return true;
             }
-            target = foundPlayer;
-        }
-
-        int ping = target.getPing();
-
-        NamedTextColor color;
-        if (ping < 50) {
-            color = NamedTextColor.GREEN;
-        } else if (ping < 100) {
-            color = NamedTextColor.YELLOW;
+            showPing(player, foundPlayer);
         } else {
-            color = NamedTextColor.RED;
-        }
-
-        if (target.equals(sender)) {
-            sender.sendMessage(Component.text("Your ping is: ", NamedTextColor.GRAY)
-                    .append(Component.text(ping + "ms", color)));
-        } else {
-            sender.sendMessage(Component.text(target.getName() + "'s ping is: ", NamedTextColor.GRAY)
-                    .append(Component.text(ping + "ms", color)));
+            showPing(player, player);
         }
 
         return true;
+    }
+
+    private void showPing(Player requester, Player target) {
+        int ping = target.getPing();
+
+        if (target.equals(requester)) {
+            requester.sendMessage(plugin.getMessageManager().getMessage("ping.your-ping", requester, Map.of("ping", String.valueOf(ping))));
+        } else {
+            requester.sendMessage(plugin.getMessageManager().getMessage("ping.player-ping", requester, Map.of("player", target.getName(), "ping", String.valueOf(ping))));
+        }
     }
 }

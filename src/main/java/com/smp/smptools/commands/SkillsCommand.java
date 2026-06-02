@@ -7,8 +7,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -16,30 +14,24 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
-public class SkillsCommand implements CommandExecutor {
-
-    private final SMPTools plugin;
+public class SkillsCommand extends AbstractPlayerCommand {
 
     public SkillsCommand(SMPTools plugin) {
-        this.plugin = plugin;
+        super(plugin);
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(Component.text("Only players can use this command.", NamedTextColor.RED));
-            return true;
-        }
-
-        openSkillsGUI((Player) sender);
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
+        openSkillsGUI(player);
         return true;
     }
 
     private void openSkillsGUI(Player player) {
-        Inventory skillsGUI = Bukkit.createInventory(null, 27, Component.text("Your Skills"));
+        Inventory skillsGUI = Bukkit.createInventory(null, 27, plugin.getMessageManager().getMessage("skills.gui-title", player));
 
-        int slot = 11; // Start in the middle of the top row
+        int slot = 11;
         for (SkillType skill : SkillType.values()) {
             int level = plugin.getSkillsManager().getLevel(player, skill);
             int currentXp = plugin.getSkillsManager().getCurrentExperience(player, skill);
@@ -48,17 +40,18 @@ public class SkillsCommand implements CommandExecutor {
             ItemStack skillItem = new ItemStack(getMaterialForSkill(skill));
             ItemMeta meta = skillItem.getItemMeta();
 
-            meta.displayName(Component.text(skill.getDisplayName() + " - Level " + level, NamedTextColor.GREEN));
+            meta.displayName(plugin.getMessageManager().getMessage("skills.gui-display-name", player,
+                    Map.of("name", skill.getDisplayName(), "level", String.valueOf(level))));
 
             List<Component> lore = new ArrayList<>();
-            lore.add(Component.text("Experience: ", NamedTextColor.GRAY)
-                    .append(Component.text(currentXp + " / " + xpToNextLevel, NamedTextColor.YELLOW)));
+            lore.add(plugin.getMessageManager().getMessage("skills.gui-experience", player,
+                    Map.of("current", String.valueOf(currentXp), "next", String.valueOf(xpToNextLevel))));
             lore.add(generateProgressBar(currentXp, xpToNextLevel));
             meta.lore(lore);
 
             skillItem.setItemMeta(meta);
             skillsGUI.setItem(slot, skillItem);
-            slot += 2; // space them out
+            slot += 2;
         }
 
         player.openInventory(skillsGUI);
@@ -77,19 +70,10 @@ public class SkillsCommand implements CommandExecutor {
     private Component generateProgressBar(int current, int max) {
         if (max == 0) return Component.empty();
         float percent = (float) current / max;
-        int barWidth = 20; // The total width of the progress bar in characters
+        int barWidth = 20;
 
-        StringBuilder progressBar = new StringBuilder();
-        for (int i = 0; i < barWidth; i++) {
-            if (i < percent * barWidth) {
-                progressBar.append("|");
-            } else {
-                progressBar.append("|");
-            }
-        }
-
-        String filled = progressBar.substring(0, (int) (percent * barWidth));
-        String empty = progressBar.substring((int) (percent * barWidth));
+        String filled = "█".repeat((int) (percent * barWidth));
+        String empty = "█".repeat(barWidth - (int) (percent * barWidth));
 
         return Component.text(filled, NamedTextColor.GREEN)
                 .append(Component.text(empty, NamedTextColor.GRAY));

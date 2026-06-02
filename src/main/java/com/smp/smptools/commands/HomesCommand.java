@@ -1,12 +1,11 @@
 package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -14,56 +13,56 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
-public class HomesCommand implements CommandExecutor {
-
-    private final SMPTools plugin;
+public class HomesCommand extends AbstractPlayerCommand {
 
     public HomesCommand(SMPTools plugin) {
-        this.plugin = plugin;
+        super(plugin);
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "Only players can use this command!");
-            return true;
-        }
-
-        Player player = (Player) sender;
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
         String playerUUID = player.getUniqueId().toString();
 
         ConfigurationSection homesSection = plugin.getConfig().getConfigurationSection("homes." + playerUUID);
         if (homesSection == null) {
-            player.sendMessage(ChatColor.RED + "You have no homes set.");
+            player.sendMessage(plugin.getMessageManager().getMessage("homes.no-homes", player));
             return true;
         }
 
         Set<String> homeNames = homesSection.getKeys(false);
         if (homeNames.isEmpty()) {
-            player.sendMessage(ChatColor.RED + "You have no homes set.");
+            player.sendMessage(plugin.getMessageManager().getMessage("homes.no-homes", player));
             return true;
         }
 
-        Inventory homesGUI = Bukkit.createInventory(null, 54, "Your Homes");
+        Inventory homesGUI = Bukkit.createInventory(null, 54, plugin.getMessageManager().getMessage("homes.gui-title"));
 
         for (String homeName : homeNames) {
             ItemStack homeItem = new ItemStack(Material.NAME_TAG);
             ItemMeta homeMeta = homeItem.getItemMeta();
-            homeMeta.setDisplayName(ChatColor.GOLD + homeName);
+            homeMeta.displayName(Component.text(homeName, NamedTextColor.GOLD));
 
             ConfigurationSection home = homesSection.getConfigurationSection(homeName);
-            List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.GRAY + "World: " + home.getString("world"));
-            lore.add(ChatColor.GRAY + "X: " + home.getDouble("x"));
-            lore.add(ChatColor.GRAY + "Y: " + home.getDouble("y"));
-            lore.add(ChatColor.GRAY + "Z: " + home.getDouble("z"));
-            lore.add("");
-            lore.add(ChatColor.GREEN + "Left-click to teleport");
-            lore.add(ChatColor.RED + "Right-click to delete");
-            homeMeta.setLore(lore);
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("world", home.getString("world"));
+            placeholders.put("x", String.valueOf(home.getDouble("x")));
+            placeholders.put("y", String.valueOf(home.getDouble("y")));
+            placeholders.put("z", String.valueOf(home.getDouble("z")));
+
+            List<Component> lore = new ArrayList<>();
+            lore.add(plugin.getMessageManager().getMessage("homes.gui-world", player, placeholders));
+            lore.add(plugin.getMessageManager().getMessage("homes.gui-x", player, placeholders));
+            lore.add(plugin.getMessageManager().getMessage("homes.gui-y", player, placeholders));
+            lore.add(plugin.getMessageManager().getMessage("homes.gui-z", player, placeholders));
+            lore.add(Component.empty());
+            lore.add(plugin.getMessageManager().getMessage("homes.gui-teleport", player));
+            lore.add(plugin.getMessageManager().getMessage("homes.gui-delete", player));
+            homeMeta.lore(lore);
 
             homeItem.setItemMeta(homeMeta);
             homesGUI.addItem(homeItem);

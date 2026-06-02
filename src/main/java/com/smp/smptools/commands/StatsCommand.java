@@ -8,8 +8,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -21,12 +19,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class StatsCommand implements CommandExecutor {
-
-    private final SMPTools plugin;
+public class StatsCommand extends AbstractPlayerCommand {
 
     public StatsCommand(SMPTools plugin) {
-        this.plugin = plugin;
+        super(plugin);
     }
 
     public SMPTools getPlugin() {
@@ -34,20 +30,16 @@ public class StatsCommand implements CommandExecutor {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
         if (args.length == 0) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage(Component.text("You must specify a player to view their stats.", NamedTextColor.RED));
-                return true;
-            }
-            showStatsGUI((Player) sender, (Player) sender);
+            showStatsGUI(player, player);
         } else {
             OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
             if (!target.hasPlayedBefore() && !target.isOnline()) {
-                sender.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
+                player.sendMessage(plugin.getMessageManager().getMessage("common.player-not-found"));
                 return true;
             }
-            showStatsGUI((Player) sender, target);
+            showStatsGUI(player, target);
         }
         return true;
     }
@@ -58,7 +50,6 @@ public class StatsCommand implements CommandExecutor {
 
         Inventory statsGUI = Bukkit.createInventory(null, 54, Component.text(target.getName() + "'s Stats", TextColor.fromHexString("#008B8B")));
 
-        // Player Head and General Info
         ItemStack playerHead = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta headMeta = (SkullMeta) playerHead.getItemMeta();
         headMeta.setOwningPlayer(target);
@@ -66,7 +57,6 @@ public class StatsCommand implements CommandExecutor {
         playerHead.setItemMeta(headMeta);
         statsGUI.setItem(4, playerHead);
 
-        // General Stats
         long playtimeMinutes;
         if (target.isOnline()) {
             playtimeMinutes = ((Player) target).getStatistic(org.bukkit.Statistic.PLAY_ONE_MINUTE) / (20 * 60);
@@ -80,13 +70,11 @@ public class StatsCommand implements CommandExecutor {
         createDisplayItem(statsGUI, Material.SKELETON_SKULL, 22, Component.text("Total Deaths", NamedTextColor.GOLD),
                 Component.text(String.valueOf(statsSection != null ? statsSection.getInt("deaths_total", 0) : 0), NamedTextColor.YELLOW));
 
-        // Block Stats
         createDisplayItem(statsGUI, Material.DIAMOND_PICKAXE, 23, Component.text("Blocks Broken", NamedTextColor.GOLD),
                 Component.text(String.valueOf(statsSection != null ? statsSection.getInt("blocks_broken", 0) : 0), NamedTextColor.YELLOW));
         createDisplayItem(statsGUI, Material.GRASS_BLOCK, 24, Component.text("Blocks Placed", NamedTextColor.GOLD),
                 Component.text(String.valueOf(statsSection != null ? statsSection.getInt("blocks_placed", 0) : 0), NamedTextColor.YELLOW));
 
-        // Ores Mined
         createDisplayItem(statsGUI, Material.COAL_ORE, 37, Component.text("Coal Mined", NamedTextColor.GOLD),
                 Component.text(String.valueOf(statsSection != null ? statsSection.getInt("ores_mined.coal", 0) : 0), NamedTextColor.YELLOW));
         createDisplayItem(statsGUI, Material.IRON_ORE, 38, Component.text("Iron Mined", NamedTextColor.GOLD),
@@ -102,7 +90,6 @@ public class StatsCommand implements CommandExecutor {
         createDisplayItem(statsGUI, Material.EMERALD, 43, Component.text("Emeralds Mined", NamedTextColor.GOLD),
                 Component.text(String.valueOf(statsSection != null ? statsSection.getInt("ores_mined.emerald", 0) : 0), NamedTextColor.YELLOW));
 
-        // Deaths Button
         createDisplayItem(statsGUI, Material.PAPER, 49, Component.text("View Deaths", NamedTextColor.RED),
                 Component.text("Click to see detailed death info", NamedTextColor.YELLOW));
 
@@ -154,53 +141,12 @@ public class StatsCommand implements CommandExecutor {
         viewer.openInventory(deathInfoGUI);
     }
 
-    private Material getMaterialForMob(String mobName) {
-        switch (mobName.toLowerCase()) {
-            case "cow": return Material.BEEF;
-            case "sheep": return Material.WHITE_WOOL;
-            case "pig": return Material.PORKCHOP;
-            case "chicken": return Material.FEATHER;
-            case "turtle": return Material.TURTLE_HELMET;
-            case "llama": return Material.LEATHER;
-            case "rabbit": return Material.RABBIT_FOOT;
-            case "zombie": return Material.ROTTEN_FLESH;
-            case "skeleton": return Material.BONE;
-            case "creeper": return Material.GUNPOWDER;
-            case "enderman": return Material.ENDER_PEARL;
-            case "witch": return Material.GLASS_BOTTLE;
-            case "blaze": return Material.BLAZE_ROD;
-            case "spider": return Material.SPIDER_EYE;
-            case "cave_spider": return Material.SPIDER_EYE;
-            case "phantom": return Material.PHANTOM_MEMBRANE;
-            case "slime": return Material.SLIME_BALL;
-            case "wither_skeleton": return Material.WITHER_SKELETON_SKULL;
-            case "warden": return Material.ECHO_SHARD;
-            default: return Material.STONE;
-        }
-    }
-
-    private Material getMaterialForOre(String oreName) {
-        switch (oreName.toLowerCase()) {
-            case "diamond": return Material.DIAMOND;
-            case "gold": return Material.GOLD_INGOT;
-            case "iron": return Material.IRON_INGOT;
-            case "coal": return Material.COAL;
-            case "lapis": return Material.LAPIS_LAZULI;
-            case "redstone": return Material.REDSTONE;
-            case "emerald": return Material.EMERALD;
-            case "copper": return Material.COPPER_INGOT;
-            case "quartz": return Material.QUARTZ;
-            case "netherite": return Material.NETHERITE_SCRAP;
-            default: return Material.STONE;
-        }
-    }
-
     public void showDetailedDeathInfoGUI(Player viewer, OfflinePlayer target, int deathIndex) {
         String playerUUID = target.getUniqueId().toString();
         List<Map<?, ?>> deathInfo = plugin.getStatsConfig().getMapList("stats." + playerUUID + ".deaths_info");
 
         if (deathIndex < 0 || deathIndex >= deathInfo.size()) {
-            viewer.sendMessage(Component.text("Invalid death index.", NamedTextColor.RED));
+            viewer.sendMessage(plugin.getMessageManager().getMessage("stats.invalid-death-index"));
             return;
         }
 
@@ -233,7 +179,7 @@ public class StatsCommand implements CommandExecutor {
         List<Map<?, ?>> deathInfo = plugin.getStatsConfig().getMapList("stats." + playerUUID + ".deaths_info");
 
         if (deathIndex < 0 || deathIndex >= deathInfo.size()) {
-            viewer.sendMessage(Component.text("Invalid death index.", NamedTextColor.RED));
+            viewer.sendMessage(plugin.getMessageManager().getMessage("stats.invalid-death-index"));
             return;
         }
 
@@ -262,14 +208,13 @@ public class StatsCommand implements CommandExecutor {
             }
         }
 
-        // Rollback button
         if (viewer.hasPermission("smptools.stats.rollback")) {
             ItemStack rollbackItem = new ItemStack(Material.ANVIL);
             ItemMeta rollbackMeta = rollbackItem.getItemMeta();
-            rollbackMeta.displayName(Component.text("Rollback Inventory", NamedTextColor.GREEN));
+            rollbackMeta.displayName(plugin.getMessageManager().getMessage("stats.rollback-display", viewer));
             List<Component> lore = new ArrayList<>();
-            lore.add(Component.text("Click to restore this inventory", NamedTextColor.GRAY));
-            lore.add(Component.text("to the player.", NamedTextColor.GRAY));
+            lore.add(plugin.getMessageManager().getMessage("stats.rollback-lore-1", viewer));
+            lore.add(plugin.getMessageManager().getMessage("stats.rollback-lore-2", viewer));
             rollbackMeta.lore(lore);
             rollbackItem.setItemMeta(rollbackMeta);
             deathInventoryGUI.setItem(50, rollbackItem);

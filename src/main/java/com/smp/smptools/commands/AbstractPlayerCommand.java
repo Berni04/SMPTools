@@ -1,7 +1,6 @@
 package com.smp.smptools.commands;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
+import com.smp.smptools.SMPTools;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -17,6 +16,17 @@ import org.bukkit.entity.Player;
  */
 public abstract class AbstractPlayerCommand implements CommandExecutor {
 
+    protected final SMPTools plugin;
+
+    /**
+     * Constructs an AbstractPlayerCommand with plugin reference.
+     *
+     * @param plugin the SMPTools plugin instance
+     */
+    public AbstractPlayerCommand(SMPTools plugin) {
+        this.plugin = plugin;
+    }
+
     /**
      * Handles the command execution.
      * Checks if the sender is a player and delegates to onPlayerCommand().
@@ -30,7 +40,7 @@ public abstract class AbstractPlayerCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(Component.text("Only players can use this command!", NamedTextColor.RED));
+            sender.sendMessage(plugin.getMessageManager().getMessage("common.player-only"));
             return true;
         }
         return onPlayerCommand((Player) sender, command, label, args);

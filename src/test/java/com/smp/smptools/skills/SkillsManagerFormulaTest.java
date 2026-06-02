@@ -26,9 +26,9 @@ class SkillsManagerFormulaTest {
     @Test
     void getExpToNextLevel_level50_isReasonable() {
         int expLevel50 = (int) (Constants.SKILL_BASE_EXP * Math.pow(Constants.SKILL_GROWTH_RATE, 49));
-        // Should be around 100 * 1.2^49 ≈ 83,593
-        assertTrue(expLevel50 > 50000);
-        assertTrue(expLevel50 < 200000);
+        // Should be around 100 * 1.2^49 ≈ 760,931
+        assertTrue(expLevel50 > 500000);
+        assertTrue(expLevel50 < 1000000);
     }
 
     @Test

@@ -1,54 +1,42 @@
 package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
-import com.smp.smptools.listeners.TrollGUIListener; // Will create this next
-import net.kyori.adventure.text.minimessage.MiniMessage;
+import com.smp.smptools.listeners.TrollGUIListener;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-public class TrollCommand implements CommandExecutor {
-
-    private final SMPTools plugin;
+public class TrollCommand extends AbstractPlayerCommand {
 
     public TrollCommand(SMPTools plugin) {
-        this.plugin = plugin;
+        super(plugin);
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(MiniMessage.miniMessage().deserialize("<red>Only players can use this command!</red>"));
-            return true;
-        }
-
-        Player player = (Player) sender;
-
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
         if (!player.hasPermission("smptools.troll")) {
-            player.sendMessage(MiniMessage.miniMessage().deserialize("<red>You don't have permission to use this command.</red>"));
+            player.sendMessage(plugin.getMessageManager().getMessage("common.no-permission"));
             return true;
         }
 
         if (args.length == 0) {
-            player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Usage: /troll <player></red>"));
+            player.sendMessage(plugin.getMessageManager().getMessage("common.usage", player,
+                    java.util.Map.of("usage", "/troll <player>")));
             return true;
         }
 
         Player target = Bukkit.getPlayer(args[0]);
 
         if (target == null) {
-            player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Player not found or is offline.</red>"));
+            player.sendMessage(plugin.getMessageManager().getMessage("common.player-not-found"));
             return true;
         }
 
         if (target.equals(player)) {
-            player.sendMessage(MiniMessage.miniMessage().deserialize("<red>You cannot troll yourself!</red>"));
+            player.sendMessage(plugin.getMessageManager().getMessage("troll.cannot-troll-self"));
             return true;
         }
 
-        // Open the troll GUI for the sender, targeting 'target'
         TrollGUIListener.openTrollGUI(player, target);
 
         return true;

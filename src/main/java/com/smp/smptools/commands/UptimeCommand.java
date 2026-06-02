@@ -1,18 +1,21 @@
 package com.smp.smptools.commands;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
+import com.smp.smptools.SMPTools;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 
 import java.lang.management.ManagementFactory;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-public class UptimeCommand implements CommandExecutor {
+public class UptimeCommand extends AbstractPlayerCommand {
+
+    public UptimeCommand(SMPTools plugin) {
+        super(plugin);
+    }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
         long uptimeMillis = ManagementFactory.getRuntimeMXBean().getUptime();
 
         long days = TimeUnit.MILLISECONDS.toDays(uptimeMillis);
@@ -29,8 +32,7 @@ public class UptimeCommand implements CommandExecutor {
             uptimeString.append(minutes).append("m ");
         uptimeString.append(seconds).append("s");
 
-        sender.sendMessage(Component.text("Server Uptime: ", NamedTextColor.GREEN)
-                .append(Component.text(uptimeString.toString(), NamedTextColor.WHITE)));
+        player.sendMessage(plugin.getMessageManager().getMessage("uptime.server-uptime", player, Map.of("uptime", uptimeString.toString())));
 
         return true;
     }

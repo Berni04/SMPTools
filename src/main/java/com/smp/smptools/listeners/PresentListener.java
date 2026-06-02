@@ -1,8 +1,7 @@
 package com.smp.smptools.listeners;
 
+import com.smp.smptools.SMPTools;
 import com.smp.smptools.christmas.PresentManager;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -39,7 +38,7 @@ public class PresentListener implements Listener {
             String tier = meta.getPersistentDataContainer().get(PresentManager.PRESENT_TIER_KEY,
                     PersistentDataType.STRING);
             presentManager.createPresent(event.getBlock().getLocation(), tier);
-            event.getPlayer().sendMessage(Component.text("Present placed and registered!", NamedTextColor.GREEN));
+            event.getPlayer().sendMessage(SMPTools.getInstance().getMessageManager().getMessage("present.placed"));
         }
     }
 
@@ -69,7 +68,7 @@ public class PresentListener implements Listener {
 
         if (presentManager.getPresentIdAt(block.getLocation()) != null) {
             presentManager.removePresent(block.getLocation());
-            event.getPlayer().sendMessage(Component.text("Present removed from registry.", NamedTextColor.YELLOW));
+            event.getPlayer().sendMessage(SMPTools.getInstance().getMessageManager().getMessage("present.registry-removed"));
         }
     }
 }

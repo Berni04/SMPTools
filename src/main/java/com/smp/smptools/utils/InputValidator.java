@@ -63,4 +63,29 @@ public final class InputValidator {
                 && name.length() <= Constants.MAX_PLAYER_NAME_LENGTH
                 && name.matches("[a-zA-Z0-9_]+");
     }
+
+    /**
+     * Pattern matching potentially dangerous MiniMessage tags.
+     * Used to strip interactive tags (hover, click, insert, etc.) from user input
+     * to prevent social engineering / command injection via display names.
+     */
+    private static final java.util.regex.Pattern DANGEROUS_MINIMESSAGE_TAGS = java.util.regex.Pattern.compile(
+            "</?(?:hover|click|insert|key|suggest_command|run_command|translatable|font|selector)\\b[^>]*>");
+
+    /**
+     * Sanitizes a string intended for use inside a MiniMessage template.
+     * Strips potentially dangerous interactive tags (hover, click, etc.)
+     * while preserving color and formatting tags such as {@code <red>} or
+     * {@code <bold>}.
+     *
+     * <p>This should be applied to any user-controlled value that will be
+     * concatenated into a MiniMessage string before {@code deserialize()}.</p>
+     *
+     * @param input the user input to sanitize (may be null)
+     * @return the sanitized string, or empty string if input is null
+     */
+    public static String sanitizeMiniMessage(String input) {
+        if (input == null) return "";
+        return DANGEROUS_MINIMESSAGE_TAGS.matcher(input).replaceAll("");
+    }
 }

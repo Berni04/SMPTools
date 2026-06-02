@@ -58,7 +58,7 @@ class ConstantsTest {
 
     @Test
     void constructor_throwsException() {
-        assertThrows(Exception.class, () -> {
+        assertThrows(java.lang.reflect.InvocationTargetException.class, () -> {
             var constructor = Constants.class.getDeclaredConstructor();
             constructor.setAccessible(true);
             constructor.newInstance();

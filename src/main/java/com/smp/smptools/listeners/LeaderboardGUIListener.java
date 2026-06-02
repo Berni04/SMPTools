@@ -61,10 +61,12 @@ public class LeaderboardGUIListener implements Listener {
         Map<String, Long> leaderboard = manager.getLeaderboard(statKey);
 
         String title = statKey.replace('_', ' ').toUpperCase();
-        Inventory leaderboardGUI = Bukkit.createInventory(null, 54, Component.text("Top 10 - " + title));
+        Inventory leaderboardGUI = Bukkit.createInventory(null, 54,
+                plugin.getMessageManager().getMessage("leaderboard.stat-title", player,
+                        Map.of("title", title)));
 
         if (leaderboard.isEmpty()) {
-            player.sendMessage(Component.text("No leaderboard data available for this stat.", NamedTextColor.YELLOW));
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("leaderboard.no-data"));
             return;
         }
 
@@ -78,9 +80,11 @@ public class LeaderboardGUIListener implements Listener {
                 headMeta.setOwningPlayer(offlinePlayer);
             }
 
-            headMeta.displayName(Component.text("#" + rank.get() + " " + playerName, NamedTextColor.GOLD));
+            headMeta.displayName(plugin.getMessageManager().getMessage("leaderboard.gui-rank", player,
+                    Map.of("rank", String.valueOf(rank.get()), "name", playerName)));
             List<Component> lore = new ArrayList<>();
-            lore.add(Component.text("Score: " + formatScore(statKey, score), NamedTextColor.YELLOW));
+            lore.add(plugin.getMessageManager().getMessage("leaderboard.gui-score", player,
+                    Map.of("score", formatScore(statKey, score))));
             headMeta.lore(lore);
             playerHead.setItemMeta(headMeta);
             leaderboardGUI.addItem(playerHead);

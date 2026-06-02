@@ -3,7 +3,6 @@ package com.smp.smptools.listeners;
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.commands.StatsCommand;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -64,7 +63,7 @@ public class StatsGUIListener implements Listener {
             // --- Rollback Logic ---
             else if (viewTitlePlain.contains("Inventory") && clickedItem.getType() == Material.TOTEM_OF_UNDYING) {
                 if (!player.hasPermission("smptools.stats.rollback")) {
-                    player.sendMessage(Component.text("You do not have permission to roll back inventories.", NamedTextColor.RED));
+                    player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("stats.rollback-no-permission", player));
                     return;
                 }
 
@@ -102,12 +101,12 @@ public class StatsGUIListener implements Listener {
         Map<String, Object> death = (Map<String, Object>) deathInfo.get(deathIndex);
 
         if (death.containsKey("rolled_back") && (Boolean) death.get("rolled_back")) {
-            admin.sendMessage(Component.text("This death has already been rolled back.", NamedTextColor.RED));
+            admin.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("stats.rollback-already-done", admin));
             return;
         }
 
         if (!target.isOnline()) {
-            admin.sendMessage(Component.text("Target player must be online to receive their items.", NamedTextColor.RED));
+            admin.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("stats.rollback-player-offline", admin));
             return;
         }
 
@@ -129,8 +128,8 @@ public class StatsGUIListener implements Listener {
         plugin.getStatsConfig().set(path, deathInfo);
         plugin.saveStatsConfig();
 
-        admin.sendMessage(Component.text("Successfully rolled back death #" + (deathIndex + 1) + " for " + target.getName() + ".", NamedTextColor.GREEN));
-        targetPlayer.sendMessage(Component.text("Your inventory from a previous death has been restored by an administrator.", NamedTextColor.GREEN));
+        admin.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("stats.rollback-success", admin, Map.of("index", String.valueOf(deathIndex + 1), "target", String.valueOf(target.getName()))));
+        targetPlayer.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("stats.rollback-restored", targetPlayer));
         admin.closeInventory();
     }
 }

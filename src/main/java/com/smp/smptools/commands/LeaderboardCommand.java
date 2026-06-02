@@ -6,8 +6,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -16,37 +14,27 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.util.ArrayList;
 import java.util.List;
 
-public class LeaderboardCommand implements CommandExecutor {
-
-    private final SMPTools plugin;
+public class LeaderboardCommand extends AbstractPlayerCommand {
 
     public LeaderboardCommand(SMPTools plugin) {
-        this.plugin = plugin;
+        super(plugin);
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(Component.text("This command can only be used by players.", NamedTextColor.RED));
-            return true;
-        }
-        openLeaderboardHub((Player) sender);
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
+        openLeaderboardHub(player);
         return true;
     }
 
     private void openLeaderboardHub(Player player) {
-        Inventory hubGUI = Bukkit.createInventory(null, 54, Component.text("Leaderboards"));
+        Inventory hubGUI = Bukkit.createInventory(null, 54, plugin.getMessageManager().getMessage("leaderboard.gui-title", player));
 
-        // General Stats
         createDisplayItem(hubGUI, Material.CLOCK, 20, Component.text("Playtime", NamedTextColor.GOLD), "playtime");
         createDisplayItem(hubGUI, Material.DIAMOND_SWORD, 21, Component.text("Player Kills", NamedTextColor.GOLD), "player_kills");
         createDisplayItem(hubGUI, Material.SKELETON_SKULL, 22, Component.text("Total Deaths", NamedTextColor.GOLD), "deaths");
-        
-        // Block Stats
         createDisplayItem(hubGUI, Material.DIAMOND_PICKAXE, 23, Component.text("Blocks Broken", NamedTextColor.GOLD), "blocks_broken");
         createDisplayItem(hubGUI, Material.GRASS_BLOCK, 24, Component.text("Blocks Placed", NamedTextColor.GOLD), "blocks_placed");
 
-        // Ores Mined
         createDisplayItem(hubGUI, Material.COAL_ORE, 37, Component.text("Coal Mined", NamedTextColor.GOLD), "ores_mined.coal");
         createDisplayItem(hubGUI, Material.IRON_ORE, 38, Component.text("Iron Mined", NamedTextColor.GOLD), "ores_mined.iron");
         createDisplayItem(hubGUI, Material.GOLD_ORE, 39, Component.text("Gold Mined", NamedTextColor.GOLD), "ores_mined.gold");

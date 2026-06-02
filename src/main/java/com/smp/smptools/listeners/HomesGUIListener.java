@@ -4,6 +4,7 @@ import com.smp.smptools.SMPTools;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import java.util.Map;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -71,7 +72,7 @@ public class HomesGUIListener implements Listener {
             // Confirm delete
             player.performCommand("delhome " + homeName);
             player.closeInventory();
-            player.sendMessage(Component.text("Home '" + homeName + "' has been deleted.", NamedTextColor.GREEN));
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("homes.deleted-confirmation", player, Map.of("name", homeName)));
         } else if (clickedItem.getType() == Material.RED_WOOL) {
             // Cancel delete
             player.closeInventory();
@@ -79,7 +80,9 @@ public class HomesGUIListener implements Listener {
     }
 
     private void openDeleteConfirmation(Player player, String homeName) {
-        Inventory confirmationGUI = plugin.getServer().createInventory(null, 27, Component.text("Delete home '" + homeName + "'?"));
+        Inventory confirmationGUI = plugin.getServer().createInventory(null, 27,
+                plugin.getMessageManager().getMessage("homes.delete-confirm-title", player,
+                        Map.of("name", homeName)));
 
         ItemStack confirmItem = new ItemStack(Material.GREEN_WOOL);
         ItemMeta confirmMeta = confirmItem.getItemMeta();

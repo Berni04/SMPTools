@@ -3,7 +3,6 @@ package com.smp.smptools.listeners;
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.commands.PrivateVaultCommand;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -11,6 +10,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
+
+import java.util.Map;
 
 public class VaultListener implements Listener {
 
@@ -31,10 +32,10 @@ public class VaultListener implements Listener {
                 String encodedInventory = PrivateVaultCommand.encodeInventory(inventory.getContents());
                 config.set("privatevaults." + player.getUniqueId().toString(), encodedInventory);
                 plugin.saveConfig();
-                player.sendMessage(Component.text("Private vault saved!", NamedTextColor.GREEN));
+                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("vault.saved", player));
             } catch (IllegalStateException e) {
                 plugin.getLogger().warning("Failed to encode inventory for player " + player.getName() + ": " + e.getMessage());
-                player.sendMessage(Component.text("Failed to save your private vault.", NamedTextColor.RED));
+                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("vault.save-failed", player));
             }
         }
     }

@@ -143,7 +143,9 @@ public class PresentManager {
             RewardManager.giveReward(player, reward);
         }
 
-        player.sendMessage(Component.text("You found a " + tier + " present!", NamedTextColor.GREEN));
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("tier", tier);
+        player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("present.found", player, placeholders));
 
         // Remove the block
         location.getBlock().setType(Material.AIR);

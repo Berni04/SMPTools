@@ -5,60 +5,52 @@ import com.smp.smptools.enchants.CustomEnchantment;
 import com.smp.smptools.enchants.LumberjackEnchant;
 import com.smp.smptools.enchants.TelekinesisEnchant;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class CustomEnchantCommand implements CommandExecutor {
+public class CustomEnchantCommand extends AbstractPlayerCommand {
 
-    private final SMPTools plugin;
     private final Map<String, CustomEnchantment> enchantments = new HashMap<>();
 
     public CustomEnchantCommand(SMPTools plugin) {
-        this.plugin = plugin;
+        super(plugin);
         enchantments.put("telekinesis", new TelekinesisEnchant());
         enchantments.put("lumberjack", new LumberjackEnchant());
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!sender.hasPermission("smptools.customenchant")) {
-            sender.sendMessage("§cYou do not have permission to use this command.");
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
+        if (!player.hasPermission("smptools.customenchant")) {
+            player.sendMessage(plugin.getMessageManager().getMessage("common.no-permission"));
             return true;
         }
 
         if (args.length < 1) {
-            sender.sendMessage("§cUsage: /cenchant <enchantment>");
+            player.sendMessage(plugin.getMessageManager().getMessage("common.usage", player,
+                    java.util.Map.of("usage", "/cenchant <enchantment>")));
             return true;
         }
 
-        if (!(sender instanceof Player)) {
-            sender.sendMessage("§cOnly players can use this command to enchant items.");
-            return true;
-        }
-
-        Player player = (Player) sender;
         ItemStack item = player.getInventory().getItemInMainHand();
         String enchantName = args[0].toLowerCase();
 
         CustomEnchantment enchant = enchantments.get(enchantName);
 
         if (enchant == null) {
-            sender.sendMessage("§cUnknown enchantment: " + enchantName);
+            player.sendMessage(plugin.getMessageManager().getMessage("enchant.unknown", player, Map.of("enchant", enchantName)));
             return true;
         }
 
         if (!plugin.getEnchantmentManager().isApplicable(enchant, item.getType())) {
-            sender.sendMessage("§cThat enchantment cannot be applied to this item.");
+            player.sendMessage(plugin.getMessageManager().getMessage("enchant.not-applicable"));
             return true;
         }
 
         plugin.getEnchantmentManager().applyEnchantment(item, enchant);
-        sender.sendMessage("§aSuccessfully applied " + enchant.getDisplayName() + " to your item.");
+        player.sendMessage(plugin.getMessageManager().getMessage("enchant.applied", player, Map.of("enchant", enchant.getDisplayName())));
 
         return true;
     }

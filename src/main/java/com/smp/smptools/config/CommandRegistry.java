@@ -45,7 +45,7 @@ public final class CommandRegistry {
     public static void registerAll(SMPTools plugin, LeaderboardCommand leaderboardCommand,
                                    TpaCommand tpaCommand, AdventGUIListener adventGUIListener) {
         // Core commands
-        plugin.getCommand("fly").setExecutor(new FlyCommand());
+        plugin.getCommand("fly").setExecutor(new FlyCommand(plugin));
         plugin.getCommand("pv").setExecutor(new PrivateVaultCommand(plugin));
         plugin.getCommand("sethome").setExecutor(new SetHomeCommand(plugin));
         plugin.getCommand("home").setExecutor(new HomeCommand(plugin));
@@ -53,8 +53,8 @@ public final class CommandRegistry {
         plugin.getCommand("homes").setExecutor(new HomesCommand(plugin));
         plugin.getCommand("msg").setExecutor(new MsgCommand(plugin));
         plugin.getCommand("clearstats").setExecutor(new ClearStatsCommand(plugin));
-        plugin.getCommand("prefix").setExecutor(new PrefixCommand());
-        plugin.getCommand("color").setExecutor(new ColorCommand());
+        plugin.getCommand("prefix").setExecutor(new PrefixCommand(plugin));
+        plugin.getCommand("color").setExecutor(new ColorCommand(plugin));
         plugin.getCommand("tags").setExecutor(new TagsCommand(plugin));
 
         // TPA commands
@@ -72,15 +72,15 @@ public final class CommandRegistry {
         Objects.requireNonNull(plugin.getCommand("troll")).setExecutor(new TrollCommand(plugin));
         Objects.requireNonNull(plugin.getCommand("missions")).setExecutor(new MissionCommand(plugin));
         Objects.requireNonNull(plugin.getCommand("sudo")).setExecutor(new SudoCommand(plugin));
-        Objects.requireNonNull(plugin.getCommand("customitem")).setExecutor(new CustomItemCommand());
+        Objects.requireNonNull(plugin.getCommand("customitem")).setExecutor(new CustomItemCommand(plugin));
         Objects.requireNonNull(plugin.getCommand("r")).setExecutor(new ReplyCommand(plugin));
         Objects.requireNonNull(plugin.getCommand("rename")).setExecutor(new RenameCommand(plugin));
-        Objects.requireNonNull(plugin.getCommand("advent")).setExecutor(new AdventCommand(adventGUIListener));
+        Objects.requireNonNull(plugin.getCommand("advent")).setExecutor(new AdventCommand(plugin, adventGUIListener));
         Objects.requireNonNull(plugin.getCommand("npc")).setExecutor(new NPCCommand(plugin));
 
         // Utility commands
-        plugin.getCommand("uptime").setExecutor(new UptimeCommand());
-        plugin.getCommand("ping").setExecutor(new PingCommand());
+        plugin.getCommand("uptime").setExecutor(new UptimeCommand(plugin));
+        plugin.getCommand("ping").setExecutor(new PingCommand(plugin));
     }
 
     public static void registerConditionalCommands(SMPTools plugin) {
@@ -111,7 +111,7 @@ public final class CommandRegistry {
 
         // Ride command
         if (plugin.getConfig().getBoolean("features.ride.enabled")) {
-            plugin.getCommand("ride").setExecutor(new RideCommand());
+            plugin.getCommand("ride").setExecutor(new RideCommand(plugin));
         }
 
         // Meme sounds
