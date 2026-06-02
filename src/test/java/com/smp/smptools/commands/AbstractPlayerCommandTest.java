@@ -105,6 +105,11 @@ class AbstractPlayerCommandTest {
         }
 
         @Override
+        public void sendMessage(@org.jetbrains.annotations.Nullable java.util.UUID sender, @org.jetbrains.annotations.NotNull String... messages) {
+            for (String m : messages) sendMessage(m);
+        }
+
+        @Override
         public Component name() {
             return Component.text("CONSOLE");
         }
