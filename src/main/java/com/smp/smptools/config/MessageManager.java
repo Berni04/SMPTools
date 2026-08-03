@@ -94,8 +94,7 @@ public class MessageManager {
 
         for (Map.Entry<String, String> entry : placeholders.entrySet()) {
             String raw = entry.getValue() == null ? "" : entry.getValue();
-            String escaped = MiniMessage.miniMessage().escapeTags(raw);
-            msg = msg.replace("{" + entry.getKey() + "}", escaped);
+            msg = msg.replace("{" + entry.getKey() + "}", raw);
         }
 
         TagResolver primary = buildPlayerTagResolver(context);

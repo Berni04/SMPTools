@@ -499,9 +499,10 @@ public class MissionGUIListener implements Listener {
                 lore.add(SMPTools.getInstance().getMessageManager().getMessage("missions.status-in-progress", player));
                 break;
         }
+        String escapedId = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().escapeTags(mission.getId());
         lore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(
                 SMPTools.getInstance().getMessageManager().getRawMessage("missions.mission-id-lore")
-                        .replace("{id}", mission.getId())));
+                        .replace("{id}", escapedId)));
         meta.lore(lore);
         item.setItemMeta(meta);
         return item;

@@ -24,9 +24,6 @@ public class SecretSantaHolder implements InventoryHolder {
 
     @Override
     public Inventory getInventory() {
-        if (inventory == null) {
-            inventory = Bukkit.createInventory(this, 27);
-        }
         return inventory;
     }
 }

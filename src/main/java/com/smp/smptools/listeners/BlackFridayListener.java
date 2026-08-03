@@ -32,7 +32,7 @@ public class BlackFridayListener implements Listener {
 
     @EventHandler
     public void onInventoryOpen(InventoryOpenEvent event) {
-        if (!manager.isEnabled()) {
+        if (!manager.isEnabled() || event.isCancelled()) {
             return;
         }
 
@@ -80,10 +80,39 @@ public class BlackFridayListener implements Listener {
                 activeViewers.remove(villagerUUID);
                 List<MerchantRecipe> original = originalRecipes.remove(villagerUUID);
                 if (original != null) {
-                    merchant.setRecipes(original);
+                    restoreOriginalRecipes(merchant, original);
                 }
             }
         }
+    }
+
+    private void restoreOriginalRecipes(Merchant merchant, List<MerchantRecipe> original) {
+        List<MerchantRecipe> currentLive = merchant.getRecipes();
+        List<MerchantRecipe> restored = new ArrayList<>();
+
+        for (int i = 0; i < original.size(); i++) {
+            MerchantRecipe base = original.get(i);
+            MerchantRecipe restoredRecipe = new MerchantRecipe(base.getResult(), base.getMaxUses());
+            restoredRecipe.setExperienceReward(base.hasExperienceReward());
+            restoredRecipe.setVillagerExperience(base.getVillagerExperience());
+            restoredRecipe.setPriceMultiplier(base.getPriceMultiplier());
+            for (ItemStack ingredient : base.getIngredients()) {
+                restoredRecipe.addIngredient(ingredient.clone());
+            }
+
+            if (i < currentLive.size()) {
+                MerchantRecipe live = currentLive.get(i);
+                restoredRecipe.setUses(live.getUses());
+                restoredRecipe.setDemand(live.getDemand());
+                restoredRecipe.setSpecialPrice(live.getSpecialPrice());
+            } else {
+                restoredRecipe.setUses(base.getUses());
+            }
+
+            restored.add(restoredRecipe);
+        }
+
+        merchant.setRecipes(restored);
     }
 
     private void applyDiscount(Merchant merchant, List<MerchantRecipe> baseRecipes) {
@@ -91,16 +120,22 @@ public class BlackFridayListener implements Listener {
         int discountPercent = manager.getDiscountPercentage();
 
         for (MerchantRecipe recipe : baseRecipes) {
-            ItemStack result = recipe.getResult().clone();
             List<ItemStack> ingredients = recipe.getIngredients();
 
-            if (ingredients.isEmpty()) continue;
+            if (ingredients.isEmpty()) {
+                discountedRecipes.add(recipe);
+                continue;
+            }
 
+            ItemStack result = recipe.getResult().clone();
             ItemStack ingredient1 = ingredients.get(0).clone();
             int newAmount1 = Math.max(1, ingredient1.getAmount() * (100 - discountPercent) / 100);
             ingredient1.setAmount(newAmount1);
 
             MerchantRecipe newRecipe = new MerchantRecipe(result, recipe.getMaxUses());
+            newRecipe.setUses(recipe.getUses());
+            newRecipe.setDemand(recipe.getDemand());
+            newRecipe.setSpecialPrice(recipe.getSpecialPrice());
             newRecipe.setExperienceReward(recipe.hasExperienceReward());
             newRecipe.setVillagerExperience(recipe.getVillagerExperience());
             newRecipe.setPriceMultiplier(recipe.getPriceMultiplier());

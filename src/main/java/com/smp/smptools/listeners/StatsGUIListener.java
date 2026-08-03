@@ -120,6 +120,7 @@ public class StatsGUIListener implements Listener {
             return;
         }
 
+        boolean allSuccess = true;
         List<?> inventory = (List<?>) death.get("inventory");
 
         if (inventory != null) {
@@ -136,6 +137,7 @@ public class StatsGUIListener implements Listener {
                             item = ItemStack.deserialize(copy);
                         } catch (Exception ex) {
                             plugin.getLogger().warning("Failed to deserialize rollback item: " + itemMap);
+                            allSuccess = false;
                         }
                     }
                     if (item != null) {
@@ -145,6 +147,11 @@ public class StatsGUIListener implements Listener {
                     }
                 }
             }
+        }
+
+        if (!allSuccess) {
+            admin.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("stats.rollback-failed", admin, Map.of("index", String.valueOf(deathIndex + 1), "target", String.valueOf(target.getName()))));
+            return;
         }
 
         death.put("rolled_back", true);

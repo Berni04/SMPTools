@@ -13,9 +13,6 @@ public class PrivateVaultHolder implements InventoryHolder {
 
     @Override
     public Inventory getInventory() {
-        if (inventory == null) {
-            inventory = Bukkit.createInventory(this, 54);
-        }
         return inventory;
     }
 }

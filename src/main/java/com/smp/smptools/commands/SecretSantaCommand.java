@@ -20,7 +20,6 @@ import java.util.UUID;
 public class SecretSantaCommand extends AbstractPlayerCommand implements Listener {
 
     private final SecretSantaManager manager;
-    private final Map<UUID, UUID> depositSessions = new HashMap<>();
 
     public SecretSantaCommand(SMPTools plugin, SecretSantaManager manager) {
         super(plugin);

@@ -133,7 +133,8 @@ public class SecretSantaManager {
             } else if (obj instanceof java.util.Map<?, ?> map) {
                 try {
                     items.add(ItemStack.deserialize((java.util.Map<String, Object>) map));
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Failed to deserialize Secret Santa gift item for recipient " + recipient + ": " + e.getMessage());
                 }
             }
         }

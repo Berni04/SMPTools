@@ -151,7 +151,7 @@ public class ChunkLoaderManager {
         return null;
     }
 
-    public static final org.bukkit.NamespacedKey CHUNK_LOADER_KEY = new org.bukkit.NamespacedKey(SMPTools.getInstance(), "chunk_loader");
+    public static final org.bukkit.NamespacedKey CHUNK_LOADER_KEY = new org.bukkit.NamespacedKey("smptools", "chunk_loader");
 
     public static ItemStack getChunkLoaderItem() {
         if (cachedMaterial == null) {
