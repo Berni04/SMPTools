@@ -135,15 +135,26 @@ public class PresentManager {
         if (id == null)
             return;
 
-        String tier = presentsConfig.getString("presents." + id + ".tier");
-        List<String> rewards = christmasConfig.getStringList("presents." + tier + ".rewards");
+        String storedTier = presentsConfig.getString("presents." + id + ".tier");
+        // Validate the stored tier against christmas.yml. If it is null,
+        // empty, or refers to a tier that no longer exists, treat the present
+        // as invalid WITHOUT overwriting the stored value with a sentinel
+        // string (which would collide with a real tier named "unknown").
+        boolean tierValid = storedTier != null
+                && !storedTier.isEmpty()
+                && christmasConfig.contains("presents." + storedTier);
 
-        // Give rewards
-        for (String reward : rewards) {
-            RewardManager.giveReward(player, reward);
+        if (tierValid) {
+            List<String> rewards = christmasConfig.getStringList("presents." + storedTier + ".rewards");
+            for (String reward : rewards) {
+                RewardManager.giveReward(player, reward);
+            }
         }
 
-        player.sendMessage(Component.text("You found a " + tier + " present!", NamedTextColor.GREEN));
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("tier", storedTier != null ? storedTier : "unknown");
+        String messageKey = tierValid ? "present.found" : "present.invalid-tier";
+        player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage(messageKey, player, placeholders));
 
         // Remove the block
         location.getBlock().setType(Material.AIR);

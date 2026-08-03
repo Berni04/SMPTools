@@ -1,16 +1,13 @@
 package com.smp.smptools.imagemap;
 
 import com.smp.smptools.SMPTools;
+import com.smp.smptools.commands.AbstractPlayerCommand;
 import com.smp.smptools.utils.Constants;
 import com.smp.smptools.utils.BoundedInputStream;
 import com.smp.smptools.utils.URLValidator;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.MapMeta;
@@ -19,28 +16,21 @@ import org.bukkit.map.MapView;
 import java.awt.image.BufferedImage;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Map;
 
-public class MapCommand implements CommandExecutor {
-
-    private final SMPTools plugin;
+public class MapCommand extends AbstractPlayerCommand {
 
     public MapCommand(SMPTools plugin) {
-        this.plugin = plugin;
+        super(plugin);
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(Component.text("This command can only be used by players.", NamedTextColor.RED));
-            return true;
-        }
-
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usage: /tomap <url> [width] [height]", NamedTextColor.RED));
+            player.sendMessage(plugin.getMessageManager().getMessage("map.usage"));
             return true;
         }
 
-        Player player = (Player) sender;
         String urlString = args[0];
 
         // Validate URL
@@ -48,7 +38,7 @@ public class MapCommand implements CommandExecutor {
         try {
             url = URLValidator.validateAndCreate(urlString);
         } catch (Exception e) {
-            player.sendMessage(Component.text("Invalid URL: " + e.getMessage(), NamedTextColor.RED));
+            player.sendMessage(plugin.getMessageManager().getMessage("common.invalid-url", player, Map.of("error", e.getMessage())));
             return true;
         }
 
@@ -60,20 +50,20 @@ public class MapCommand implements CommandExecutor {
                 widthGrid = Integer.parseInt(args[1]);
                 heightGrid = Integer.parseInt(args[2]);
             } catch (NumberFormatException e) {
-                player.sendMessage(Component.text("Width and Height must be numbers.", NamedTextColor.RED));
+                player.sendMessage(plugin.getMessageManager().getMessage("map.not-numbers", player));
                 return true;
             }
 
             // Validate grid bounds
             if (widthGrid < Constants.MIN_MAP_GRID_SIZE || widthGrid > Constants.MAX_MAP_GRID_SIZE ||
                 heightGrid < Constants.MIN_MAP_GRID_SIZE || heightGrid > Constants.MAX_MAP_GRID_SIZE) {
-                player.sendMessage(Component.text("Width and Height must be between " + 
-                    Constants.MIN_MAP_GRID_SIZE + " and " + Constants.MAX_MAP_GRID_SIZE + ".", NamedTextColor.RED));
+                player.sendMessage(plugin.getMessageManager().getMessage("map.invalid-dimensions", player,
+                        Map.of("min", String.valueOf(Constants.MIN_MAP_GRID_SIZE), "max", String.valueOf(Constants.MAX_MAP_GRID_SIZE))));
                 return true;
             }
         }
 
-        player.sendMessage(Component.text("Downloading and processing image... this may take a moment.", NamedTextColor.GRAY));
+        player.sendMessage(plugin.getMessageManager().getMessage("map.downloading", player));
 
         int finalWidthGrid = widthGrid;
         int finalHeightGrid = heightGrid;
@@ -92,7 +82,7 @@ public class MapCommand implements CommandExecutor {
 
                 if (fullImage == null) {
                     Bukkit.getScheduler().runTask(plugin, () -> {
-                        player.sendMessage(Component.text("Failed to download or process the image. Please check the URL.", NamedTextColor.RED));
+                        player.sendMessage(plugin.getMessageManager().getMessage("map.download-failed", player));
                     });
                     return;
                 }
@@ -125,12 +115,12 @@ public class MapCommand implements CommandExecutor {
                         }
                     }
                     plugin.saveImageMapsConfig();
-                    player.sendMessage(Component.text("Your map(s) have been created!", NamedTextColor.GREEN));
+                    player.sendMessage(plugin.getMessageManager().getMessage("map.created", player));
                 });
 
             } catch (Exception e) {
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    player.sendMessage(Component.text("An error occurred: " + e.getMessage(), NamedTextColor.RED));
+                    player.sendMessage(plugin.getMessageManager().getMessage("map.error", player, Map.of("message", e.getMessage())));
                 });
                 plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to create map", e);
             }

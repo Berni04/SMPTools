@@ -2,7 +2,6 @@ package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.chunkloaders.ChunkLoaderManager;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -34,7 +33,7 @@ public class ChunkLoaderListener implements Listener {
         if (ChunkLoaderManager.isChunkLoaderItem(itemInHand)) {
             Block placedBlock = event.getBlockPlaced();
             chunkLoaderManager.addChunkLoader(placedBlock.getLocation());
-            player.sendMessage(MiniMessage.miniMessage().deserialize("<green>Chunk loader placed! This chunk will now remain loaded.</green>"));
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("chunk-loader.placed", player));
         }
     }
 
@@ -47,7 +46,7 @@ public class ChunkLoaderListener implements Listener {
         Block brokenBlock = event.getBlock();
         if (chunkLoaderManager.isChunkLoader(brokenBlock.getLocation())) {
             chunkLoaderManager.removeChunkLoader(brokenBlock.getLocation());
-            event.getPlayer().sendMessage(MiniMessage.miniMessage().deserialize("<red>Chunk loader removed! This chunk will no longer be force loaded.</red>"));
+            event.getPlayer().sendMessage(SMPTools.getInstance().getMessageManager().getMessage("chunk-loader.removed", event.getPlayer()));
             // Optionally, drop the item back
             event.setDropItems(false); // Prevent default drop
             event.getBlock().getWorld().dropItemNaturally(brokenBlock.getLocation().add(0.5, 0.5, 0.5), ChunkLoaderManager.getChunkLoaderItem());

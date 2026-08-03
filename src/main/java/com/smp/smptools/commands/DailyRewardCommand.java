@@ -1,40 +1,30 @@
 package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
+import com.smp.smptools.utils.CommandBlacklist;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
-public class DailyRewardCommand implements CommandExecutor {
-
-    private final SMPTools plugin;
+public class DailyRewardCommand extends AbstractPlayerCommand {
 
     public DailyRewardCommand(SMPTools plugin) {
-        this.plugin = plugin;
+        super(plugin);
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(Component.text("Only players can use this command.", NamedTextColor.RED));
-            return true;
-        }
-
-        Player player = (Player) sender;
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
         String uuid = player.getUniqueId().toString();
 
         if (!plugin.getConfig().getBoolean("features.daily-rewards.enabled")) {
-            player.sendMessage(Component.text("The daily reward system is currently disabled.", NamedTextColor.RED));
+            player.sendMessage(plugin.getMessageManager().getMessage("daily.disabled"));
             return true;
         }
 
@@ -47,15 +37,15 @@ public class DailyRewardCommand implements CommandExecutor {
             Duration timeSinceClaimed = Duration.between(lastClaimed, now);
 
             if (timeSinceClaimed.toHours() < cooldownHours) {
-                long hoursRemaining = cooldownHours - timeSinceClaimed.toHours();
-                long minutesRemaining = (cooldownHours * 60) - timeSinceClaimed.toMinutes();
-                minutesRemaining %= 60;
-                player.sendMessage(Component.text("You have already claimed your daily reward. Please wait " + hoursRemaining + "h " + minutesRemaining + "m.", NamedTextColor.RED));
+                long totalRemainingMinutes = (cooldownHours * 60) - timeSinceClaimed.toMinutes();
+                long hoursRemaining = totalRemainingMinutes / 60;
+                long minutesRemaining = totalRemainingMinutes % 60;
+                player.sendMessage(plugin.getMessageManager().getMessage("daily.cooldown", player,
+                        Map.of("hours", String.valueOf(hoursRemaining), "minutes", String.valueOf(minutesRemaining))));
                 return true;
             }
         }
 
-        // Grant rewards
         List<String> rewards = plugin.getConfig().getStringList("features.daily-rewards.rewards");
         for (String reward : rewards) {
             if (reward.startsWith("item:")) {
@@ -68,15 +58,19 @@ public class DailyRewardCommand implements CommandExecutor {
                     plugin.getLogger().warning("Invalid item format in daily reward: " + reward);
                 }
             } else {
-                // Assume it's a command
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), reward.replace("%player%", player.getName()));
+                String cmd = reward.replace("%player%", player.getName());
+                if (CommandBlacklist.isBlocked(cmd)) {
+                    plugin.getLogger().warning("Blocked dangerous command in daily reward: " + cmd);
+                    continue;
+                }
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
             }
         }
 
         plugin.getRewardsConfig().set("players." + uuid + ".last-claimed", Instant.now().toString());
         plugin.saveRewardsConfig();
 
-        player.sendMessage(Component.text("You have successfully claimed your daily reward!", NamedTextColor.GREEN));
+        player.sendMessage(plugin.getMessageManager().getMessage("daily.claimed"));
 
         return true;
     }

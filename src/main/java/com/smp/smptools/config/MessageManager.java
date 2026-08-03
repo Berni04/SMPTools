@@ -44,6 +44,15 @@ public class MessageManager {
             plugin.saveResource("messages.yml", false);
         }
         messagesConfig = YamlConfiguration.loadConfiguration(file);
+
+        try (java.io.InputStream defaultStream = plugin.getResource("messages.yml")) {
+            if (defaultStream != null) {
+                YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(defaultStream, java.nio.charset.StandardCharsets.UTF_8));
+                messagesConfig.setDefaults(defaultConfig);
+            }
+        } catch (java.io.IOException e) {
+            plugin.getLogger().warning("Could not load default messages.yml stream: " + e.getMessage());
+        }
     }
 
     /**
@@ -57,15 +66,62 @@ public class MessageManager {
     public Component getMessage(String path, Player player, Map<String, String> placeholders) {
         String msg = messagesConfig.getString(path, "Missing message: " + path);
 
-        // Replace simple {placeholder} values
+        java.util.List<TagResolver> resolvers = new java.util.ArrayList<>();
+        resolvers.add(buildPlayerTagResolver(player));
+
         for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-            msg = msg.replace("{" + entry.getKey() + "}", entry.getValue());
+            String key = entry.getKey();
+            String val = entry.getValue() == null ? "" : entry.getValue();
+            String phKey = "ph_" + key;
+            msg = msg.replace("{" + key + "}", "<" + phKey + ">");
+
+            if (isSimpleFormattingTag(val)) {
+                resolvers.add(net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.parsed(phKey, val));
+            } else {
+                resolvers.add(net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.unparsed(phKey, val));
+            }
         }
 
-        // Build dynamic tag resolvers
-        TagResolver resolver = buildPlayerTagResolver(player);
+        return MiniMessage.miniMessage().deserialize(msg, TagResolver.resolver(resolvers));
+    }
 
-        return MiniMessage.miniMessage().deserialize(msg, resolver);
+    public Component getMessage(String path, Player context, Map<String, String> placeholders, Player secondary) {
+        String msg = messagesConfig.getString(path, "Missing message: " + path);
+
+        java.util.List<TagResolver> resolvers = new java.util.ArrayList<>();
+        resolvers.add(buildPlayerTagResolver(context));
+        resolvers.add(buildSecondaryPlayerTagResolver(secondary));
+
+        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+            String key = entry.getKey();
+            String val = entry.getValue() == null ? "" : entry.getValue();
+            String phKey = "ph_" + key;
+            msg = msg.replace("{" + key + "}", "<" + phKey + ">");
+
+            if (isSimpleFormattingTag(val)) {
+                resolvers.add(net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.parsed(phKey, val));
+            } else {
+                resolvers.add(net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.unparsed(phKey, val));
+            }
+        }
+
+        return MiniMessage.miniMessage().deserialize(msg, TagResolver.resolver(resolvers));
+    }
+
+    private boolean isSimpleFormattingTag(String val) {
+        if (val == null || val.isEmpty()) return false;
+        String trimmed = val.trim();
+        if (!((trimmed.startsWith("<green>") && trimmed.endsWith("</green>"))
+                || (trimmed.startsWith("<red>") && trimmed.endsWith("</red>"))
+                || (trimmed.startsWith("<yellow>") && trimmed.endsWith("</yellow>"))
+                || (trimmed.startsWith("<gold>") && trimmed.endsWith("</gold>")))) {
+            return false;
+        }
+        int firstClose = trimmed.indexOf('>');
+        int lastOpen = trimmed.lastIndexOf('<');
+        if (firstClose < 0 || lastOpen <= firstClose) return false;
+        String inner = trimmed.substring(firstClose + 1, lastOpen);
+        return !inner.contains("<") && !inner.contains(">");
     }
 
     /**
@@ -87,6 +143,30 @@ public class MessageManager {
      */
     public Component getMessage(String path) {
         return getMessage(path, null, Collections.emptyMap());
+    }
+
+    /**
+     * Gets the raw string message from the configuration without parsing.
+     * Useful when the caller wants to deserialize via a different serializer
+     * (e.g. {@code MiniMessage.deserialize(...)} or for lore/displayName fields).
+     *
+     * @param path the message path in messages.yml
+     * @return the raw MiniMessage template string, or empty string if not found
+     */
+    public String getRawMessage(String path) {
+        String msg = messagesConfig.getString(path, "");
+        return msg == null ? "" : msg;
+    }
+
+    /**
+     * Gets a string list from the messages configuration.
+     *
+     * @param path the message path in messages.yml
+     * @return the list of strings, or empty list if not found
+     */
+    public java.util.List<String> getStringList(String path) {
+        java.util.List<String> list = messagesConfig.getStringList(path);
+        return list == null ? java.util.Collections.emptyList() : list;
     }
 
     /**
@@ -122,13 +202,13 @@ public class MessageManager {
         Component color = MiniMessage.miniMessage().deserialize(colorTag);
 
         // Just the prefix
-        Component prefixComponent = prefix.isEmpty() 
-            ? Component.empty() 
+        Component prefixComponent = prefix.isEmpty()
+            ? Component.empty()
             : MiniMessage.miniMessage().deserialize(colorTag + prefix);
 
         // Just the title
-        Component titleComponent = title.isEmpty() 
-            ? Component.empty() 
+        Component titleComponent = title.isEmpty()
+            ? Component.empty()
             : Component.text("[" + title + "]");
 
         return TagResolver.builder()
@@ -138,6 +218,48 @@ public class MessageManager {
             .resolver(TagResolver.resolver("player_color", Tag.selfClosingInserting(color)))
             .resolver(TagResolver.resolver("player_prefix", Tag.selfClosingInserting(prefixComponent)))
             .resolver(TagResolver.resolver("player_title", Tag.selfClosingInserting(titleComponent)))
+            .build();
+    }
+
+    /**
+     * Builds a TagResolver with secondary-player (e.g. requester) dynamic tags.
+     * Tag names are prefixed with "requester" to avoid collisions with the primary
+     * {@code <player*...>} tags from {@link #buildPlayerTagResolver(Player)}.
+     *
+     * @param player the secondary player (can be null)
+     * @return the TagResolver with {@code <requester*...>} tags
+     */
+    private TagResolver buildSecondaryPlayerTagResolver(Player player) {
+        if (player == null) {
+            return TagResolver.empty();
+        }
+
+        FileConfiguration statsConfig = plugin.getStatsConfig();
+        FileConfiguration tagsConfig = plugin.getTagsConfig();
+        String uuid = player.getUniqueId().toString();
+
+        String colorTag = statsConfig.getString("players." + uuid + ".name-color", "<white>");
+        String prefix = statsConfig.getString("players." + uuid + ".prefix", "");
+        String title = tagsConfig.getString("player-titles." + uuid, "");
+
+        Component fullPlayer = plugin.getChatManager().getFormattedDisplayName(player);
+        Component nameColor = MiniMessage.miniMessage().deserialize(colorTag + player.getName());
+        Component rawName = Component.text(player.getName());
+        Component color = MiniMessage.miniMessage().deserialize(colorTag);
+        Component prefixComponent = prefix.isEmpty()
+            ? Component.empty()
+            : MiniMessage.miniMessage().deserialize(colorTag + prefix);
+        Component titleComponent = title.isEmpty()
+            ? Component.empty()
+            : Component.text("[" + title + "]");
+
+        return TagResolver.builder()
+            .resolver(TagResolver.resolver("requester", Tag.selfClosingInserting(fullPlayer)))
+            .resolver(TagResolver.resolver("requester_name", Tag.selfClosingInserting(rawName)))
+            .resolver(TagResolver.resolver("requester_name_color", Tag.selfClosingInserting(nameColor)))
+            .resolver(TagResolver.resolver("requester_color", Tag.selfClosingInserting(color)))
+            .resolver(TagResolver.resolver("requester_prefix", Tag.selfClosingInserting(prefixComponent)))
+            .resolver(TagResolver.resolver("requester_title", Tag.selfClosingInserting(titleComponent)))
             .build();
     }
 }

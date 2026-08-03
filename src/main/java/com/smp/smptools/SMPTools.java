@@ -8,6 +8,7 @@ import com.smp.smptools.config.CommandRegistry;
 import com.smp.smptools.config.ConfigDefaults;
 import com.smp.smptools.config.ListenerRegistry;
 import com.smp.smptools.config.MessageManager;
+import com.smp.smptools.utils.ConfigValidator;
 import com.smp.smptools.enchants.EnchantmentManager;
 import com.smp.smptools.leaderboard.LeaderboardManager;
 import com.smp.smptools.skills.SkillsManager;
@@ -90,6 +91,7 @@ public class SMPTools extends JavaPlugin {
     private DialogueManager dialogueManager;
     private BlackFridayManager blackFridayManager;
     private MessageManager messageManager;
+    private com.smp.smptools.listeners.InvseeGUIListener invseeGUIListener;
 
     @Override
     public void onEnable() {
@@ -98,6 +100,7 @@ public class SMPTools extends JavaPlugin {
 
         // Setup configs
         ConfigDefaults.applyDefaults(this);
+        ConfigValidator.validate(this);
 
         setupStatsConfig();
         setupTagsConfig();
@@ -185,7 +188,7 @@ public class SMPTools extends JavaPlugin {
 
             // Present Hunt
             com.smp.smptools.christmas.PresentManager presentManager = new com.smp.smptools.christmas.PresentManager(this);
-            this.getCommand("present").setExecutor(new com.smp.smptools.commands.PresentCommand(presentManager));
+            this.getCommand("present").setExecutor(new com.smp.smptools.commands.PresentCommand(this, presentManager));
             Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.PresentListener(presentManager), this);
 
             // Festive Mobs
@@ -196,7 +199,7 @@ public class SMPTools extends JavaPlugin {
 
             // Krampus Night
             com.smp.smptools.christmas.KrampusManager krampusManager = new com.smp.smptools.christmas.KrampusManager(this);
-            this.getCommand("krampus").setExecutor(new com.smp.smptools.commands.KrampusCommand(krampusManager));
+            this.getCommand("krampus").setExecutor(new com.smp.smptools.commands.KrampusCommand(this, krampusManager));
             Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.KrampusListener(this, krampusManager),
                     this);
         }
@@ -477,5 +480,13 @@ public class SMPTools extends JavaPlugin {
 
     public MessageManager getMessageManager() {
         return messageManager;
+    }
+
+    public com.smp.smptools.listeners.InvseeGUIListener getInvseeGUIListener() {
+        return invseeGUIListener;
+    }
+
+    public void setInvseeGUIListener(com.smp.smptools.listeners.InvseeGUIListener listener) {
+        this.invseeGUIListener = listener;
     }
 }

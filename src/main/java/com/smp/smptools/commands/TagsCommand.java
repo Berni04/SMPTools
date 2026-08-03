@@ -3,13 +3,10 @@ package com.smp.smptools.commands;
 import com.smp.smptools.SMPTools;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -18,24 +15,16 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
-public class TagsCommand implements CommandExecutor {
-
-    private final SMPTools plugin;
+public class TagsCommand extends AbstractPlayerCommand {
 
     public TagsCommand(SMPTools plugin) {
-        this.plugin = plugin;
+        super(plugin);
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(Component.text("Only players can use this command!", NamedTextColor.RED));
-            return true;
-        }
-
-        Player player = (Player) sender;
-
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
         if (args.length == 0) {
             openTagsGUI(player);
             return true;
@@ -43,17 +32,23 @@ public class TagsCommand implements CommandExecutor {
 
         if (args[0].equalsIgnoreCase("set")) {
             if (!player.hasPermission("smptools.tags.set")) {
-                player.sendMessage(Component.text("You don't have permission to use this command.", NamedTextColor.RED));
+                player.sendMessage(plugin.getMessageManager().getMessage("common.no-permission"));
                 return true;
             }
             if (args.length < 3) {
-                player.sendMessage(Component.text("Usage: /tags set <player> <title>", NamedTextColor.RED));
+                player.sendMessage(plugin.getMessageManager().getMessage("common.usage", player,
+                        java.util.Map.of("usage", "/tags set <player> <title>")));
                 return true;
             }
 
             OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
             if (!target.hasPlayedBefore()) {
-                player.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
+                player.sendMessage(plugin.getMessageManager().getMessage("common.player-not-found"));
+                return true;
+            }
+
+            if (!target.isOnline()) {
+                player.sendMessage(plugin.getMessageManager().getMessage("common.player-not-found"));
                 return true;
             }
 
@@ -64,11 +59,13 @@ public class TagsCommand implements CommandExecutor {
             title = title.trim();
 
             plugin.getTagManager().unlockTitle((Player) target, title);
-            player.sendMessage(Component.text("Title '" + title + "' unlocked for " + target.getName(), NamedTextColor.GREEN));
+            player.sendMessage(plugin.getMessageManager().getMessage("tags.unlocked", player,
+                    java.util.Map.of("title", title, "target", args[1])));
             return true;
         }
 
-        player.sendMessage(Component.text("Unknown subcommand. Usage: /tags [set <player> <title>]", NamedTextColor.RED));
+        player.sendMessage(plugin.getMessageManager().getMessage("common.unknown-subcommand", player,
+                java.util.Map.of("usage", "/tags [set <player> <title>]")));
         return true;
     }
 
@@ -95,12 +92,13 @@ public class TagsCommand implements CommandExecutor {
                     meta.displayName(Component.text(title, NamedTextColor.GOLD));
                     List<Component> lore = new ArrayList<>();
                     lore.add(Component.text(description != null ? description : "", NamedTextColor.GRAY));
-                    lore.add(Component.text("Unlocked!", NamedTextColor.GREEN));
+                    lore.add(plugin.getMessageManager().getMessage("tags.gui-unlocked", player));
                     meta.lore(lore);
                 } else {
                     meta.displayName(Component.text(title, NamedTextColor.RED));
                     List<Component> lore = new ArrayList<>();
-                    lore.add(Component.text("How to unlock: " + (description != null ? description : ""), NamedTextColor.GRAY));
+                    lore.add(plugin.getMessageManager().getMessage("tags.gui-how-to-unlock", player,
+                            Map.of("description", description != null ? description : "")));
                     meta.lore(lore);
                 }
 
@@ -109,7 +107,6 @@ public class TagsCommand implements CommandExecutor {
             }
         }
 
-        // Clear title button
         ItemStack clearItem = new ItemStack(Material.BARRIER);
         ItemMeta clearMeta = clearItem.getItemMeta();
         clearMeta.displayName(Component.text("Clear Title", NamedTextColor.RED));

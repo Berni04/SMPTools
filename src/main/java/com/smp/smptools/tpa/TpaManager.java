@@ -56,25 +56,30 @@ public class TpaManager {
      */
     public void sendTeleportRequest(@NotNull Player requester, @NotNull Player target) {
         if (tpaToggledOff.contains(target.getUniqueId())) {
-            requester.sendMessage(Component.text(target.getName() + " is not accepting teleport requests at this time.", NamedTextColor.RED));
+            requester.sendMessage(plugin.getMessageManager().getMessage("tpa.target-toggled-off", requester,
+                    Map.of("target", target.getName())));
             return;
         }
 
         if (pendingRequests.containsKey(target.getUniqueId())) {
-            requester.sendMessage(Component.text(target.getName() + " already has a pending teleport request.", NamedTextColor.RED));
+            requester.sendMessage(plugin.getMessageManager().getMessage("tpa.already-pending", requester,
+                    Map.of("target", target.getName())));
             return;
         }
 
         pendingRequests.put(target.getUniqueId(), requester.getUniqueId());
 
-        requester.sendMessage(Component.text("Teleport request sent to " + target.getName() + ".", NamedTextColor.GREEN));
+        requester.sendMessage(plugin.getMessageManager().getMessage("tpa.request-sent", requester,
+                Map.of("target", target.getName())));
 
         Component acceptButton = Component.text("[Accept]", NamedTextColor.GREEN)
                 .clickEvent(ClickEvent.runCommand("/tpa"));
         Component denyButton = Component.text("[Deny]", NamedTextColor.RED)
                 .clickEvent(ClickEvent.runCommand("/tpd"));
 
-        target.sendMessage(Component.text(requester.getName() + " has requested to teleport to you. ", NamedTextColor.YELLOW)
+        target.sendMessage(plugin.getMessageManager().getMessage("tpa.request-received", target,
+                Map.of(), requester)
+                .append(Component.text(" "))
                 .append(acceptButton)
                 .append(Component.text(" "))
                 .append(denyButton));
@@ -85,8 +90,14 @@ public class TpaManager {
             public void run() {
                 if (pendingRequests.containsKey(target.getUniqueId()) && pendingRequests.get(target.getUniqueId()).equals(requester.getUniqueId())) {
                     pendingRequests.remove(target.getUniqueId());
-                    requester.sendMessage(Component.text("Your teleport request to " + target.getName() + " has expired.", NamedTextColor.RED));
-                    target.sendMessage(Component.text("Teleport request from " + requester.getName() + " has expired.", NamedTextColor.RED));
+                    if (requester.isOnline()) {
+                        requester.sendMessage(plugin.getMessageManager().getMessage("tpa.expired", requester,
+                                Map.of("target", target.getName())));
+                    }
+                    if (target.isOnline()) {
+                        target.sendMessage(plugin.getMessageManager().getMessage("tpa.expired-other", target,
+                                Map.of("target", requester.getName())));
+                    }
                 }
             }
         }.runTaskLater(plugin, Constants.TPA_TIMEOUT_TICKS);
@@ -100,7 +111,7 @@ public class TpaManager {
      */
     public void acceptTeleportRequest(@NotNull Player acceptor) {
         if (!pendingRequests.containsKey(acceptor.getUniqueId())) {
-            acceptor.sendMessage(Component.text("You have no pending teleport requests.", NamedTextColor.RED));
+            acceptor.sendMessage(plugin.getMessageManager().getMessage("tpa.no-pending"));
             return;
         }
 
@@ -108,12 +119,13 @@ public class TpaManager {
         Player requester = plugin.getServer().getPlayer(requesterUUID);
 
         if (requester == null || !requester.isOnline()) {
-            acceptor.sendMessage(Component.text("The requester is no longer online.", NamedTextColor.RED));
+            acceptor.sendMessage(plugin.getMessageManager().getMessage("tpa.target-offline"));
             return;
         }
 
         plugin.getTeleportManager().startTeleport(requester, acceptor.getLocation(), "to " + acceptor.getName());
-        acceptor.sendMessage(Component.text(requester.getName() + " has started teleporting to you.", NamedTextColor.GREEN));
+        acceptor.sendMessage(plugin.getMessageManager().getMessage("tpa.accepted", acceptor,
+                Map.of(), requester));
     }
 
     /**
@@ -123,7 +135,7 @@ public class TpaManager {
      */
     public void denyTeleportRequest(@NotNull Player denier) {
         if (!pendingRequests.containsKey(denier.getUniqueId())) {
-            denier.sendMessage(Component.text("You have no pending teleport requests.", NamedTextColor.RED));
+            denier.sendMessage(plugin.getMessageManager().getMessage("tpa.no-pending"));
             return;
         }
 
@@ -131,9 +143,11 @@ public class TpaManager {
         Player requester = plugin.getServer().getPlayer(requesterUUID);
 
         if (requester != null && requester.isOnline()) {
-            requester.sendMessage(Component.text(denier.getName() + " has denied your teleport request.", NamedTextColor.RED));
+            requester.sendMessage(plugin.getMessageManager().getMessage("tpa.denied", requester,
+                    Map.of("target", denier.getName())));
         }
-        denier.sendMessage(Component.text("Teleport request denied.", NamedTextColor.GREEN));
+        denier.sendMessage(plugin.getMessageManager().getMessage("tpa.denied", denier,
+                Map.of("target", requester != null ? requester.getName() : "Unknown")));
     }
 
     /**
@@ -144,10 +158,10 @@ public class TpaManager {
     public void toggleTpa(@NotNull Player player) {
         if (tpaToggledOff.contains(player.getUniqueId())) {
             tpaToggledOff.remove(player.getUniqueId());
-            player.sendMessage(Component.text("You are now accepting teleport requests.", NamedTextColor.GREEN));
+            player.sendMessage(plugin.getMessageManager().getMessage("tpa.toggle-on"));
         } else {
             tpaToggledOff.add(player.getUniqueId());
-            player.sendMessage(Component.text("You are no longer accepting teleport requests.", NamedTextColor.RED));
+            player.sendMessage(plugin.getMessageManager().getMessage("tpa.toggle-off"));
         }
     }
 }

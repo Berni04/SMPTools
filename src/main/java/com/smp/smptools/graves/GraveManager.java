@@ -79,9 +79,8 @@ public class GraveManager implements Listener {
         graves.put(deathLocation, grave);
         saveGraves();
 
-        player.sendMessage(Component.text("Your items have been stored in a grave at " +
-                deathLocation.getBlockX() + ", " + deathLocation.getBlockY() + ", " + deathLocation.getBlockZ(),
-                NamedTextColor.YELLOW));
+        String graveLocation = deathLocation.getBlockX() + ", " + deathLocation.getBlockY() + ", " + deathLocation.getBlockZ();
+        player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("grave.stored", player, Map.of("location", graveLocation)));
     }
 
     @EventHandler
@@ -175,8 +174,7 @@ public class GraveManager implements Listener {
         graves.remove(loc);
         saveGraves();
 
-        looter.sendMessage(
-                Component.text("You have looted the grave of " + grave.getOwnerName(), NamedTextColor.GREEN));
+        looter.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("grave.looted", looter, Map.of("player", grave.getOwnerName())));
     }
 
     private void setupGravesConfig() {

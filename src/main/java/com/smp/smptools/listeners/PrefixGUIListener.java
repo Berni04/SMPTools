@@ -3,8 +3,8 @@ package com.smp.smptools.listeners;
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.commands.PrefixCommand;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import java.util.Map;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -41,7 +41,7 @@ public class PrefixGUIListener implements Listener {
             plugin.getStatsConfig().set("players." + player.getUniqueId() + ".prefix", prefix);
             plugin.saveStatsConfig();
             plugin.getNameTagListener().updatePlayerName(player);
-            player.sendMessage(Component.text("Your prefix has been set to: " + prefix, NamedTextColor.GREEN));
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("prefix.set", player, Map.of("prefix", prefix)));
             player.closeInventory();
         }
     }

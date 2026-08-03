@@ -3,7 +3,6 @@ package com.smp.smptools.listeners;
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.leaderboard.LeaderboardManager;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -25,15 +24,39 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class LeaderboardGUIListener implements Listener {
 
     private final SMPTools plugin;
+    private final String hubTitle;
+    private final String statTitlePrefix;
 
     public LeaderboardGUIListener(SMPTools plugin) {
         this.plugin = plugin;
+        // Resolve the configurable titles for fallback compatibility with
+        // other plugins that may open the same GUI without using our
+        // InventoryHolder. The stat-title prefix is derived by deserializing
+        // the template with {title} set to the empty string so the literal
+        // part of the template (e.g. "Top 10 - ") is captured.
+        this.hubTitle = PlainTextComponentSerializer.plainText().serialize(
+                plugin.getMessageManager().getMessage("leaderboard.gui-title"));
+        this.statTitlePrefix = PlainTextComponentSerializer.plainText().serialize(
+                plugin.getMessageManager().getMessage("leaderboard.stat-title", null,
+                        Map.of("title", "")));
     }
 
     @EventHandler
     public void onHubClick(InventoryClickEvent event) {
-        if (!event.getView().title().equals(Component.text("Leaderboards"))) {
-            return;
+        // Primary check: our InventoryHolder. This is the only reliable
+        // way to recognise the hub regardless of the configured title.
+        if (!(event.getInventory().getHolder() instanceof LeaderboardHubHolder)) {
+            // Fallback: legacy title-based check (other plugins may open
+            // a similar GUI without our holder). Skip the fallback when
+            // the configured title is empty or blank, because that would
+            // otherwise match any inventory whose plain-text title also
+            // happens to be empty.
+            if (hubTitle == null || hubTitle.isBlank()) {
+                return;
+            }
+            if (!PlainTextComponentSerializer.plainText().serialize(event.getView().title()).equals(hubTitle)) {
+                return;
+            }
         }
 
         event.setCancelled(true);
@@ -50,7 +73,23 @@ public class LeaderboardGUIListener implements Listener {
 
     @EventHandler
     public void onLeaderboardClick(InventoryClickEvent event) {
-        if (!PlainTextComponentSerializer.plainText().serialize(event.getView().title()).startsWith("Top 10 -")) {
+        // Primary check: our InventoryHolder. This is robust against any
+        // customisation of the leaderboard.stat-title template.
+        if (event.getInventory().getHolder() instanceof LeaderboardStatHolder) {
+            event.setCancelled(true);
+            return;
+        }
+
+        // Fallback: prefix-based check using the configurable
+        // leaderboard.stat-title template. Renaming the template in
+        // messages.yml automatically updates this check. The fallback is
+        // skipped when the prefix is empty or blank because every string
+        // starts with the empty string, which would otherwise cancel
+        // clicks in unrelated inventories.
+        if (statTitlePrefix == null || statTitlePrefix.isBlank()) {
+            return;
+        }
+        if (!PlainTextComponentSerializer.plainText().serialize(event.getView().title()).startsWith(statTitlePrefix)) {
             return;
         }
         event.setCancelled(true);
@@ -61,10 +100,14 @@ public class LeaderboardGUIListener implements Listener {
         Map<String, Long> leaderboard = manager.getLeaderboard(statKey);
 
         String title = statKey.replace('_', ' ').toUpperCase();
-        Inventory leaderboardGUI = Bukkit.createInventory(null, 54, Component.text("Top 10 - " + title));
+        LeaderboardStatHolder holder = new LeaderboardStatHolder(statKey);
+        Inventory leaderboardGUI = Bukkit.createInventory(holder, 54,
+                plugin.getMessageManager().getMessage("leaderboard.stat-title", player,
+                        Map.of("title", title)));
+        holder.setInventory(leaderboardGUI);
 
         if (leaderboard.isEmpty()) {
-            player.sendMessage(Component.text("No leaderboard data available for this stat.", NamedTextColor.YELLOW));
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("leaderboard.no-data"));
             return;
         }
 
@@ -78,9 +121,11 @@ public class LeaderboardGUIListener implements Listener {
                 headMeta.setOwningPlayer(offlinePlayer);
             }
 
-            headMeta.displayName(Component.text("#" + rank.get() + " " + playerName, NamedTextColor.GOLD));
+            headMeta.displayName(plugin.getMessageManager().getMessage("leaderboard.gui-rank", player,
+                    Map.of("rank", String.valueOf(rank.get()), "name", playerName)));
             List<Component> lore = new ArrayList<>();
-            lore.add(Component.text("Score: " + formatScore(statKey, score), NamedTextColor.YELLOW));
+            lore.add(plugin.getMessageManager().getMessage("leaderboard.gui-score", player,
+                    Map.of("score", formatScore(statKey, score))));
             headMeta.lore(lore);
             playerHead.setItemMeta(headMeta);
             leaderboardGUI.addItem(playerHead);

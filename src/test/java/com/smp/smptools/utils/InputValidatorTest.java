@@ -87,4 +87,32 @@ class InputValidatorTest {
     void isValidPlayerName_specialChars_returnsFalse() {
         assertFalse(InputValidator.isValidPlayerName("Player@123"));
     }
+
+    @Test
+    void sanitizeMiniMessage_stripsLowercaseDangerousTags() {
+        assertEquals("hi", InputValidator.sanitizeMiniMessage("<hover:show_text:'x'>hi"));
+        assertEquals("hi", InputValidator.sanitizeMiniMessage("<click:run_command:/x>hi</click>"));
+        assertEquals("hi", InputValidator.sanitizeMiniMessage("<insert:x>hi"));
+    }
+
+    @Test
+    void sanitizeMiniMessage_stripsMixedCaseDangerousTags() {
+        // Regression: regex was case-sensitive, so <HOVER>, <Hover> bypassed it.
+        assertEquals("hi", InputValidator.sanitizeMiniMessage("<HOVER:show_text:'x'>hi"));
+        assertEquals("hi", InputValidator.sanitizeMiniMessage("<Hover:show_text:'x'>hi</Hover>"));
+        assertEquals("hi", InputValidator.sanitizeMiniMessage("<CLICK:run_command:/x>hi</click>"));
+        assertEquals("hi", InputValidator.sanitizeMiniMessage("<TRANSLATABLE:x>hi</translatable>"));
+    }
+
+    @Test
+    void sanitizeMiniMessage_preservesColorAndFormatTags() {
+        assertEquals("<red>hi</red>", InputValidator.sanitizeMiniMessage("<red>hi</red>"));
+        assertEquals("<bold>x</bold>", InputValidator.sanitizeMiniMessage("<bold>x</bold>"));
+        assertEquals("<color:#FF00FF>x</color>", InputValidator.sanitizeMiniMessage("<color:#FF00FF>x</color>"));
+    }
+
+    @Test
+    void sanitizeMiniMessage_null_returnsEmpty() {
+        assertEquals("", InputValidator.sanitizeMiniMessage(null));
+    }
 }

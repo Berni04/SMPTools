@@ -5,47 +5,28 @@ import com.smp.smptools.listeners.MissionGUIListener;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Villager;
-import org.bukkit.entity.Entity;
-import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.NamespacedKey;
+import org.bukkit.command.Command;
+import org.bukkit.entity.Player;
 
-import com.smp.smptools.utils.HeadUtils;
-import org.bukkit.Material;
-import org.bukkit.Color;
-import org.bukkit.entity.Zombie;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.LeatherArmorMeta;
+import java.util.Map;
 
-public class MissionCommand implements CommandExecutor {
+public class MissionCommand extends AbstractPlayerCommand {
 
-    private final SMPTools plugin;
     public static final NamespacedKey MISSION_NPC_KEY = new NamespacedKey(SMPTools.getInstance(), "mission_npc");
     public static final NamespacedKey SANTA_NPC_KEY = new NamespacedKey(SMPTools.getInstance(), "santa_npc");
     public static final Component NPC_NAME = Component.text("Quest Master", NamedTextColor.GOLD, TextDecoration.BOLD);
     public static final Component SANTA_NAME = Component.text("Santa Claus", NamedTextColor.RED, TextDecoration.BOLD);
 
     public MissionCommand(SMPTools plugin) {
-        this.plugin = plugin;
+        super(plugin);
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage("Only players can use this command.");
-            return true;
-        }
-
-        Player player = (Player) sender;
-
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
         if (args.length > 0) {
-            // Admin commands
             if (args[0].equalsIgnoreCase("npc")) {
-                player.sendMessage(Component.text("Use /npc command for NPC management.", NamedTextColor.YELLOW));
+                player.sendMessage(plugin.getMessageManager().getMessage("missions.use-npc-command", player));
                 return true;
             }
 
@@ -75,75 +56,75 @@ public class MissionCommand implements CommandExecutor {
             }
         }
 
-        // Default action: open the mission GUI
         MissionGUIListener.openMissionGUI(player, false, "NORMAL");
         return true;
     }
 
-    // NPC spawning logic moved to NPCCommand and NPCManager
-
     private void handleListCommand(Player admin) {
         if (!admin.hasPermission("smptools.missions.admin")) {
-            admin.sendMessage(Component.text("You don't have permission to do that.", NamedTextColor.RED));
+            admin.sendMessage(plugin.getMessageManager().getMessage("common.no-permission"));
             return;
         }
 
-        admin.sendMessage(Component.text("Available Mission IDs:", NamedTextColor.GOLD));
+        admin.sendMessage(plugin.getMessageManager().getMessage("missions.available-ids", admin));
+        Component clickToCopy = plugin.getMessageManager().getMessage("missions.click-to-copy", admin);
         for (String missionId : plugin.getMissionManager().getAllMissions().keySet()) {
-            admin.sendMessage(Component.text("- " + missionId, NamedTextColor.YELLOW)
-                    .hoverEvent(Component.text("Click to copy"))
+            admin.sendMessage(plugin.getMessageManager().getMessage("missions.list-item", admin, Map.of("id", missionId))
+                    .hoverEvent(clickToCopy)
                     .clickEvent(net.kyori.adventure.text.event.ClickEvent.copyToClipboard(missionId)));
         }
     }
 
     private void handleCompleteCommand(Player admin, String[] args) {
         if (!admin.hasPermission("smptools.missions.admin")) {
-            admin.sendMessage(Component.text("You don't have permission to do that.", NamedTextColor.RED));
+            admin.sendMessage(plugin.getMessageManager().getMessage("common.no-permission"));
             return;
         }
         if (args.length < 3) {
-            admin.sendMessage(Component.text("Usage: /missions complete <player> <missionId>", NamedTextColor.RED));
+            admin.sendMessage(plugin.getMessageManager().getMessage("common.usage", admin,
+                    java.util.Map.of("usage", "/missions complete <player> <missionId>")));
             return;
         }
         Player target = plugin.getServer().getPlayer(args[1]);
         if (target == null) {
-            admin.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
+            admin.sendMessage(plugin.getMessageManager().getMessage("common.player-not-found"));
             return;
         }
         String missionId = args[2];
         if (plugin.getMissionManager().getMission(missionId) == null) {
-            admin.sendMessage(Component.text("Mission ID not found.", NamedTextColor.RED));
+            admin.sendMessage(plugin.getMessageManager().getMessage("missions.id-not-found", admin));
             return;
         }
 
         plugin.getMissionManager().forceCompleteMission(target, missionId);
-        admin.sendMessage(Component.text("Forcibly completed mission '" + missionId + "' for " + target.getName(),
-                NamedTextColor.GREEN));
+        admin.sendMessage(plugin.getMessageManager().getMessage("missions.force-completed", admin,
+                java.util.Map.of("mission", missionId, "target", target.getName())));
     }
 
     private void handleResetCommand(Player admin, String[] args) {
         if (!admin.hasPermission("smptools.missions.admin")) {
-            admin.sendMessage(Component.text("You don't have permission to do that.", NamedTextColor.RED));
+            admin.sendMessage(plugin.getMessageManager().getMessage("common.no-permission"));
             return;
         }
         if (args.length < 3) {
-            admin.sendMessage(Component.text("Usage: /missions reset <player> <missionId>", NamedTextColor.RED));
+            admin.sendMessage(plugin.getMessageManager().getMessage("common.usage", admin,
+                    java.util.Map.of("usage", "/missions reset <player> <missionId>")));
             return;
         }
         Player target = plugin.getServer().getPlayer(args[1]);
         if (target == null) {
-            admin.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
+            admin.sendMessage(plugin.getMessageManager().getMessage("common.player-not-found"));
             return;
         }
         String missionId = args[2];
         if (plugin.getMissionManager().getMission(missionId) == null) {
-            admin.sendMessage(Component.text("Mission ID not found.", NamedTextColor.RED));
+            admin.sendMessage(plugin.getMessageManager().getMessage("missions.id-not-found", admin));
             return;
         }
 
         plugin.getMissionManager().resetMission(target, missionId);
-        admin.sendMessage(
-                Component.text("Reset mission '" + missionId + "' for " + target.getName(), NamedTextColor.GREEN));
+        admin.sendMessage(plugin.getMessageManager().getMessage("missions.reset", admin,
+                java.util.Map.of("mission", missionId, "target", target.getName())));
     }
 
     private void handleSantaCommand(Player player) {
@@ -160,16 +141,17 @@ public class MissionCommand implements CommandExecutor {
 
     private void handleResetQuestlineCommand(Player admin, String[] args) {
         if (!admin.hasPermission("smptools.missions.admin")) {
-            admin.sendMessage(Component.text("You don't have permission to do that.", NamedTextColor.RED));
+            admin.sendMessage(plugin.getMessageManager().getMessage("common.no-permission"));
             return;
         }
         if (args.length < 2) {
-            admin.sendMessage(Component.text("Usage: /missions resetquestline <player>", NamedTextColor.RED));
+            admin.sendMessage(plugin.getMessageManager().getMessage("common.usage", admin,
+                    java.util.Map.of("usage", "/missions resetquestline <player>")));
             return;
         }
         Player target = plugin.getServer().getPlayer(args[1]);
         if (target == null) {
-            admin.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
+            admin.sendMessage(plugin.getMessageManager().getMessage("common.player-not-found"));
             return;
         }
 
@@ -178,7 +160,6 @@ public class MissionCommand implements CommandExecutor {
         String currentQuestline = data.getSelectedQuestline();
 
         if (currentQuestline != null) {
-            // Reset all missions in this questline
             for (com.smp.smptools.missions.Mission mission : plugin.getMissionManager().getAllMissions().values()) {
                 if (mission.getCategory().equalsIgnoreCase(currentQuestline)) {
                     plugin.getMissionManager().resetMission(target, mission.getId());
@@ -188,7 +169,7 @@ public class MissionCommand implements CommandExecutor {
 
         data.setSelectedQuestline(null);
         plugin.getMissionManager().savePlayerData();
-        admin.sendMessage(
-                Component.text("Reset questline selection and progress for " + target.getName(), NamedTextColor.GREEN));
+        admin.sendMessage(plugin.getMessageManager().getMessage("missions.questline-reset", admin,
+                java.util.Map.of("target", target.getName())));
     }
 }

@@ -29,7 +29,7 @@ public class SleepManager {
 
     public void startVote(Player player) {
         if (voteInProgress) {
-            player.sendMessage(Component.text("A sleep vote is already in progress.", NamedTextColor.RED));
+            player.sendMessage(plugin.getMessageManager().getMessage("sleep.already-voting"));
             return;
         }
 
@@ -46,9 +46,9 @@ public class SleepManager {
         Component denyButton = Component.text("[Deny]", NamedTextColor.RED)
                 .clickEvent(ClickEvent.runCommand("/sleepvote deny"));
 
-        Component formattedPlayerName = plugin.getChatManager().getFormattedDisplayName(player);
-        Bukkit.broadcast(formattedPlayerName
-                .append(Component.text(" wants to skip the night. ", NamedTextColor.YELLOW))
+        Component voteMessage = plugin.getMessageManager().getMessage("sleep.vote-started", player);
+        Bukkit.broadcast(voteMessage
+                .append(Component.text(" "))
                 .append(acceptButton)
                 .append(Component.text(" "))
                 .append(denyButton));
@@ -58,23 +58,22 @@ public class SleepManager {
 
     public void addVote(Player player, boolean vote) {
         if (!voteInProgress) {
-            player.sendMessage(Component.text("There is no sleep vote in progress.", NamedTextColor.RED));
+            player.sendMessage(plugin.getMessageManager().getMessage("sleep.no-vote"));
             return;
         }
 
         UUID playerUUID = player.getUniqueId();
         if (yesVotes.contains(playerUUID) || noVotes.contains(playerUUID)) {
-            player.sendMessage(Component.text("You have already voted.", NamedTextColor.RED));
+            player.sendMessage(plugin.getMessageManager().getMessage("sleep.already-voted"));
             return;
         }
 
-        Component formattedPlayerName = plugin.getChatManager().getFormattedDisplayName(player);
         if (vote) {
             yesVotes.add(playerUUID);
-            Bukkit.broadcast(formattedPlayerName.append(Component.text(" has voted to skip the night.", NamedTextColor.GRAY)));
+            Bukkit.broadcast(plugin.getMessageManager().getMessage("sleep.voted-yes", player));
         } else {
             noVotes.add(playerUUID);
-            Bukkit.broadcast(formattedPlayerName.append(Component.text(" has voted against skipping the night.", NamedTextColor.GRAY)));
+            Bukkit.broadcast(plugin.getMessageManager().getMessage("sleep.voted-no", player));
         }
 
         checkVoteStatus();
@@ -85,13 +84,13 @@ public class SleepManager {
         int requiredVotes = (int) Math.ceil(onlinePlayers / 2.0);
 
         if (yesVotes.size() >= requiredVotes) {
-            Bukkit.broadcast(Component.text("The vote passed! Skipping the night.", NamedTextColor.GREEN));
+            Bukkit.broadcast(plugin.getMessageManager().getMessage("sleep.vote-accepted"));
             voteInitiator.getWorld().setTime(0);
             voteInitiator.getWorld().setThundering(false);
             voteInitiator.getWorld().setStorm(false);
             endVote();
         } else if (noVotes.size() >= (onlinePlayers - requiredVotes + 1)) {
-            Bukkit.broadcast(Component.text("The vote failed. The night will not be skipped.", NamedTextColor.RED));
+            Bukkit.broadcast(plugin.getMessageManager().getMessage("sleep.vote-failed"));
             endVote();
         }
     }

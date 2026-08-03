@@ -1,33 +1,28 @@
 package com.smp.smptools.commands;
 
+import com.smp.smptools.SMPTools;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 
-public class CustomItemCommand implements CommandExecutor {
+public class CustomItemCommand extends AbstractPlayerCommand {
+
+    public CustomItemCommand(SMPTools plugin) {
+        super(plugin);
+    }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(Component.text("Only players can use this command.", NamedTextColor.RED));
-            return true;
-        }
-
-        Player player = (Player) sender;
-
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
         if (!player.hasPermission("smptools.customitem")) {
-            player.sendMessage(Component.text("You do not have permission to use this command.", NamedTextColor.RED));
+            player.sendMessage(plugin.getMessageManager().getMessage("common.no-permission"));
             return true;
         }
 
         if (args.length != 2) {
-            player.sendMessage(Component.text("Usage: /customitem <item_type> <custom_model_data>", NamedTextColor.RED));
+            player.sendMessage(plugin.getMessageManager().getMessage("common.usage", player,
+                    java.util.Map.of("usage", "/customitem <item_type> <custom_model_data>")));
             return true;
         }
 
@@ -35,7 +30,8 @@ public class CustomItemCommand implements CommandExecutor {
         try {
             material = Material.valueOf(args[0].toUpperCase());
         } catch (IllegalArgumentException e) {
-            player.sendMessage(Component.text("Invalid item type: " + args[0], NamedTextColor.RED));
+            player.sendMessage(plugin.getMessageManager().getMessage("custom-item.invalid-type", player,
+                    java.util.Map.of("type", args[0])));
             return true;
         }
 
@@ -43,7 +39,8 @@ public class CustomItemCommand implements CommandExecutor {
         try {
             customModelData = Integer.parseInt(args[1]);
         } catch (NumberFormatException e) {
-            player.sendMessage(Component.text("Invalid custom model data: " + args[1] + ". Must be an integer.", NamedTextColor.RED));
+            player.sendMessage(plugin.getMessageManager().getMessage("custom-item.invalid-data", player,
+                    java.util.Map.of("data", args[1])));
             return true;
         }
 
@@ -53,7 +50,8 @@ public class CustomItemCommand implements CommandExecutor {
         customItem.setItemMeta(meta);
 
         player.getInventory().addItem(customItem);
-        player.sendMessage(Component.text("Gave you a " + material.name() + " with CustomModelData " + customModelData, NamedTextColor.GREEN));
+        player.sendMessage(plugin.getMessageManager().getMessage("custom-item.gave", player,
+                java.util.Map.of("material", material.name(), "data", String.valueOf(customModelData))));
 
         return true;
     }

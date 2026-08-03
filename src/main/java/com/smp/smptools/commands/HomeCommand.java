@@ -3,46 +3,36 @@ package com.smp.smptools.commands;
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.utils.Constants;
 import com.smp.smptools.utils.InputValidator;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.Locale;
 
-public class HomeCommand implements CommandExecutor {
-
-    private final SMPTools plugin;
+public class HomeCommand extends AbstractPlayerCommand {
 
     public HomeCommand(SMPTools plugin) {
-        this.plugin = plugin;
+        super(plugin);
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(Component.text("Only players can use this command!", NamedTextColor.RED));
-            return true;
-        }
-
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Please specify a home name. Usage: /home <name>", NamedTextColor.RED));
+            player.sendMessage(plugin.getMessageManager().getMessage("common.usage", player,
+                    java.util.Map.of("usage", "/home <name>")));
             return true;
         }
 
         String homeName = args[0].toLowerCase(Locale.ROOT);
 
         if (!InputValidator.isValidHomeName(homeName)) {
-            sender.sendMessage(Component.text("Invalid home name. Use only letters, numbers, _ and - (max " + Constants.MAX_HOME_NAME_LENGTH + " characters).", NamedTextColor.RED));
+            player.sendMessage(plugin.getMessageManager().getMessage("homes.invalid-name", player,
+                    java.util.Map.of("max", String.valueOf(Constants.MAX_HOME_NAME_LENGTH))));
             return true;
         }
 
-        Player player = (Player) sender;
         String playerUUID = player.getUniqueId().toString();
 
         if (plugin.getConfig().contains("homes." + playerUUID + "." + homeName)) {
@@ -54,20 +44,21 @@ public class HomeCommand implements CommandExecutor {
             float pitch = (float) plugin.getConfig().getDouble("homes." + playerUUID + "." + homeName + ".pitch");
 
             if (worldName == null) {
-                player.sendMessage(Component.text("Error: Home world not found.", NamedTextColor.RED));
+                player.sendMessage(plugin.getMessageManager().getMessage("homes.world-not-found"));
                 return true;
             }
 
             World world = Bukkit.getWorld(worldName);
             if (world == null) {
-                player.sendMessage(Component.text("Error: Home world not found.", NamedTextColor.RED));
+                player.sendMessage(plugin.getMessageManager().getMessage("homes.world-not-found"));
                 return true;
             }
 
             Location homeLocation = new Location(world, x, y, z, yaw, pitch);
             plugin.getTeleportManager().startTeleport(player, homeLocation, "'" + homeName + "'");
         } else {
-            player.sendMessage(Component.text("You don't have a home named '" + homeName + "'.", NamedTextColor.RED));
+            player.sendMessage(plugin.getMessageManager().getMessage("homes.not-found", player,
+                    java.util.Map.of("name", homeName)));
         }
         return true;
     }

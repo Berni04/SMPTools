@@ -61,7 +61,7 @@ public class SnowballListener implements Listener {
                 Player shooter = (Player) snowball.getShooter();
                 if (isHeadshot) {
                     shooter.playSound(shooter.getLocation(), Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 1f);
-                    shooter.sendActionBar(Component.text("Headshot!", NamedTextColor.GOLD));
+                    shooter.sendActionBar(SMPTools.getInstance().getMessageManager().getMessage("christmas.headshot", shooter));
                 } else {
                     shooter.playSound(shooter.getLocation(), Sound.ENTITY_ARROW_HIT_PLAYER, 1f, 1f);
                 }

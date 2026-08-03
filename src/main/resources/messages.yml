@@ -11,12 +11,17 @@
 #
 # Placeholders: Use {name}, {target}, {level}, etc. for dynamic values
 
-# Errors
-errors:
+# Common
+common:
   player-only: "<red>Only players can use this command!</red>"
-  no-permission: "<red>You don't have permission to do that.</red>"
+  no-permission: "<red>You don't have permission to use this command.</red>"
   player-not-found: "<red>Player not found.</red>"
-  invalid-arguments: "<red>Invalid arguments. Usage: {usage}</red>"
+  invalid-url: "<red>Invalid URL: {error}</red>"
+  usage: "<red>Usage: {usage}</red>"
+  unknown-subcommand: "<red>Unknown subcommand. Usage: {usage}</red>"
+  error: "<red>{message}</red>"
+  success: "<green>{message}</green>"
+  info: "<gray>{message}</gray>"
 
 # Homes
 homes:
@@ -26,18 +31,103 @@ homes:
   not-found: "<player_name_color>, you don't have a home named '<red>{name}</red>'."
   limit-reached: "<red>You have reached your home limit of {limit} homes.</red>"
   invalid-name: "<red>Invalid home name. Use only letters, numbers, _ and - (max {max} characters).</red>"
+  world-not-found: "<red>Error: Home world not found.</red>"
+  gui-title: "Your Homes"
+  delete-confirm-title: "Delete home '{name}'?"
+  confirm: "<green>Confirm</green>"
+  cancel: "<red>Cancel</red>"
+  deleted-confirmation: "<green>Home '{name}' has been deleted.</green>"
+  no-homes: "<red>You have no homes set.</red>"
+  gui-world: "<gray>World: </gray>{world}"
+  gui-x: "<gray>X: </gray>{x}"
+  gui-y: "<gray>Y: </gray>{y}"
+  gui-z: "<gray>Z: </gray>{z}"
+  gui-teleport: "<green>Left-click to teleport</green>"
+  gui-delete: "<red>Right-click to delete</red>"
 
 # TPA
 tpa:
   request-sent: "<player_name_color>, teleport request sent to <gold>{target}</gold>."
-  request-received: "<player_name_color> has requested to teleport to you."
+  request-received: "<requester_name_color> has requested to teleport to you."
   expired: "<red>Your teleport request to {target} has expired.</red>"
-  accepted: "<player_name_color> has started teleporting to you."
+  accepted: "<requester_name_color> has started teleporting to you."
   denied: "<red>Teleport request denied.</red>"
   toggle-on: "<green>You are now accepting teleport requests.</green>"
   toggle-off: "<red>You are no longer accepting teleport requests.</red>"
   no-pending: "<red>You have no pending teleport requests.</red>"
   target-offline: "<red>The requester is no longer online.</red>"
+  already-pending: "<gold>{target} already has a pending teleport request.</gold>"
+  self-request: "<red>You cannot send a teleport request to yourself.</red>"
+  target-toggled-off: "<red>{target} is not accepting teleport requests at this time.</red>"
+  expired-other: "<red>Teleport request from {target} has expired.</red>"
+
+# Teleport
+teleport:
+  starting: "<green>Teleporting to {destination} in 3 seconds... Don't move or take damage!</green>"
+  countdown: "<gray>Teleporting in {seconds}...</gray>"
+  successful: "<green>Teleport successful!</green>"
+  cancelled: "<red>Teleport cancelled: {reason}</red>"
+  already-teleporting: "<red>You are already teleporting.</red>"
+
+# Fly
+fly:
+  enabled: "<yellow>Flight enabled.</yellow>"
+  disabled: "<yellow>Flight disabled.</yellow>"
+
+# Tags
+tags:
+  equipped: "<green>You have equipped the title: {title}</green>"
+  cleared: "<green>Your title has been cleared.</green>"
+  unlocked: "<green>Title '{title}' unlocked for {target}</green>"
+  gui-title: "Your Titles"
+  gui-unlocked: "<green>Unlocked!</green>"
+  gui-how-to-unlock: "<gray>How to unlock: {description}</gray>"
+  clear-title: "<red>Clear Title</red>"
+
+# Stats
+stats:
+  cleared: "<player_name_color>'s statistics have been cleared."
+  view-deaths: "<red>View Deaths</red>"
+  click-for-info: "<yellow>Click to see detailed death info</yellow>"
+  playtime: "<gold>Playtime</gold>"
+  player-kills: "<gold>Player Kills</gold>"
+  total-deaths: "<gold>Total Deaths</gold>"
+  blocks-broken: "<gold>Blocks Broken</gold>"
+  blocks-placed: "<gold>Blocks Placed</gold>"
+  coal-mined: "<gold>Coal Mined</gold>"
+  iron-mined: "<gold>Iron Mined</gold>"
+  gold-mined: "<gold>Gold Mined</gold>"
+  lapis-mined: "<gold>Lapis Mined</gold>"
+  redstone-mined: "<gold>Redstone Mined</gold>"
+  diamonds-mined: "<gold>Diamonds Mined</gold>"
+  rollback-display: "<green>Rollback Inventory</green>"
+  rollback-lore-1: "<gray>Click to restore this inventory</gray>"
+  rollback-lore-2: "<gray>to the player.</gray>"
+  emeralds-mined: "<gold>Emeralds Mined</gold>"
+  invalid-death-index: "<red>Invalid death index.</red>"
+  rollback-inventory: "<green>Rollback Inventory</green>"
+  rollback-description: "<gray>Click to restore this inventory to the player.</gray>"
+  rollback-success: "<green>Successfully rolled back death #{index} for {target}.</green>"
+  rollback-restored: "<green>Your inventory from a previous death has been restored by an administrator.</green>"
+  rollback-no-permission: "<red>You do not have permission to roll back inventories.</red>"
+  rollback-already-done: "<red>This death has already been rolled back.</red>"
+  rollback-player-offline: "<red>Target player must be online to receive their items.</red>"
+  rollback-failed: "<red>Failed to rollback death #{index} for {target}. Some items could not be deserialized.</red>"
+  gui-title-stats: "{player}'s Stats"
+  gui-title-deaths: "{player}'s Deaths"
+  gui-title-death: "{player}'s Death #{index}"
+  gui-title-death-inventory: "{player}'s Death #{index} Inventory"
+
+# Leaderboard
+leaderboard:
+  header: "<gold><bold>{title}</bold></gold>"
+  entry: "<gray>{position}.</gray> <player_name_color> - <gold>{value}</gold>"
+  no-data: "<yellow>No leaderboard data available for this stat.</yellow>"
+  gui-title: "Leaderboards"
+  stat-title: "Top 10 - {title}"
+  gui-entry: "<gray>{stat}</gray>"
+  gui-score: "<yellow>Score: {score}</yellow>"
+  gui-rank: "<gold>#{rank} {name}</gold>"
 
 # Skills
 skills:
@@ -45,41 +135,303 @@ skills:
   rare-treasure: "<gold><bold>RARE!</bold></gold> <player_name_color> found a rare treasure!"
   uncommon-treasure: "<player_name_color> found an uncommon treasure!"
   critical-strike: "<red><bold>CRITICAL STRIKE!</bold></red> <gray>({multiplier}x Damage)</gray>"
+  gui-title: "Your Skills"
+  gui-experience: "<gray>Experience: </gray><yellow>{current} / {next}</yellow>"
+  gui-display-name: "<green>{name} - Level {level}</green>"
 
 # Sleep
 sleep:
   vote-started: "<player_name_color> wants to skip the night."
   vote-accepted: "<green>Night skipped!</green>"
+  vote-failed: "<red>The vote failed. The night will not be skipped.</red>"
   already-voting: "<red>A sleep vote is already in progress.</red>"
-  combat-blocked: "<red>You can't sleep while in combat!</red>"
+  no-vote: "<red>There is no sleep vote in progress.</red>"
+  already-voted: "<red>You have already voted.</red>"
+  voted-yes: "<player_name_color> has voted to skip the night."
+  voted-no: "<player_name_color> has voted against skipping the night."
+  combat-blocked: "<red>You can't sleep in this world!</red>"
 
 # Music
 music:
-  song-not-found: "<red>Song not found: {song_name}</red>"
-  now-playing: "<green>Now playing: {song_title}</green>"
+  usage: "<red>Usage: /music <play|broadcast|stop> [url]</red>"
+  no-permission-broadcast: "<red>You don't have permission to broadcast music.</red>"
   stopped: "<yellow>Music stopped.</yellow>"
+  not-playing: "<red>No music is currently playing.</red>"
+  invalid-url: "<red>Invalid URL: {error}</red>"
+  base-url-not-configured: "<red>The base URL for songs is not configured on the server.</red>"
+  encoding-error: "<red>An internal error occurred while encoding the song name.</red>"
+  downloading: "<gray>Downloading and parsing song...</gray>"
+  parse-failed: "<red>Failed to parse the song. Please check the file format.</red>"
+  now-playing: "<green>Now playing: {title}</green>"
+  download-failed: "<red>Failed to download the song. Please check the URL.</red>"
 
 # Missions
 missions:
   completed: "<green>Mission completed: {mission_name}</green>"
   reward-claimed: "<player_name_color>, reward claimed!"
   no-missions: "<yellow>No missions available.</yellow>"
+  mission-completed-items: "<green>Mission completed! Items submitted.</green>"
+  reward-already-claimed: "<red>You have already claimed this reward.</red>"
+  mission-accepted: "<green>Mission Accepted: {mission_name}</green>"
+  chromatic-elytra-received: "<gold>Chromatic Elytra received!</gold>"
+  chromatic-elytra-name: "<color:#FF55FF><bold>Chromatic Elytra</bold></color>"
+  chromatic-elytra-lore-1: "<gray>A legendary reward for a master of the skies.</gray>"
+  trail-color: "<gray>Trail Color: </gray>{color}"
+  reward-received: "<green>Received {amount} {material}</green>"
+  path-chosen: "<green>You have chosen your path!</green>"
+  mission-available: "<green>Mission Available: {mission_name}</green>"
+  return-to-npc: "<green>Return to {npc} to claim your reward!</green>"
+  quest-master: "Quest Master"
+  not-enough-items: "<red>You don't have enough items! Need {amount} {material}</red>"
+  only-one-active: "<red>You can only have one active mission at a time!</red>"
+  progress: "<yellow>Progress: {current} / {total}</yellow>"
+  click-accept: "<green>>» Click to accept mission!</green>"
+  reward-claimed-label: "<red><bold>Reward Claimed</bold></red>"
+  click-claim: "<green><bold>>» Click to claim reward!</bold></green>"
+  status-in-progress: "<yellow>Status: In Progress</yellow>"
+  mission-id-lore: "<dark_gray>mission_id:{id}</dark_gray>"
+  gui-title: "Mission Control"
+  use-npc-command: "<yellow>Use /npc command for NPC management.</yellow>"
+  available-ids: "<gold>Available Mission IDs:</gold>"
+  id-not-found: "<red>Mission ID not found.</red>"
+  force-completed: "<green>Forcibly completed mission '{mission}' for {target}</green>"
+  reset: "<green>Reset mission '{mission}' for {target}</green>"
+  questline-reset: "<green>Reset questline selection and progress for {target}</green>"
+  list-item: "<yellow>- {id}</yellow>"
+  click-to-copy: "<gray>Click to copy</gray>"
 
-# Stats
-stats:
-  cleared: "<player_name_color>'s statistics have been cleared."
+# Prefix
+prefix:
+  gui-title: "Choose a Prefix"
+  set: "<green>Your prefix has been set to: {prefix}</green>"
 
-# Leaderboard
-leaderboard:
-  header: "<gold><bold>{title}</bold></gold>"
-  entry: "<gray>{position}.</gray> <player_name_color> - <gold>{value}</gold>"
+# Color
+color:
+  cleared: "<green>Your name color has been cleared.</green>"
+  set: "<green>Your name color has been set to: {color}</green>"
+  invalid: "<red>Invalid color. Only MiniMessage color/formatting tags are allowed.</red>"
+
+# Custom Enchant
+enchant:
+  unknown: "<red>Unknown enchantment: {enchant}</red>"
+  not-applicable: "<red>That enchantment cannot be applied to this item.</red>"
+  applied: "<green>Successfully applied {enchant} to your item.</green>"
+
+# Ping
+ping:
+  your-ping: "<gray>Your ping is: </gray>{ping}ms"
+  player-ping: "<gray>{player}'s ping is: </gray>{ping}ms"
+
+# Uptime
+uptime:
+  server-uptime: "<green>Server Uptime: </green><white>{uptime}</white>"
+
+# Daily Rewards
+daily:
+  disabled: "<red>The daily reward system is currently disabled.</red>"
+  cooldown: "<red>You have already claimed your daily reward. Please wait {hours}h {minutes}m.</red>"
+  claimed: "<green>You have successfully claimed your daily reward!</green>"
+
+# Private Vault
+vault:
+  opened: "<green>Opened your private vault.</green>"
+  saved: "<green>Private vault saved!</green>"
+  save-failed: "<red>Failed to save your private vault.</red>"
+  gui-title: "<color:#5B2C6F>Private Vault</color>"
 
 # Chat
 chat:
   private-message-sent: "<gray>[<aqua>You</aqua> -> <aqua>{target}</aqua>] {message}</gray>"
   private-message-received: "<gray>[<aqua>{sender}</aqua> -> <aqua>You</aqua>] {message}</gray>"
+  no-reply: "<red>You have nobody to reply to!</red>"
+  reply-offline: "<red>Your last messenger is no longer online.</red>"
 
 # Join/Leave
 join-leave:
   joined: "<player> joined the server."
   left: "<player> left the server."
+
+# Sound
+sound:
+  usage: "<red>Usage: /sound <sound_name></red>"
+  available: "<yellow>Available sounds: {sounds}</yellow>"
+  not-found: "<red>That sound does not exist.</red>"
+
+# Ride
+ride:
+  dismounted: "<yellow>You have dismounted.</yellow>"
+  no-entity: "<red>You are not looking at a nearby entity.</red>"
+  riding: "<green>You are now riding {target}!</green>"
+
+# ClearStats
+clearstats:
+  cleared: "<green>Stats for {target} have been cleared.</green>"
+
+# Rename
+rename:
+  holding-required: "<red>You must be holding an item to rename it!</red>"
+  usage: "<red>Usage: /rename <name></red>"
+  example: "<gray>Example: /rename <gradient:#FF0000:#0000FF>My Awesome Item</gradient></gray>"
+  format-help: "<gray>Supports MiniMessage formatting (colors, bold, italic, hex codes, etc.).</gray>"
+  success: "<green>Item renamed successfully!</green>"
+
+# Invsee
+invsee:
+  viewing: "<green>Viewing {target}'s inventory.</green>"
+  self-use: "<red>You cannot invsee yourself. Use /inv to open your own inventory.</red>"
+  gui-title: "Invsee - {player}"
+  label-helmet: "<gold>Helmet</gold>"
+  label-chestplate: "<gold>Chestplate</gold>"
+  label-leggings: "<gold>Leggings</gold>"
+  label-boots: "<gold>Boots</gold>"
+  label-offhand: "<gold>Off-hand</gold>"
+  armor-slot-lore: "<gray>Armor Slot</gray>"
+
+# Troll
+troll:
+  gui-title: "Troll Menu - {target}"
+  target-offline: "<red>Target player is no longer online!</red>"
+  cannot-troll-self: "<red>You cannot troll yourself!</red>"
+  unknown-option: "<red>Unknown troll option: {id}</red>"
+  unknown-option-id: "<red>Error: Unknown troll option (ID: {id}).</red>"
+  no-items-to-rename: "<red>Target has no items to rename!</red>"
+  executing: "<green>Executing troll '{troll}' on {target}!</green>"
+  fake-op: "<gray>[Server: Opped {name}]</gray>"
+  fake-ban: "<red>You have been permanently banned from this server!</red>"
+  fake-crash: "<red>Internal Server Error: java.lang.NullPointerException</red>"
+  item-broke: "<red>Your {item} just broke!</red>"
+  chat-scramble-activated: "<green>Chat Scramble activated for {name} (30s)!</green>"
+  fake-death: "<red>{name} was slain by [Troll God]</red>"
+  fake-join: "<yellow>{name} joined the game.</yellow>"
+  fake-leave: "<yellow>{name} left the game.</yellow>"
+  fake-advancement: "<green>{name} has made the advancement [Troll Master]</green>"
+  lag-detected: "<red>Lag detected! Please check your connection.</red>"
+  funny-names:
+    - "<red>Useless Rock</red>"
+    - "<green>Magic Stick</green>"
+    - "<blue>Shiny Thing</blue>"
+    - "<gold>Mystery Meat</gold>"
+    - "<dark_purple>Broken Dream</dark_purple>"
+    - "<gray>Just a Block</gray>"
+
+# ChunkLoader
+chunk-loader:
+  placed: "<green>Chunk loader placed! This chunk will now remain loaded.</green>"
+  removed: "<green>Chunk loader removed! This chunk will no longer be force loaded.</green>"
+  received: "<green>You received a Chunk Loader!</green>"
+  gave: "<green>Gave a Chunk Loader to {target}.</green>"
+
+# Advent
+advent:
+  already-claimed: "<red>You have already claimed this reward!</red>"
+  claimed: "<green>You claimed the reward for Day {day}!</green>"
+  not-december: "<red>The Advent Calendar is only available in December!</red>"
+  not-available: "<red>You cannot claim this reward yet! Come back on Dec {day}.</red>"
+  gui-title: "Advent Calendar"
+
+# Secret Santa
+secret-santa:
+  registration-closed: "<red>Registration is closed!</red>"
+  already-registered: "<red>You are already registered!</red>"
+  registered: "<green>You are now registered for Secret Santa! Your assignment will be revealed when matches are generated.</green>"
+  giftee: "<green>Your giftee is: <gold>{target}</gold></green>"
+  not-registered: "<red>You are not part of Secret Santa.</red>"
+  assignment: "<gold>Your Secret Santa assignment: <green>{target}</green></gold>"
+  matches-generated: "<green>Matches generated!</green>"
+  gift-deposited: "<green>Gift deposited safely! Your Secret Santa duty is done.</green>"
+  gui-title: "Deposit Gift"
+  help-header: "<gold>--- Secret Santa ---</gold>"
+  help-join: "<yellow>/secretsanta join</yellow><gray> - Join the event</gray>"
+  help-target: "<yellow>/secretsanta target</yellow><gray> - See your target</gray>"
+  help-deposit: "<yellow>/secretsanta deposit</yellow><gray> - Deposit gift</gray>"
+  help-claim: "<yellow>/secretsanta claim</yellow><gray> - Claim gift</gray>"
+  click-to-copy: "<gray>Click to copy</gray>"
+  deposit-gui-title: "Deposit Gift for {target}"
+  deposit-gui-prefix: "Deposit Gift for "
+
+# Krampus
+krampus:
+  spawned: "<green>Krampus has been summoned!</green>"
+  escaped: "<green>You have escaped Krampus's cage!</green>"
+  darkness: "<red>Darkness consumes you...</red>"
+  kidnapped: "<red>You have been kidnapped by Krampus! Defeat the guards to escape!</red>"
+  guard-defeated: "<yellow>Guard defeated! {remaining} remaining!</yellow>"
+
+# Black Friday
+blackfriday:
+  enabled: "<green>Black Friday event has been enabled!</green>"
+  disabled: "<red>Black Friday event has been disabled!</red>"
+  reloaded: "<green>Black Friday configuration reloaded!</green>"
+  status-header: "<gold>=== Black Friday Status ===</gold>"
+  status-enabled: "<yellow>Enabled: </yellow>{status}"
+  status-enabled-yes: "<green>YES</green>"
+  status-enabled-no: "<red>NO</red>"
+  status-discount: "<yellow>Discount: </yellow><aqua>{discount}%</aqua>"
+  help-header: "<gold>=== Black Friday Commands ===</gold>"
+  help-start: "<yellow>/blackfriday start</yellow> - <gray>Enable the event</gray>"
+  help-stop: "<yellow>/blackfriday stop</yellow> - <gray>Disable the event</gray>"
+  help-reload: "<yellow>/blackfriday reload</yellow> - <gray>Reload configuration</gray>"
+  help-status: "<yellow>/blackfriday status</yellow> - <gray>View event status</gray>"
+
+# Dialogue
+dialogue:
+  no-dialogue: "<gray>This NPC has nothing to say.</gray>"
+  expired: "<gray>This dialogue has expired.</gray>"
+  invalid-option: "<red>Invalid option.</red>"
+
+# NPC
+npc:
+  spawned: "<green>NPC {id} spawned!</green>"
+  removed: "<green>NPC {id} removed!</green>"
+  reloaded: "<green>NPCs reloaded!</green>"
+  invalid-option-index: "<red>Invalid option index.</red>"
+
+# Sudo
+sudo:
+  forced: "<green>Forced {target} to execute: {command}</green>"
+  blocked: "<red>That command is blocked for sudo (privileged command).</red>"
+
+# Present
+present:
+  given: "<green>Given 1 {tier} present.</green>"
+  removed: "<green>Present removed.</green>"
+  no-present: "<red>No present found at target block.</red>"
+  invalid-tier: "<red>Invalid present tier: {tier}</red>"
+  found: "<green>You found a {tier} present!</green>"
+  placed: "<green>Present placed and registered!</green>"
+  registry-removed: "<green>Present removed from registry.</green>"
+
+# Advancement
+advancement:
+  made: "<player> has made the advancement <yellow>{advancement}</yellow>"
+  made-text: "<yellow> has made the advancement </yellow>"
+
+# Custom Item
+custom-item:
+  invalid-type: "<red>Invalid item type: {type}</red>"
+  invalid-data: "<red>Invalid custom model data: {data}. Must be an integer.</red>"
+  gave: "<green>Gave you a {material} with CustomModelData {data}</green>"
+
+# Christmas
+christmas:
+  cannot-sleep: "<red>You cannot sleep in this world!</red>"
+  elytra-disabled: "<red>Elytra flying is disabled in this world!</red>"
+  santa-hat: "<gold>Santa Hat</gold>"
+  elf-hat: "<green>Elf Hat</green>"
+  sweet: "<green>Yum! That was sweet!</green>"
+  headshot: "<red>Headshot!</red>"
+
+# Grave
+grave:
+  stored: "<gray>Your items have been stored in a grave at {location}</gray>"
+  looted: "<green>You have looted the grave of {player}</green>"
+
+# Map
+map:
+  usage: "<red>Usage: /tomap <url> [width] [height]</red>"
+  invalid-dimensions: "<red>Width and Height must be between {min} and {max}.</red>"
+  not-numbers: "<red>Width and Height must be numbers.</red>"
+  downloading: "<gray>Downloading and processing image... this may take a moment.</gray>"
+  created: "<green>Your map(s) have been created!</green>"
+  download-failed: "<red>Failed to download or process the image. Please check the URL.</red>"
+  error: "<red>An error occurred: {message}</red>"

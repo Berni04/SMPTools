@@ -57,7 +57,8 @@ public class FestiveMobsListener implements Listener {
             ItemStack helmet = new ItemStack(Material.LEATHER_HELMET);
             LeatherArmorMeta meta = (LeatherArmorMeta) helmet.getItemMeta();
             meta.setColor(Color.RED);
-            meta.displayName(Component.text("Santa Hat", NamedTextColor.RED));
+            meta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                    .deserialize(SMPTools.getInstance().getMessageManager().getRawMessage("christmas.santa-hat")));
             helmet.setItemMeta(meta);
             zombie.getEquipment().setHelmet(helmet);
         } else if (event.getEntity() instanceof Skeleton) {
@@ -65,7 +66,8 @@ public class FestiveMobsListener implements Listener {
             ItemStack helmet = new ItemStack(Material.LEATHER_HELMET);
             LeatherArmorMeta meta = (LeatherArmorMeta) helmet.getItemMeta();
             meta.setColor(Color.GREEN);
-            meta.displayName(Component.text("Elf Hat", NamedTextColor.GREEN));
+            meta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                    .deserialize(SMPTools.getInstance().getMessageManager().getRawMessage("christmas.elf-hat")));
             helmet.setItemMeta(meta);
             skeleton.getEquipment().setHelmet(helmet);
         }
@@ -143,7 +145,7 @@ public class FestiveMobsListener implements Listener {
                                                                                                          // 10 seconds
                     event.getPlayer().getWorld().playSound(event.getPlayer().getLocation(),
                             org.bukkit.Sound.ENTITY_PLAYER_BURP, 1f, 1f);
-                    event.getPlayer().sendMessage(Component.text("Yum! That was sweet!", NamedTextColor.GREEN));
+                    event.getPlayer().sendMessage(SMPTools.getInstance().getMessageManager().getMessage("christmas.sweet"));
                 }
             }
         }

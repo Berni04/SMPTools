@@ -2,6 +2,7 @@ package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.christmas.AdventManager;
+import com.smp.smptools.utils.CommandBlacklist;
 import com.smp.smptools.utils.HeadUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -19,6 +20,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class AdventGUIListener implements Listener {
 
@@ -33,8 +35,7 @@ public class AdventGUIListener implements Listener {
 
     public void openAdventGUI(Player player) {
         if (!adventManager.isDecember() && !player.hasPermission("smptools.advent.bypass")) {
-            player.sendMessage(MiniMessage.miniMessage()
-                    .deserialize("<red>The Advent Calendar is only available in December!</red>"));
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("advent.not-december"));
             return;
         }
 
@@ -102,15 +103,13 @@ public class AdventGUIListener implements Listener {
         int currentDay = adventManager.getCurrentDay();
 
         if (day > currentDay && !player.hasPermission("smptools.advent.bypass")) {
-            player.sendMessage(MiniMessage.miniMessage()
-                    .deserialize("<red>You cannot claim this reward yet! Come back on Dec " + day + ".</red>"));
+            player.sendMessage(plugin.getMessageManager().getMessage("advent.not-available", player, Map.of("day", String.valueOf(day))));
             player.playSound(player.getLocation(), Sound.BLOCK_CHEST_LOCKED, 1f, 1f);
             return;
         }
 
         if (adventManager.hasClaimed(player.getUniqueId(), day)) {
-            player.sendMessage(
-                    MiniMessage.miniMessage().deserialize("<red>You have already claimed this reward!</red>"));
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("advent.already-claimed"));
             return;
         }
 
@@ -118,8 +117,7 @@ public class AdventGUIListener implements Listener {
         adventManager.setClaimed(player.getUniqueId(), day);
         giveReward(player, day);
 
-        player.sendMessage(
-                MiniMessage.miniMessage().deserialize("<green>You claimed the reward for Day " + day + "!</green>"));
+        player.sendMessage(plugin.getMessageManager().getMessage("advent.claimed", player, Map.of("day", String.valueOf(day))));
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
 
         // Refresh GUI
@@ -143,7 +141,12 @@ public class AdventGUIListener implements Listener {
                 Bukkit.broadcast(LegacyComponentSerializer.legacyAmpersand().deserialize(message));
             } else {
                 // Command
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), reward.replace("%player%", player.getName()));
+                String cmd = reward.replace("%player%", player.getName());
+                if (CommandBlacklist.isBlocked(cmd)) {
+                    plugin.getLogger().warning("Blocked dangerous command in advent reward day " + day + ": " + cmd);
+                    continue;
+                }
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
             }
         }
     }

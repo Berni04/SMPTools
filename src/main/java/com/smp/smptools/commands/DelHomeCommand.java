@@ -1,43 +1,34 @@
 package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-public class DelHomeCommand implements CommandExecutor {
-
-    private final SMPTools plugin;
+public class DelHomeCommand extends AbstractPlayerCommand {
 
     public DelHomeCommand(SMPTools plugin) {
-        this.plugin = plugin;
+        super(plugin);
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(Component.text("Only players can use this command!", NamedTextColor.RED));
-            return true;
-        }
-
+    protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Please specify the name of the home you want to delete. Usage: /delhome <name>", NamedTextColor.RED));
+            player.sendMessage(plugin.getMessageManager().getMessage("common.usage", player,
+                    java.util.Map.of("usage", "/delhome <name>")));
             return true;
         }
 
-        Player player = (Player) sender;
         String playerUUID = player.getUniqueId().toString();
         String homeName = args[0].toLowerCase();
 
         if (plugin.getConfig().contains("homes." + playerUUID + "." + homeName)) {
             plugin.getConfig().set("homes." + playerUUID + "." + homeName, null);
             plugin.saveConfig();
-            player.sendMessage(Component.text("Your home '" + homeName + "' has been deleted!", NamedTextColor.GREEN));
+            player.sendMessage(plugin.getMessageManager().getMessage("homes.deleted", player,
+                    java.util.Map.of("name", homeName)));
         } else {
-            player.sendMessage(Component.text("You don't have a home named '" + homeName + "'.", NamedTextColor.RED));
+            player.sendMessage(plugin.getMessageManager().getMessage("homes.not-found", player,
+                    java.util.Map.of("name", homeName)));
         }
         return true;
     }

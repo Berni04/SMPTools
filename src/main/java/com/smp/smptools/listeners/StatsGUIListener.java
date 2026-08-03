@@ -3,7 +3,6 @@ package com.smp.smptools.listeners;
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.commands.StatsCommand;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -14,6 +13,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -62,9 +63,9 @@ public class StatsGUIListener implements Listener {
                 if (deathIndex != -1) statsCommand.showDeathInventoryGUI(player, target, deathIndex);
             }
             // --- Rollback Logic ---
-            else if (viewTitlePlain.contains("Inventory") && clickedItem.getType() == Material.TOTEM_OF_UNDYING) {
+            else if (viewTitlePlain.contains("Inventory") && clickedItem.getType() == Material.ANVIL) {
                 if (!player.hasPermission("smptools.stats.rollback")) {
-                    player.sendMessage(Component.text("You do not have permission to roll back inventories.", NamedTextColor.RED));
+                    player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("stats.rollback-no-permission", player));
                     return;
                 }
 
@@ -99,29 +100,65 @@ public class StatsGUIListener implements Listener {
         String uuid = target.getUniqueId().toString();
         String path = "stats." + uuid + ".deaths_info";
         List<Map<?, ?>> deathInfo = plugin.getStatsConfig().getMapList(path);
+        if (deathIndex < 0 || deathIndex >= deathInfo.size()) {
+            return;
+        }
         Map<String, Object> death = (Map<String, Object>) deathInfo.get(deathIndex);
 
-        if (death.containsKey("rolled_back") && (Boolean) death.get("rolled_back")) {
-            admin.sendMessage(Component.text("This death has already been rolled back.", NamedTextColor.RED));
+        if (death.containsKey("rolled_back") && Boolean.TRUE.equals(death.get("rolled_back"))) {
+            admin.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("stats.rollback-already-done", admin));
             return;
         }
 
         if (!target.isOnline()) {
-            admin.sendMessage(Component.text("Target player must be online to receive their items.", NamedTextColor.RED));
+            admin.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("stats.rollback-player-offline", admin));
             return;
         }
 
         Player targetPlayer = target.getPlayer();
-        List<Map<String, Object>> inventory = (List<Map<String, Object>>) death.get("inventory");
+        if (targetPlayer == null) {
+            admin.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("stats.rollback-player-offline", admin));
+            return;
+        }
+
+        boolean allSuccess = true;
+        List<ItemStack> restoredItems = new ArrayList<>();
+        List<?> inventory = (List<?>) death.get("inventory");
 
         if (inventory != null) {
-            for (Map<String, Object> itemMap : inventory) {
-                if (itemMap != null) {
-                    ItemStack item = ItemStack.deserialize(itemMap);
-                    for (ItemStack leftover : targetPlayer.getInventory().addItem(item).values()) {
-                        targetPlayer.getWorld().dropItemNaturally(targetPlayer.getLocation(), leftover);
+            for (Object obj : inventory) {
+                if (obj instanceof Map<?, ?> rawMap) {
+                    Map<String, Object> itemMap = (Map<String, Object>) rawMap;
+                    ItemStack item = null;
+                    try {
+                        item = ItemStack.deserialize(itemMap);
+                    } catch (Exception e) {
+                        Map<String, Object> copy = new HashMap<>(itemMap);
+                        copy.putIfAbsent("==", "org.bukkit.inventory.ItemStack");
+                        try {
+                            item = ItemStack.deserialize(copy);
+                        } catch (Exception ex) {
+                            plugin.getLogger().warning("Failed to deserialize rollback item: " + itemMap);
+                            allSuccess = false;
+                        }
+                    }
+                    if (item != null) {
+                        restoredItems.add(item);
+                    } else {
+                        allSuccess = false;
                     }
                 }
+            }
+        }
+
+        if (!allSuccess) {
+            admin.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("stats.rollback-failed", admin, Map.of("index", String.valueOf(deathIndex + 1), "target", String.valueOf(target.getName()))));
+            return;
+        }
+
+        for (ItemStack item : restoredItems) {
+            for (ItemStack leftover : targetPlayer.getInventory().addItem(item).values()) {
+                targetPlayer.getWorld().dropItemNaturally(targetPlayer.getLocation(), leftover);
             }
         }
 
@@ -129,8 +166,8 @@ public class StatsGUIListener implements Listener {
         plugin.getStatsConfig().set(path, deathInfo);
         plugin.saveStatsConfig();
 
-        admin.sendMessage(Component.text("Successfully rolled back death #" + (deathIndex + 1) + " for " + target.getName() + ".", NamedTextColor.GREEN));
-        targetPlayer.sendMessage(Component.text("Your inventory from a previous death has been restored by an administrator.", NamedTextColor.GREEN));
+        admin.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("stats.rollback-success", admin, Map.of("index", String.valueOf(deathIndex + 1), "target", String.valueOf(target.getName()))));
+        targetPlayer.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("stats.rollback-restored", targetPlayer));
         admin.closeInventory();
     }
 }

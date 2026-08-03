@@ -4,8 +4,8 @@ import com.smp.smptools.SMPTools;
 import com.smp.smptools.missions.Mission;
 import com.smp.smptools.missions.MissionManager;
 import com.smp.smptools.missions.MissionType;
+import java.util.Map;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
 import org.bukkit.Statistic;
 import org.bukkit.entity.EntityType;
@@ -108,16 +108,14 @@ public class MissionTrackerListener implements Listener {
                 if (currentProgress < mission.getAmount() && newProgress >= mission.getAmount()) {
                     missionManager.forceCompleteMission(player, missionId);
                     missionManager.savePlayerData(); // Save immediately
-                    player.sendMessage(Component.text("Mission Completed: ", NamedTextColor.GOLD)
-                            .append(Component.text(mission.getName().replace('&', '§'))));
+                    player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.completed", player, Map.of("mission_name", mission.getName())));
 
                     String npcName = "Quest Master";
                     if (mission.getCategory().toUpperCase().contains("CHRISTMAS")) {
                         npcName = "Santa Claus";
                     }
 
-                    player.sendMessage(
-                            Component.text("Return to " + npcName + " to claim your reward!", NamedTextColor.GREEN));
+                    player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.return-to-npc", player, Map.of("npc", npcName)));
 
                     // Check for newly unlocked missions
                     for (Mission potentialMission : missionManager.getAllMissions().values()) {
@@ -140,8 +138,7 @@ public class MissionTrackerListener implements Listener {
                             }
 
                             if (allMet) {
-                                player.sendMessage(Component.text("Mission Available: ", NamedTextColor.GOLD)
-                                        .append(Component.text(potentialMission.getName().replace('&', '§'))));
+                                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.mission-available", player, Map.of("mission_name", potentialMission.getName())));
                             }
                         }
                     }

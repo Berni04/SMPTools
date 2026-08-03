@@ -1,6 +1,7 @@
 package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
+import com.smp.smptools.utils.InputValidator;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.entity.Player;
@@ -22,8 +23,10 @@ public class NameTagListener implements Listener {
     }
 
     public void updatePlayerName(Player player) {
-        String prefix = plugin.getStatsConfig().getString("players." + player.getUniqueId() + ".prefix");
-        String nameColor = plugin.getStatsConfig().getString("players." + player.getUniqueId() + ".name-color");
+        String prefix = InputValidator.sanitizeMiniMessage(
+                plugin.getStatsConfig().getString("players." + player.getUniqueId() + ".prefix"));
+        String nameColor = InputValidator.sanitizeMiniMessage(
+                plugin.getStatsConfig().getString("players." + player.getUniqueId() + ".name-color"));
 
         Component prefixComponent = Component.empty();
         if (prefix != null && !prefix.isEmpty()) {

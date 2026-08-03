@@ -1,9 +1,9 @@
 package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
+import com.smp.smptools.utils.InputValidator;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import java.util.Map;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -16,14 +16,31 @@ import org.bukkit.inventory.meta.ItemMeta;
 public class HomesGUIListener implements Listener {
 
     private final SMPTools plugin;
+    private final String homesGuiTitle;
 
     public HomesGUIListener(SMPTools plugin) {
         this.plugin = plugin;
+        // Resolve the configurable title once so renaming the GUI does not
+        // require code changes.
+        this.homesGuiTitle = PlainTextComponentSerializer.plainText().serialize(
+                plugin.getMessageManager().getMessage("homes.gui-title"));
     }
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!event.getView().title().equals(Component.text("Your Homes"))) {
+        if (event.getInventory().getHolder() instanceof HomeDeleteConfirmHolder) {
+            // Delete-confirmation GUIs are handled by the dedicated method
+            // below; ignore them here to avoid double-handling.
+            return;
+        }
+        // Skip the title fallback when the configured title is empty or
+        // blank, because an empty title would otherwise match any
+        // inventory whose plain-text title happens to also be empty.
+        if (homesGuiTitle == null || homesGuiTitle.isBlank()) {
+            return;
+        }
+        String titlePlain = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (!titlePlain.equals(homesGuiTitle)) {
             return;
         }
 
@@ -50,8 +67,7 @@ public class HomesGUIListener implements Listener {
 
     @EventHandler
     public void onDeleteConfirmationClick(InventoryClickEvent event) {
-        String titlePlain = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (!titlePlain.startsWith("Delete home '")) {
+        if (!(event.getInventory().getHolder() instanceof HomeDeleteConfirmHolder holder)) {
             return;
         }
 
@@ -64,31 +80,37 @@ public class HomesGUIListener implements Listener {
             return;
         }
 
-        String homeName = PlainTextComponentSerializer.plainText().serialize(event.getView().title())
-                .replace("Delete home '", "").replace("'?", "");
+        // Recover the home name from the holder rather than parsing it out
+        // of the inventory title, so the configurable
+        // homes.delete-confirm-title template can be renamed freely.
+        String homeName = holder.getHomeName();
 
         if (clickedItem.getType() == Material.GREEN_WOOL) {
-            // Confirm delete
             player.performCommand("delhome " + homeName);
             player.closeInventory();
-            player.sendMessage(Component.text("Home '" + homeName + "' has been deleted.", NamedTextColor.GREEN));
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage(
+                    "homes.deleted-confirmation", player,
+                    Map.of("name", InputValidator.sanitizeMiniMessage(homeName))));
         } else if (clickedItem.getType() == Material.RED_WOOL) {
-            // Cancel delete
             player.closeInventory();
         }
     }
 
     private void openDeleteConfirmation(Player player, String homeName) {
-        Inventory confirmationGUI = plugin.getServer().createInventory(null, 27, Component.text("Delete home '" + homeName + "'?"));
+        HomeDeleteConfirmHolder holder = new HomeDeleteConfirmHolder(homeName);
+        Inventory confirmationGUI = plugin.getServer().createInventory(holder, 27,
+                plugin.getMessageManager().getMessage("homes.delete-confirm-title", player,
+                        Map.of("name", InputValidator.sanitizeMiniMessage(homeName))));
+        holder.setInventory(confirmationGUI);
 
         ItemStack confirmItem = new ItemStack(Material.GREEN_WOOL);
         ItemMeta confirmMeta = confirmItem.getItemMeta();
-        confirmMeta.displayName(Component.text("Confirm", NamedTextColor.GREEN));
+        confirmMeta.displayName(plugin.getMessageManager().getMessage("homes.confirm", player));
         confirmItem.setItemMeta(confirmMeta);
 
         ItemStack cancelItem = new ItemStack(Material.RED_WOOL);
         ItemMeta cancelMeta = cancelItem.getItemMeta();
-        cancelMeta.displayName(Component.text("Cancel", NamedTextColor.RED));
+        cancelMeta.displayName(plugin.getMessageManager().getMessage("homes.cancel", player));
         cancelItem.setItemMeta(cancelMeta);
 
         confirmationGUI.setItem(11, confirmItem);

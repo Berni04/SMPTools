@@ -28,6 +28,7 @@ import java.util.Random;
 import java.util.HashMap; // Import HashMap
 import java.util.Map; // Import Map
 import java.util.Arrays; // Import Arrays
+import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Location; // Import Location
 import org.bukkit.Particle; // Import Particle
 
@@ -36,30 +37,10 @@ public class TrollGUIListener implements Listener {
     private final SMPTools plugin;
     private static final String GUI_TITLE = "Troll Menu";
     private static final Random random = new Random();
-    private static final Map<Integer, String> trollIdMap = new HashMap<>(); // Map to store explicit integer ID to
-                                                                            // trollId string mapping
-    private static final Map<java.util.UUID, Long> scrambledPlayers = new HashMap<>();
+    private static final Map<Integer, String> trollIdMap = new ConcurrentHashMap<>();
+    private static final Map<java.util.UUID, Long> scrambledPlayers = new ConcurrentHashMap<>();
 
-    public TrollGUIListener(SMPTools plugin) {
-        this.plugin = plugin;
-        initializeTrollIdMap(); // Initialize the map when the listener is created
-    }
-
-    public static boolean isChatScrambled(Player player) {
-        if (scrambledPlayers.containsKey(player.getUniqueId())) {
-            if (System.currentTimeMillis() < scrambledPlayers.get(player.getUniqueId())) {
-                return true;
-            } else {
-                scrambledPlayers.remove(player.getUniqueId());
-            }
-        }
-        return false;
-    }
-
-    private static void initializeTrollIdMap() {
-        trollIdMap.clear(); // Ensure map is clear before repopulating
-        // Populate the map with explicit integer IDs and their corresponding trollId
-        // strings
+    static {
         trollIdMap.put(1, "fake_op");
         trollIdMap.put(2, "fake_ban");
         trollIdMap.put(3, "fake_crash");
@@ -85,7 +66,22 @@ public class TrollGUIListener implements Listener {
         trollIdMap.put(24, "random_item_rename");
         trollIdMap.put(25, "temp_block_replace");
         trollIdMap.put(26, "sound_loop");
-        trollIdMap.put(99, "close"); // Unique ID for close button
+        trollIdMap.put(99, "close");
+    }
+
+    public TrollGUIListener(SMPTools plugin) {
+        this.plugin = plugin;
+    }
+
+    public static boolean isChatScrambled(Player player) {
+        if (scrambledPlayers.containsKey(player.getUniqueId())) {
+            if (System.currentTimeMillis() < scrambledPlayers.get(player.getUniqueId())) {
+                return true;
+            } else {
+                scrambledPlayers.remove(player.getUniqueId());
+            }
+        }
+        return false;
     }
 
     public static void openTrollGUI(Player opener, Player target) {
@@ -188,7 +184,7 @@ public class TrollGUIListener implements Listener {
         Player target = Bukkit.getPlayer(targetName);
 
         if (target == null || !target.isOnline()) {
-            opener.sendMessage(MiniMessage.miniMessage().deserialize("<red>Target player is no longer online!</red>"));
+            opener.sendMessage(plugin.getMessageManager().getMessage("troll.target-offline", opener));
             opener.closeInventory();
             return;
         }
@@ -202,16 +198,15 @@ public class TrollGUIListener implements Listener {
 
         String originalTrollId = trollIdMap.get(trollId); // Use explicit ID directly for lookup
         if (originalTrollId == null) { // Should not happen if trollIdMap is correctly populated
-            opener.sendMessage(MiniMessage.miniMessage()
-                    .deserialize("<red>Error: Unknown troll option (ID: " + trollId + ").</red>"));
+            opener.sendMessage(plugin.getMessageManager().getMessage("troll.unknown-option-id", opener,
+                    Map.of("id", String.valueOf(trollId))));
             opener.closeInventory();
             return;
         }
 
-        opener.sendMessage(MiniMessage.miniMessage()
-                .deserialize("<green>Executing troll '"
-                        + MiniMessage.miniMessage().serialize(clickedItem.getItemMeta().displayName()) + "' on "
-                        + target.getName() + "!</green>"));
+        String trollName = MiniMessage.miniMessage().serialize(clickedItem.getItemMeta().displayName());
+        opener.sendMessage(plugin.getMessageManager().getMessage("troll.executing", opener,
+                Map.of("troll", trollName, "target", target.getName())));
         executeTroll(opener, target, originalTrollId);
         opener.closeInventory();
     }
@@ -219,16 +214,14 @@ public class TrollGUIListener implements Listener {
     private void executeTroll(Player opener, Player target, String trollId) {
         switch (trollId) {
             case "fake_op":
-                target.sendMessage(
-                        MiniMessage.miniMessage().deserialize("<gray>[Server: Opped " + target.getName() + "]</gray>"));
+                target.sendMessage(plugin.getMessageManager().getMessage("troll.fake-op", target,
+                        Map.of("name", target.getName())));
                 break;
             case "fake_ban":
-                target.sendMessage(MiniMessage.miniMessage()
-                        .deserialize("<red>You have been permanently banned from this server!</red>"));
+                target.sendMessage(plugin.getMessageManager().getMessage("troll.fake-ban", target));
                 break;
             case "fake_crash":
-                target.sendMessage(MiniMessage.miniMessage()
-                        .deserialize("<red>Internal Server Error: java.lang.NullPointerException</red>"));
+                target.sendMessage(plugin.getMessageManager().getMessage("troll.fake-crash", target));
                 break;
             case "scramble_inv":
                 scrambleInventory(target);
@@ -277,8 +270,8 @@ public class TrollGUIListener implements Listener {
                 break;
             case "chat_scramble":
                 scrambledPlayers.put(target.getUniqueId(), System.currentTimeMillis() + 30000); // 30 seconds
-                opener.sendMessage(MiniMessage.miniMessage()
-                        .deserialize("<green>Chat Scramble activated for " + target.getName() + " (30s)!</green>"));
+                opener.sendMessage(plugin.getMessageManager().getMessage("troll.chat-scramble-activated", opener,
+                        Map.of("name", target.getName())));
                 break;
             case "fake_lag_message":
                 fakeLagMessage(target);
@@ -296,15 +289,14 @@ public class TrollGUIListener implements Listener {
                 soundLoop(target);
                 break;
             case "fake_item_break":
-                target.sendMessage(MiniMessage.miniMessage()
-                        .deserialize("<red>Your "
-                                + MiniMessage.miniMessage()
-                                        .serialize(target.getInventory().getItemInMainHand().displayName())
-                                + " just broke!</red>"));
+                String itemName = MiniMessage.miniMessage().serialize(
+                        target.getInventory().getItemInMainHand().displayName());
+                target.sendMessage(plugin.getMessageManager().getMessage("troll.item-broke", target,
+                        Map.of("item", itemName)));
                 break;
             default:
-                opener.sendMessage(
-                        MiniMessage.miniMessage().deserialize("<red>Unknown troll option: " + trollId + "</red>"));
+                opener.sendMessage(plugin.getMessageManager().getMessage("troll.unknown-option", opener,
+                        Map.of("id", String.valueOf(trollId))));
                 break;
         }
     }
@@ -363,8 +355,8 @@ public class TrollGUIListener implements Listener {
     private void broadcastFakeDeathMessage(Player player) {
         // This is a simplified fake death message. More complex ones would mimic actual
         // death causes.
-        Bukkit.broadcast(
-                MiniMessage.miniMessage().deserialize("<red>" + player.getName() + " was slain by [Troll God]</red>"));
+        Bukkit.broadcast(plugin.getMessageManager().getMessage("troll.fake-death", null,
+                Map.of("name", player.getName())));
     }
 
     private void teleportRandomly(Player player) {
@@ -378,8 +370,8 @@ public class TrollGUIListener implements Listener {
     private void sendFakeAdvancement(Player player) {
         // This is a client-side packet, not directly available in Bukkit API.
         // For a simple troll, we can send a message that looks like an advancement.
-        player.sendMessage(MiniMessage.miniMessage()
-                .deserialize("<green>" + player.getName() + " has made the advancement [Troll Master]</green>"));
+        player.sendMessage(plugin.getMessageManager().getMessage("troll.fake-advancement", player,
+                Map.of("name", player.getName())));
     }
 
     private void soundSpam(Player player) {
@@ -388,7 +380,7 @@ public class TrollGUIListener implements Listener {
 
             @Override
             public void run() {
-                if (count >= 5) { // Spam 5 times
+                if (!player.isOnline() || count >= 5) {
                     this.cancel();
                     return;
                 }
@@ -404,12 +396,11 @@ public class TrollGUIListener implements Listener {
 
             @Override
             public void run() {
-                if (count >= 3) { // Send 3 messages
+                if (!player.isOnline() || count >= 3) {
                     this.cancel();
                     return;
                 }
-                player.sendMessage(MiniMessage.miniMessage()
-                        .deserialize("<red>Lag detected! Please check your connection.</red>"));
+                player.sendMessage(plugin.getMessageManager().getMessage("troll.lag-detected", player));
                 count++;
             }
         }.runTaskTimer(plugin, 0L, 20L); // Every 1 second
@@ -424,14 +415,14 @@ public class TrollGUIListener implements Listener {
         String fakePlayerName = randomPlayer.getName();
 
         // Fake join message
-        Bukkit.broadcast(
-                MiniMessage.miniMessage().deserialize("<yellow>" + fakePlayerName + " joined the game.</yellow>"));
+        Bukkit.broadcast(plugin.getMessageManager().getMessage("troll.fake-join", null,
+                Map.of("name", fakePlayerName)));
         new BukkitRunnable() {
             @Override
             public void run() {
                 // Fake leave message after a short delay
-                Bukkit.broadcast(MiniMessage.miniMessage()
-                        .deserialize("<yellow>" + fakePlayerName + " left the game.</yellow>"));
+                Bukkit.broadcast(plugin.getMessageManager().getMessage("troll.fake-leave", null,
+                        Map.of("name", fakePlayerName)));
             }
         }.runTaskLater(plugin, 20 * 5); // 5 seconds later
     }
@@ -446,7 +437,7 @@ public class TrollGUIListener implements Listener {
         }
 
         if (availableSlots.isEmpty()) {
-            player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Target has no items to rename!</red>"));
+            player.sendMessage(plugin.getMessageManager().getMessage("troll.no-items-to-rename", player));
             return;
         }
 
@@ -454,10 +445,10 @@ public class TrollGUIListener implements Listener {
         ItemStack item = inv.getItem(randomSlot);
         if (item != null) {
             ItemMeta meta = item.getItemMeta();
-            List<String> funnyNames = Arrays.asList(
-                    "<red>Useless Rock</red>", "<green>Magic Stick</green>", "<blue>Shiny Thing</blue>",
-                    "<gold>Mystery Meat</gold>", "<dark_purple>Broken Dream</dark_purple>",
-                    "<gray>Just a Block</gray>");
+            List<String> funnyNames = plugin.getMessageManager().getStringList("troll.funny-names");
+            if (funnyNames.isEmpty()) {
+                funnyNames = Arrays.asList("<red>Useless Rock</red>", "<green>Magic Stick</green>");
+            }
             meta.displayName(MiniMessage.miniMessage().deserialize(funnyNames.get(random.nextInt(funnyNames.size()))));
             item.setItemMeta(meta);
         }
@@ -508,7 +499,7 @@ public class TrollGUIListener implements Listener {
 
             @Override
             public void run() {
-                if (count >= 10) { // Loop 10 times
+                if (!player.isOnline() || count >= 10) {
                     this.cancel();
                     return;
                 }

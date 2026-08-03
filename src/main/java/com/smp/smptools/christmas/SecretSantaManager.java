@@ -126,8 +126,19 @@ public class SecretSantaManager {
         if (list == null)
             return null;
 
-        // Bukkit serialization handling
-        return list.toArray(new ItemStack[0]);
+        List<ItemStack> items = new ArrayList<>();
+        for (Object obj : list) {
+            if (obj instanceof ItemStack is) {
+                items.add(is);
+            } else if (obj instanceof java.util.Map<?, ?> map) {
+                try {
+                    items.add(ItemStack.deserialize((java.util.Map<String, Object>) map));
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Failed to deserialize Secret Santa gift item for recipient " + recipient + ": " + e.getMessage());
+                }
+            }
+        }
+        return items.toArray(new ItemStack[0]);
     }
 
     public boolean hasGiftDeposited(UUID target) {

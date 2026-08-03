@@ -1,6 +1,7 @@
 package com.smp.smptools.missions;
 
 import com.smp.smptools.SMPTools;
+import com.smp.smptools.utils.CommandBlacklist;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -14,7 +15,9 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class RewardManager {
 
@@ -25,10 +28,12 @@ public class RewardManager {
         ItemStack elytra = new ItemStack(Material.ELYTRA);
         ItemMeta meta = elytra.getItemMeta();
 
-        meta.displayName(Component.text("Chromatic Elytra", NamedTextColor.LIGHT_PURPLE, TextDecoration.BOLD));
+        meta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                .deserialize(SMPTools.getInstance().getMessageManager().getRawMessage("missions.chromatic-elytra-name")));
 
         List<Component> lore = new ArrayList<>();
-        lore.add(Component.text("A legendary reward for a master of the skies.", NamedTextColor.GRAY));
+        lore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                .deserialize(SMPTools.getInstance().getMessageManager().getRawMessage("missions.chromatic-elytra-lore-1")));
         lore.add(Component.text(""));
         NamedTextColor trailColor;
         switch (color.toUpperCase()) {
@@ -60,7 +65,10 @@ public class RewardManager {
                 trailColor = NamedTextColor.WHITE;
                 break;
         }
-        lore.add(Component.text("Trail Color: ", NamedTextColor.GRAY).append(Component.text(color, trailColor)));
+        // Build the trail color lore line using the static color component for the {color} part
+        String trailLore = SMPTools.getInstance().getMessageManager().getRawMessage("missions.trail-color")
+                .replace("{color}", "<" + trailColor.toString().replace("NamedTextColor", "").toLowerCase() + ">" + color);
+        lore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(trailLore));
         meta.lore(lore);
 
         meta.addEnchant(Enchantment.UNBREAKING, 3, true);
@@ -73,7 +81,7 @@ public class RewardManager {
         elytra.setItemMeta(meta);
 
         player.getInventory().addItem(elytra);
-        player.sendMessage(Component.text("You have received the Chromatic Elytra!", NamedTextColor.GREEN));
+        player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.chromatic-elytra-received", player));
     }
 
     public static void giveReward(Player player, String reward) {
@@ -89,7 +97,10 @@ public class RewardManager {
                 } else {
                     player.getWorld().dropItem(player.getLocation(), item);
                 }
-                player.sendMessage(Component.text("Received " + amount + " " + material.name(), NamedTextColor.GREEN));
+                Map<String, String> placeholders = new HashMap<>();
+                placeholders.put("amount", String.valueOf(amount));
+                placeholders.put("material", material.name());
+                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-received", player, placeholders));
             }
         } else if (reward.startsWith("custom_item:")) {
             String customItem = reward.substring(12);
@@ -99,10 +110,17 @@ public class RewardManager {
             }
         } else if (reward.startsWith("command:")) {
             String command = reward.substring(8).replace("%player%", player.getName());
+            if (CommandBlacklist.isBlocked(command)) {
+                SMPTools.getInstance().getLogger().warning("Blocked dangerous command in mission reward: " + command);
+                return;
+            }
             org.bukkit.Bukkit.dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), command);
         } else {
-            // Assume it's a command if no prefix (like "eco give")
             String command = reward.replace("%player%", player.getName());
+            if (CommandBlacklist.isBlocked(command)) {
+                SMPTools.getInstance().getLogger().warning("Blocked dangerous command in mission reward: " + command);
+                return;
+            }
             org.bukkit.Bukkit.dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), command);
         }
     }

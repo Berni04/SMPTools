@@ -35,9 +35,9 @@ public class AdvancementListener implements Listener {
         Component hoverableAdvancementTitle = advancementTitle.color(NamedTextColor.GREEN)
                 .hoverEvent(advancementDescription.color(NamedTextColor.GRAY)); // Description also colored
 
-        // Construct the new message: "[PlayerName] has made the advancement [AdvancementTitle]"
+        // Build: <formatted player> + message text + <hovered advancement>
         Component finalMessage = formattedPlayerName
-                .append(Component.text(" has made the advancement ", NamedTextColor.YELLOW))
+                .append(plugin.getMessageManager().getMessage("advancement.made-text"))
                 .append(hoverableAdvancementTitle);
 
         plugin.getServer().broadcast(finalMessage);

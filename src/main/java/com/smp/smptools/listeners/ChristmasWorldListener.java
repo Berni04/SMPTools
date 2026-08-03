@@ -1,8 +1,6 @@
 package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -100,7 +98,7 @@ public class ChristmasWorldListener implements Listener {
     public void onPlayerBedEnter(PlayerBedEnterEvent event) {
         if (event.getPlayer().getWorld().getName().equalsIgnoreCase(WORLD_NAME)) {
             event.setCancelled(true);
-            event.getPlayer().sendMessage(Component.text("You cannot sleep in this world!", NamedTextColor.RED));
+            event.getPlayer().sendMessage(SMPTools.getInstance().getMessageManager().getMessage("christmas.cannot-sleep", event.getPlayer()));
         }
     }
 
@@ -128,7 +126,7 @@ public class ChristmasWorldListener implements Listener {
                 event.setCancelled(true);
                 if (event.getEntity() instanceof Player) {
                     ((Player) event.getEntity())
-                            .sendMessage(Component.text("Elytra flying is disabled in this world!", NamedTextColor.RED));
+                            .sendMessage(SMPTools.getInstance().getMessageManager().getMessage("christmas.elytra-disabled", (Player) event.getEntity()));
                 }
             }
         }
