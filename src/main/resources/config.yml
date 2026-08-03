@@ -12,3 +12,30 @@ features:
   accelerated-growth:
     enabled: true
     multiplier: 2.0 # Crops grow 2 times faster
+
+# Storage configuration
+# Supported storage types: FLATFILE, SQLITE, MYSQL, MARIADB, MONGODB
+storage:
+  type: "FLATFILE"
+  sqlite:
+    file: "smptools.db"
+  mysql:
+    host: "localhost"
+    port: 3306
+    database: "smptools"
+    username: "root"
+    password: ""
+    pool-size: 10
+    use-ssl: false
+  mariadb:
+    host: "localhost"
+    port: 3306
+    database: "smptools"
+    username: "root"
+    password: ""
+    pool-size: 10
+    use-ssl: false
+  mongodb:
+    uri: "mongodb://localhost:27017"
+    database: "smptools"
+    collection-prefix: "smptools_"

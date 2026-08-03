@@ -43,6 +43,7 @@ import com.smp.smptools.listeners.ResourcePackListener;
 import com.smp.smptools.listeners.SitListener;
 import com.smp.smptools.listeners.SkillsListener;
 import com.smp.smptools.managers.NPCManager;
+import com.smp.smptools.storage.StorageManager;
 import com.smp.smptools.managers.DialogueManager;
 import com.smp.smptools.managers.BlackFridayManager;
 import org.bukkit.Bukkit;
@@ -91,6 +92,7 @@ public class SMPTools extends JavaPlugin {
     private DialogueManager dialogueManager;
     private BlackFridayManager blackFridayManager;
     private MessageManager messageManager;
+    private StorageManager storageManager;
     private com.smp.smptools.listeners.InvseeGUIListener invseeGUIListener;
 
     @Override
@@ -106,6 +108,9 @@ public class SMPTools extends JavaPlugin {
         setupTagsConfig();
         setupRewardsConfig();
         setupImageMapsConfig();
+
+        // Initialize Storage Manager
+        this.storageManager = new StorageManager(this);
 
         // Instantiate Managers
         this.leaderboardManager = new LeaderboardManager(this);
@@ -221,6 +226,9 @@ public class SMPTools extends JavaPlugin {
                 long totalTicks = player.getStatistic(org.bukkit.Statistic.PLAY_ONE_MINUTE);
                 long totalMinutes = totalTicks / (20 * 60);
                 getStatsConfig().set("stats." + player.getUniqueId() + ".playtime_minutes", totalMinutes);
+                if (storageManager != null && storageManager.getProvider() != null) {
+                    storageManager.getProvider().saveStat(player.getUniqueId(), "playtime_minutes", totalMinutes);
+                }
             }
             saveStatsConfig();
         }, 6000L, 6000L); // Run every 5 minutes (6000 ticks)
@@ -241,6 +249,9 @@ public class SMPTools extends JavaPlugin {
         }
         if (npcManager != null) {
             npcManager.removeAllNPCs();
+        }
+        if (storageManager != null) {
+            storageManager.shutdown();
         }
         // Save configs
         saveStatsConfig();
@@ -480,6 +491,10 @@ public class SMPTools extends JavaPlugin {
 
     public MessageManager getMessageManager() {
         return messageManager;
+    }
+
+    public StorageManager getStorageManager() {
+        return storageManager;
     }
 
     public com.smp.smptools.listeners.InvseeGUIListener getInvseeGUIListener() {

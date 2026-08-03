@@ -50,10 +50,10 @@ public class TagManager {
      * Loads player titles from the configuration file.
      */
     private void loadPlayerTitles() {
-        ConfigurationSection titlesSection = plugin.getTagsConfig().getConfigurationSection("player-titles");
-        if (titlesSection != null) {
-            for (String uuid : titlesSection.getKeys(false)) {
-                playerTitles.put(uuid, titlesSection.getString(uuid));
+        if (plugin.getStorageManager() != null && plugin.getStorageManager().getProvider() != null) {
+            Map<String, String> titles = plugin.getStorageManager().getProvider().getAllPlayerTitles();
+            if (titles != null) {
+                playerTitles.putAll(titles);
             }
         }
     }
@@ -76,8 +76,9 @@ public class TagManager {
      */
     public void setPlayerTitle(@NotNull Player player, @NotNull String title) {
         playerTitles.put(player.getUniqueId().toString(), title);
-        plugin.getTagsConfig().set("player-titles." + player.getUniqueId().toString(), title);
-        plugin.saveTagsConfig();
+        if (plugin.getStorageManager() != null && plugin.getStorageManager().getProvider() != null) {
+            plugin.getStorageManager().getProvider().savePlayerTitle(player.getUniqueId(), title);
+        }
         plugin.getNameTagListener().updatePlayerName(player); // Update display name immediately
     }
 
@@ -88,8 +89,9 @@ public class TagManager {
      */
     public void removePlayerTitle(@NotNull Player player) {
         playerTitles.remove(player.getUniqueId().toString());
-        plugin.getTagsConfig().set("player-titles." + player.getUniqueId().toString(), null);
-        plugin.saveTagsConfig();
+        if (plugin.getStorageManager() != null && plugin.getStorageManager().getProvider() != null) {
+            plugin.getStorageManager().getProvider().removePlayerTitle(player.getUniqueId());
+        }
         plugin.getNameTagListener().updatePlayerName(player); // Update display name immediately
     }
 

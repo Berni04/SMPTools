@@ -35,64 +35,20 @@ public class LeaderboardManager {
         lastCacheTime = System.currentTimeMillis();
         cachedLeaderboards.clear();
 
-        ConfigurationSection statsSection = plugin.getStatsConfig().getConfigurationSection("stats");
-        if (statsSection == null) {
+        if (plugin.getStorageManager() == null || plugin.getStorageManager().getProvider() == null) {
             return;
         }
 
-        Map<String, Long> blocksBroken = new LinkedHashMap<>();
-        Map<String, Long> blocksPlaced = new LinkedHashMap<>();
-        Map<String, Long> playtime = new LinkedHashMap<>();
-        Map<String, Long> deaths = new LinkedHashMap<>();
-        Map<String, Long> playerKills = new LinkedHashMap<>();
-        // New maps for individual ore types
-        Map<String, Long> oresMinedCoal = new LinkedHashMap<>();
-        Map<String, Long> oresMinedIron = new LinkedHashMap<>();
-        Map<String, Long> oresMinedGold = new LinkedHashMap<>();
-        Map<String, Long> oresMinedLapis = new LinkedHashMap<>();
-        Map<String, Long> oresMinedRedstone = new LinkedHashMap<>();
-        Map<String, Long> oresMinedDiamond = new LinkedHashMap<>();
-        Map<String, Long> oresMinedEmerald = new LinkedHashMap<>();
+        String[] statsToLoad = new String[]{
+                "blocks_broken", "blocks_placed", "playtime_minutes", "deaths_total", "player_kills",
+                "ores_mined.coal", "ores_mined.iron", "ores_mined.gold", "ores_mined.lapis",
+                "ores_mined.redstone", "ores_mined.diamond", "ores_mined.emerald"
+        };
 
-        for (String uuid : statsSection.getKeys(false)) {
-            ConfigurationSection playerSection = statsSection.getConfigurationSection(uuid);
-            if (playerSection != null) {
-                OfflinePlayer player = Bukkit.getOfflinePlayer(java.util.UUID.fromString(uuid));
-                String name = player.getName() != null ? player.getName() : "Unknown";
-
-                blocksBroken.put(name, playerSection.getLong("blocks_broken", 0));
-                blocksPlaced.put(name, playerSection.getLong("blocks_placed", 0));
-                playtime.put(name, playerSection.getLong("playtime_minutes", 0));
-                deaths.put(name, playerSection.getLong("deaths_total", 0));
-                playerKills.put(name, playerSection.getLong("player_kills", 0));
-
-                // Extract individual ore stats
-                ConfigurationSection oresMinedSection = playerSection.getConfigurationSection("ores_mined");
-                if (oresMinedSection != null) {
-                    oresMinedCoal.put(name, oresMinedSection.getLong("coal", 0));
-                    oresMinedIron.put(name, oresMinedSection.getLong("iron", 0));
-                    oresMinedGold.put(name, oresMinedSection.getLong("gold", 0));
-                    oresMinedLapis.put(name, oresMinedSection.getLong("lapis", 0));
-                    oresMinedRedstone.put(name, oresMinedSection.getLong("redstone", 0));
-                    oresMinedDiamond.put(name, oresMinedSection.getLong("diamond", 0));
-                    oresMinedEmerald.put(name, oresMinedSection.getLong("emerald", 0));
-                }
-            }
+        for (String stat : statsToLoad) {
+            Map<String, Long> statMap = plugin.getStorageManager().getProvider().getLeaderboardStats(stat);
+            cachedLeaderboards.put(stat, sortLeaderboard(statMap));
         }
-
-        cachedLeaderboards.put("blocks_broken", sortLeaderboard(blocksBroken));
-        cachedLeaderboards.put("blocks_placed", sortLeaderboard(blocksPlaced));
-        cachedLeaderboards.put("playtime", sortLeaderboard(playtime));
-        cachedLeaderboards.put("deaths", sortLeaderboard(deaths));
-        cachedLeaderboards.put("player_kills", sortLeaderboard(playerKills));
-        // Add new ore leaderboards
-        cachedLeaderboards.put("ores_mined.coal", sortLeaderboard(oresMinedCoal));
-        cachedLeaderboards.put("ores_mined.iron", sortLeaderboard(oresMinedIron));
-        cachedLeaderboards.put("ores_mined.gold", sortLeaderboard(oresMinedGold));
-        cachedLeaderboards.put("ores_mined.lapis", sortLeaderboard(oresMinedLapis));
-        cachedLeaderboards.put("ores_mined.redstone", sortLeaderboard(oresMinedRedstone));
-        cachedLeaderboards.put("ores_mined.diamond", sortLeaderboard(oresMinedDiamond));
-        cachedLeaderboards.put("ores_mined.emerald", sortLeaderboard(oresMinedEmerald));
     }
 
     private Map<String, Long> sortLeaderboard(Map<String, Long> unsortedMap) {
