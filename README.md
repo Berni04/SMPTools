@@ -52,6 +52,7 @@ SMPTools is a comprehensive Minecraft Paper plugin designed to enhance the survi
 *   **Inventory Viewer**: **/invsee <player>**: View another player's inventory with a death-screen-like layout showing armor and off-hand.
 *   **Troll Commands**: **/troll <player>**: Opens a GUI with 20+ troll options including Chat Scramble, Fake Lag, Fake Join/Leave, and more.
 *   **Force Execute**: **/sudo <player> <command>**: Forces a player to execute a command or send a chat message.
+*   **Custom Items (WIP)**: **/customitem <type> <data>**: Gives custom items with specified CustomModelData (work in progress).
 
 ### NPC & Dialogue System
 *   **NPC Management**: **/npc <spawn|remove|reload>**: Create and manage NPCs with custom skins and names.
@@ -103,6 +104,7 @@ SMPTools is a comprehensive Minecraft Paper plugin designed to enhance the survi
 ### Quality of Life
 *   **Sit on Stairs**: Players can right-click on stairs with an empty hand to sit down.
 *   **Ride Command**: **/ride**: Allows players to ride other entities (including other players) they are looking at. Use `/ride` again to dismount.
+*   **Accelerated Growth**: Boosts crop and sapling growth speed across loaded chunks with configurable tick multipliers.
 *   **Funny Death Messages**: Replaces standard Minecraft death messages with humorous, meme-inspired alternatives based on the cause of death.
 *   **Meme Sound Player**: **/sound <sound_name>**: Plays a custom meme sound effect for nearby players. Requires a custom resource pack.
 
@@ -113,8 +115,8 @@ SMPTools is a comprehensive Minecraft Paper plugin designed to enhance the survi
 ### Seasonal Events
 
 #### Christmas Events
-*   **Advent Calendar**: **/advent**: Opens a daily reward GUI for December with 25 daily rewards (CET timezone).
-*   **Secret Santa**: **/secretsanta <join|target|deposit|claim>**: Full Secret Santa event lifecycle management.
+*   **Advent Calendar**: **/advent** (alias **/xmas**): Opens a daily reward GUI for December with 25 daily rewards (CET timezone).
+*   **Secret Santa**: **/secretsanta** (alias **/ss**) **<join|target|deposit|claim>**: Full Secret Santa event lifecycle management.
 *   **Present Hunt**: **/present <give|remove> [tier]**: Admin command to manage Christmas presents scattered around the world.
 *   **Festive Mobs**: Mobs spawn with Santa/Elf hats, drop Candy Canes, and Creepers leave confetti.
 *   **Snowball Warfare**: Snowballs deal damage, apply freezing effect, and have headshot mechanics.
@@ -196,7 +198,7 @@ Common placeholders:
 | `/color` | Color selection GUI | Default |
 | `/leaderboard` | Server leaderboard | Default |
 | `/tags` | Tags/titles GUI | Default |
-| `/tags set <player> <title>` | Unlock title for player | `smptools.tags.admin` |
+| `/tags set <player> <title>` | Unlock title for player | `smptools.tags.set` |
 | `/tpr <player>` | Send teleport request | Default |
 | `/tpa` | Accept teleport request | Default |
 | `/tpd` | Deny teleport request | Default |
@@ -216,9 +218,9 @@ Common placeholders:
 | `/missions` | Missions GUI | Default |
 | `/missions resetquestline` | Reset questline | Default |
 | `/sudo <player> <cmd>` | Force player action | `smptools.sudo` |
-| `/customitem <type> <data>` | Give custom item | `smptools.customitem` |
-| `/advent` | Advent calendar | Default |
-| `/secretsanta <cmd>` | Secret Santa | Default |
+| `/customitem <type> <data>` | Give custom item (WIP) | `smptools.customitem` |
+| `/advent` (alias `/xmas`) | Advent calendar | Default |
+| `/secretsanta <cmd>` (alias `/ss`) | Secret Santa | Default |
 | `/npc <spawn\|remove\|reload>` | NPC management | `smptools.npc.admin` |
 | `/uptime` | Server uptime | Default |
 | `/ping [player]` | Check ping | Default |
@@ -232,12 +234,16 @@ Common placeholders:
 |------------|-------------|---------|
 | `smptools.fly` | Use `/fly` command | - |
 | `smptools.privatevault` | Use `/pv` command | - |
+| `smptools.homes.<group>` | Permission node for home limit groups (e.g., `smptools.homes.vip`) | - |
 | `smptools.clearstats` | Use `/clearstats` command | - |
-| `smptools.tags.admin` | Use `/tags set` command | op |
+| `smptools.stats.rollback` | Rollback/reset player statistics | op |
+| `smptools.tags.set` | Use `/tags set` command | op |
 | `smptools.imagemap` | Use `/tomap` command | - |
 | `smptools.music` | Use `/music` command | - |
+| `smptools.music.broadcast` | Use `/music broadcast` subcommand | - |
 | `smptools.ride` | Use `/ride` command | - |
 | `smptools.sound` | Use `/sound` command | - |
+| `smptools.advent.bypass` | Bypass date restrictions on Advent Calendar | op |
 | `smptools.chunkloader.give` | Give chunk loaders | op |
 | `smptools.invsee` | Use `/invsee` command | op |
 | `smptools.troll` | Use `/troll` command | op |
@@ -245,13 +251,13 @@ Common placeholders:
 | `smptools.npc.admin` | Manage NPCs | op |
 | `smptools.missions.admin` | Spawn mission NPCs | op |
 | `smptools.customenchant` | Apply custom enchants | - |
-| `smptools.customitem` | Give custom items | op |
+| `smptools.customitem` | Give custom items (WIP) | op |
 | `smptools.admin` | Admin commands (presents, krampus, black friday) | op |
 
 ## Configuration
 
 ### Main Configuration Files
-*   **`config.yml`**: General plugin configuration including feature toggles, skill formulas, daily rewards, custom enchantments, music player settings, and meme sound resource pack URL.
+*   **`config.yml`**: General plugin configuration including feature toggles, skill formulas, daily rewards, custom enchantments, music player settings, accelerated growth multiplier, and meme sound resource pack URL.
 *   **`stats.yml`**: Player statistics storage. Managed by the plugin - avoid manual editing.
 *   **`tags.yml`**: Defines milestone tags and their unlock requirements.
 *   **`messages.yml`**: Customizable player-facing messages with MiniMessage support and dynamic player tags.
