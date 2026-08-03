@@ -23,7 +23,7 @@ public class VaultListener implements Listener {
 
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
-        if (event.getView().title().equals(Component.text("Private Vault", TextColor.fromHexString("#5B2C6F")))) {
+        if (event.getInventory().getHolder() instanceof PrivateVaultHolder) {
             Player player = (Player) event.getPlayer();
             Inventory inventory = event.getInventory();
             FileConfiguration config = plugin.getConfig();

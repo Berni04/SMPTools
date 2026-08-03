@@ -499,8 +499,9 @@ public class MissionGUIListener implements Listener {
                 lore.add(SMPTools.getInstance().getMessageManager().getMessage("missions.status-in-progress", player));
                 break;
         }
-        lore.add(LEGACY.deserialize(SMPTools.getInstance().getMessageManager().getRawMessage("missions.mission-id-lore")
-                .replace("{id}", mission.getId())));
+        lore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(
+                SMPTools.getInstance().getMessageManager().getRawMessage("missions.mission-id-lore")
+                        .replace("{id}", mission.getId())));
         meta.lore(lore);
         item.setItemMeta(meta);
         return item;
@@ -544,9 +545,14 @@ public class MissionGUIListener implements Listener {
         if (item == null || !item.hasItemMeta() || !item.getItemMeta().hasLore())
             return null;
         for (Component component : item.getItemMeta().lore()) {
-            String line = component.toString();
-            if (line.contains("mission_id:")) {
-                return line.split("mission_id:")[1].split("\"")[0];
+            String plain = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(component);
+            if (plain.contains("mission_id:")) {
+                String idPart = plain.substring(plain.indexOf("mission_id:") + "mission_id:".length()).trim();
+                int end = idPart.indexOf(' ');
+                if (end != -1) {
+                    idPart = idPart.substring(0, end);
+                }
+                return idPart;
             }
         }
         return null;

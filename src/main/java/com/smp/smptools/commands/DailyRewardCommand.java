@@ -37,9 +37,9 @@ public class DailyRewardCommand extends AbstractPlayerCommand {
             Duration timeSinceClaimed = Duration.between(lastClaimed, now);
 
             if (timeSinceClaimed.toHours() < cooldownHours) {
-                long hoursRemaining = cooldownHours - timeSinceClaimed.toHours();
-                long minutesRemaining = (cooldownHours * 60) - timeSinceClaimed.toMinutes();
-                minutesRemaining %= 60;
+                long totalRemainingMinutes = (cooldownHours * 60) - timeSinceClaimed.toMinutes();
+                long hoursRemaining = totalRemainingMinutes / 60;
+                long minutesRemaining = totalRemainingMinutes % 60;
                 player.sendMessage(plugin.getMessageManager().getMessage("daily.cooldown", player,
                         Map.of("hours", String.valueOf(hoursRemaining), "minutes", String.valueOf(minutesRemaining))));
                 return true;

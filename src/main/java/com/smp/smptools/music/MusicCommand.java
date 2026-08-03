@@ -110,6 +110,10 @@ public class MusicCommand extends AbstractPlayerCommand {
                     }
 
                     Bukkit.getScheduler().runTask(plugin, () -> {
+                        SongPlayer existing = playingTasks.remove(player.getUniqueId());
+                        if (existing != null) {
+                            try { existing.cancel(); } catch (Exception ignored) {}
+                        }
                         SongPlayer songPlayer;
                         if (subCommand.equals("broadcast")) {
                             songPlayer = new SongPlayer(song, Bukkit.getOnlinePlayers());

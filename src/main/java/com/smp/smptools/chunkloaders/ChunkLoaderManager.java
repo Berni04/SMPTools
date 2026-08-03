@@ -151,6 +151,8 @@ public class ChunkLoaderManager {
         return null;
     }
 
+    public static final org.bukkit.NamespacedKey CHUNK_LOADER_KEY = new org.bukkit.NamespacedKey(SMPTools.getInstance(), "chunk_loader");
+
     public static ItemStack getChunkLoaderItem() {
         if (cachedMaterial == null) {
             return new ItemStack(Material.BEACON);
@@ -161,6 +163,7 @@ public class ChunkLoaderManager {
 
         meta.displayName(cachedName);
         meta.lore(cachedLore);
+        meta.getPersistentDataContainer().set(CHUNK_LOADER_KEY, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
         item.setItemMeta(meta);
         return item;
     }
@@ -175,6 +178,10 @@ public class ChunkLoaderManager {
         }
 
         ItemMeta meta = item.getItemMeta();
+        if (meta.getPersistentDataContainer().has(CHUNK_LOADER_KEY, org.bukkit.persistence.PersistentDataType.BYTE)) {
+            return true;
+        }
+
         return Objects.equals(meta.displayName(), cachedName) && Objects.equals(meta.lore(), cachedLore);
     }
 }

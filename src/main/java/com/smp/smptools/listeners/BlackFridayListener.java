@@ -24,6 +24,7 @@ public class BlackFridayListener implements Listener {
 
     private final BlackFridayManager manager;
     private final Map<UUID, List<MerchantRecipe>> originalRecipes = new ConcurrentHashMap<>();
+    private final Map<UUID, java.util.Set<UUID>> activeViewers = new ConcurrentHashMap<>();
 
     public BlackFridayListener(SMPTools plugin, BlackFridayManager manager) {
         this.manager = manager;
@@ -35,7 +36,7 @@ public class BlackFridayListener implements Listener {
             return;
         }
 
-        if (!(event.getPlayer() instanceof Player)) {
+        if (!(event.getPlayer() instanceof Player player)) {
             return;
         }
 
@@ -49,13 +50,18 @@ public class BlackFridayListener implements Listener {
         }
 
         Merchant merchant = (Merchant) villager;
-
         UUID villagerUUID = villager.getUniqueId();
-        if (!originalRecipes.containsKey(villagerUUID)) {
-            originalRecipes.put(villagerUUID, new ArrayList<>(merchant.getRecipes()));
-        }
+        UUID playerUUID = player.getUniqueId();
 
-        applyDiscount(merchant);
+        java.util.Set<UUID> viewers = activeViewers.computeIfAbsent(villagerUUID, k -> ConcurrentHashMap.newKeySet());
+        boolean isFirstViewer = viewers.isEmpty();
+        viewers.add(playerUUID);
+
+        if (isFirstViewer) {
+            List<MerchantRecipe> original = new ArrayList<>(merchant.getRecipes());
+            originalRecipes.put(villagerUUID, original);
+            applyDiscount(merchant, original);
+        }
     }
 
     @EventHandler
@@ -63,24 +69,32 @@ public class BlackFridayListener implements Listener {
         if (!(event.getInventory().getHolder() instanceof AbstractVillager villager)) {
             return;
         }
-        // AbstractVillager implements Merchant
         Merchant merchant = villager;
+        UUID villagerUUID = villager.getUniqueId();
+        UUID playerUUID = event.getPlayer().getUniqueId();
 
-        // Always restore on close, even if Black Friday was disabled mid-session,
-        // to avoid leaving a player stuck with discounted recipes.
-        List<MerchantRecipe> original = originalRecipes.remove(villager.getUniqueId());
-        if (original != null) {
-            merchant.setRecipes(original);
+        java.util.Set<UUID> viewers = activeViewers.get(villagerUUID);
+        if (viewers != null) {
+            viewers.remove(playerUUID);
+            if (viewers.isEmpty()) {
+                activeViewers.remove(villagerUUID);
+                List<MerchantRecipe> original = originalRecipes.remove(villagerUUID);
+                if (original != null) {
+                    merchant.setRecipes(original);
+                }
+            }
         }
     }
 
-    private void applyDiscount(Merchant merchant) {
+    private void applyDiscount(Merchant merchant, List<MerchantRecipe> baseRecipes) {
         List<MerchantRecipe> discountedRecipes = new ArrayList<>();
         int discountPercent = manager.getDiscountPercentage();
 
-        for (MerchantRecipe recipe : merchant.getRecipes()) {
+        for (MerchantRecipe recipe : baseRecipes) {
             ItemStack result = recipe.getResult().clone();
             List<ItemStack> ingredients = recipe.getIngredients();
+
+            if (ingredients.isEmpty()) continue;
 
             ItemStack ingredient1 = ingredients.get(0).clone();
             int newAmount1 = Math.max(1, ingredient1.getAmount() * (100 - discountPercent) / 100);

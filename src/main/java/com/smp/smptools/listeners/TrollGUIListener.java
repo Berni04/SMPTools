@@ -37,30 +37,10 @@ public class TrollGUIListener implements Listener {
     private final SMPTools plugin;
     private static final String GUI_TITLE = "Troll Menu";
     private static final Random random = new Random();
-    private static final Map<Integer, String> trollIdMap = new HashMap<>(); // Map to store explicit integer ID to
-                                                                            // trollId string mapping
+    private static final Map<Integer, String> trollIdMap = new ConcurrentHashMap<>();
     private static final Map<java.util.UUID, Long> scrambledPlayers = new ConcurrentHashMap<>();
 
-    public TrollGUIListener(SMPTools plugin) {
-        this.plugin = plugin;
-        initializeTrollIdMap(); // Initialize the map when the listener is created
-    }
-
-    public static boolean isChatScrambled(Player player) {
-        if (scrambledPlayers.containsKey(player.getUniqueId())) {
-            if (System.currentTimeMillis() < scrambledPlayers.get(player.getUniqueId())) {
-                return true;
-            } else {
-                scrambledPlayers.remove(player.getUniqueId());
-            }
-        }
-        return false;
-    }
-
-    private static void initializeTrollIdMap() {
-        trollIdMap.clear(); // Ensure map is clear before repopulating
-        // Populate the map with explicit integer IDs and their corresponding trollId
-        // strings
+    static {
         trollIdMap.put(1, "fake_op");
         trollIdMap.put(2, "fake_ban");
         trollIdMap.put(3, "fake_crash");
@@ -86,7 +66,22 @@ public class TrollGUIListener implements Listener {
         trollIdMap.put(24, "random_item_rename");
         trollIdMap.put(25, "temp_block_replace");
         trollIdMap.put(26, "sound_loop");
-        trollIdMap.put(99, "close"); // Unique ID for close button
+        trollIdMap.put(99, "close");
+    }
+
+    public TrollGUIListener(SMPTools plugin) {
+        this.plugin = plugin;
+    }
+
+    public static boolean isChatScrambled(Player player) {
+        if (scrambledPlayers.containsKey(player.getUniqueId())) {
+            if (System.currentTimeMillis() < scrambledPlayers.get(player.getUniqueId())) {
+                return true;
+            } else {
+                scrambledPlayers.remove(player.getUniqueId());
+            }
+        }
+        return false;
     }
 
     public static void openTrollGUI(Player opener, Player target) {

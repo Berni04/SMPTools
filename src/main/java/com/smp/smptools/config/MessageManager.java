@@ -93,7 +93,9 @@ public class MessageManager {
         String msg = messagesConfig.getString(path, "Missing message: " + path);
 
         for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-            msg = msg.replace("{" + entry.getKey() + "}", entry.getValue());
+            String raw = entry.getValue() == null ? "" : entry.getValue();
+            String escaped = MiniMessage.miniMessage().escapeTags(raw);
+            msg = msg.replace("{" + entry.getKey() + "}", escaped);
         }
 
         TagResolver primary = buildPlayerTagResolver(context);

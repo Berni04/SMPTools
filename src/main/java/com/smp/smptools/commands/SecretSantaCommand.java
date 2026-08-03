@@ -132,23 +132,19 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
     }
 
     private void openDepositGUI(Player player, UUID targetUUID) {
-        Inventory gui = Bukkit.createInventory(null, 27,
+        com.smp.smptools.christmas.SecretSantaHolder holder = new com.smp.smptools.christmas.SecretSantaHolder(targetUUID);
+        Inventory gui = Bukkit.createInventory(holder, 27,
                 plugin.getMessageManager().getMessage("secret-santa.deposit-gui-title", player,
                         Map.of("target", String.valueOf(Bukkit.getOfflinePlayer(targetUUID).getName()))));
-        depositSessions.put(player.getUniqueId(), targetUUID);
+        holder.setInventory(gui);
         player.openInventory(gui);
     }
 
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
-        if (depositSessions.containsKey(event.getPlayer().getUniqueId())) {
-            UUID target = depositSessions.remove(event.getPlayer().getUniqueId());
+        if (event.getInventory().getHolder() instanceof com.smp.smptools.christmas.SecretSantaHolder holder) {
+            UUID target = holder.getTargetUUID();
             Inventory inv = event.getInventory();
-
-            String titlePrefix = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
-                    .plainText().serialize(plugin.getMessageManager().getMessage("secret-santa.deposit-gui-prefix"));
-            if (!event.getView().title().toString().contains(titlePrefix))
-                return;
 
             ItemStack[] items = inv.getContents();
             manager.depositGift(target, items);

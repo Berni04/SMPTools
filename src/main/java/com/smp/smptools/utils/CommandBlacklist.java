@@ -34,8 +34,7 @@ public final class CommandBlacklist {
      */
     public static boolean isBlocked(String command) {
         if (command == null || command.isEmpty()) return true;
-        String trimmed = command.trim();
-        if (trimmed.startsWith("/")) trimmed = trimmed.substring(1);
+        String trimmed = command.trim().replaceFirst("^/+", "");
         int space = trimmed.indexOf(' ');
         String head = (space == -1 ? trimmed : trimmed.substring(0, space)).toLowerCase();
         if (head.contains(":")) {

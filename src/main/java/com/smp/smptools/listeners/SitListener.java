@@ -72,6 +72,7 @@ public class SitListener implements Listener {
         armorStand.setVisible(false);
         armorStand.setSmall(true);
         armorStand.setMarker(true);
+        armorStand.setPersistent(false);
         armorStand.addPassenger(player);
 
         sittingPlayers.add(player.getUniqueId());

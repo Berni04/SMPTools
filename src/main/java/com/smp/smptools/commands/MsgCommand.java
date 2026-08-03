@@ -21,7 +21,7 @@ public class MsgCommand extends AbstractPlayerCommand {
             // as literal text rather than stripping them, so the usage string
             // can be passed through common.usage ({usage} placeholder) without
             // escaping and the angle brackets render correctly.
-            senderPlayer.sendMessage(plugin.getMessageManager().getMessage("common.usage", senderPlayer,
+            senderPlayer.sendMessage(plugin.getMessageManager().getMessage("common.usage", null,
                     java.util.Map.of("usage", "/msg <player> <message>")));
             return true;
         }

@@ -34,7 +34,9 @@ public class PrivateVaultCommand extends AbstractPlayerCommand {
                 vaultSize = 54;
             }
 
-            Inventory vault = Bukkit.createInventory(null, vaultSize, plugin.getMessageManager().getMessage("vault.gui-title", player));
+            com.smp.smptools.listeners.PrivateVaultHolder holder = new com.smp.smptools.listeners.PrivateVaultHolder();
+            Inventory vault = Bukkit.createInventory(holder, vaultSize, plugin.getMessageManager().getMessage("vault.gui-title", player));
+            holder.setInventory(vault);
 
             String encodedInventory = config.getString("privatevaults." + playerUUID.toString());
             if (encodedInventory != null && !encodedInventory.isEmpty()) {
