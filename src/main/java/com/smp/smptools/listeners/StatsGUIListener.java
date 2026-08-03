@@ -13,6 +13,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -121,6 +122,7 @@ public class StatsGUIListener implements Listener {
         }
 
         boolean allSuccess = true;
+        List<ItemStack> restoredItems = new ArrayList<>();
         List<?> inventory = (List<?>) death.get("inventory");
 
         if (inventory != null) {
@@ -141,9 +143,9 @@ public class StatsGUIListener implements Listener {
                         }
                     }
                     if (item != null) {
-                        for (ItemStack leftover : targetPlayer.getInventory().addItem(item).values()) {
-                            targetPlayer.getWorld().dropItemNaturally(targetPlayer.getLocation(), leftover);
-                        }
+                        restoredItems.add(item);
+                    } else {
+                        allSuccess = false;
                     }
                 }
             }
@@ -152,6 +154,12 @@ public class StatsGUIListener implements Listener {
         if (!allSuccess) {
             admin.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("stats.rollback-failed", admin, Map.of("index", String.valueOf(deathIndex + 1), "target", String.valueOf(target.getName()))));
             return;
+        }
+
+        for (ItemStack item : restoredItems) {
+            for (ItemStack leftover : targetPlayer.getInventory().addItem(item).values()) {
+                targetPlayer.getWorld().dropItemNaturally(targetPlayer.getLocation(), leftover);
+            }
         }
 
         death.put("rolled_back", true);

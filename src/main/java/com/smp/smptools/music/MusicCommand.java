@@ -21,6 +21,7 @@ public class MusicCommand extends AbstractPlayerCommand {
 
     private final Map<UUID, SongPlayer> playingTasks = new ConcurrentHashMap<>();
     private final Map<UUID, Long> activeRequestGen = new ConcurrentHashMap<>();
+    private final java.util.concurrent.atomic.AtomicLong globalRequestCounter = new java.util.concurrent.atomic.AtomicLong(0);
 
     public MusicCommand(SMPTools plugin) {
         super(plugin);
@@ -44,7 +45,7 @@ public class MusicCommand extends AbstractPlayerCommand {
         }
 
         if (subCommand.equals("stop")) {
-            activeRequestGen.remove(player.getUniqueId());
+            activeRequestGen.put(player.getUniqueId(), 0L);
             SongPlayer task = playingTasks.remove(player.getUniqueId());
             if (task != null) {
                 task.cancel();
@@ -97,7 +98,8 @@ public class MusicCommand extends AbstractPlayerCommand {
         }
 
         player.sendMessage(plugin.getMessageManager().getMessage("music.downloading"));
-        long requestId = activeRequestGen.compute(player.getUniqueId(), (k, v) -> v == null ? 1L : v + 1L);
+        long requestId = globalRequestCounter.incrementAndGet();
+        activeRequestGen.put(player.getUniqueId(), requestId);
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
@@ -109,6 +111,7 @@ public class MusicCommand extends AbstractPlayerCommand {
                         Bukkit.getScheduler().runTask(plugin, () -> {
                             if (java.util.Objects.equals(activeRequestGen.get(player.getUniqueId()), requestId)) {
                                 player.sendMessage(plugin.getMessageManager().getMessage("music.parse-failed"));
+                                activeRequestGen.remove(player.getUniqueId(), requestId);
                             }
                         });
                         return;
@@ -139,6 +142,7 @@ public class MusicCommand extends AbstractPlayerCommand {
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     if (java.util.Objects.equals(activeRequestGen.get(player.getUniqueId()), requestId)) {
                         player.sendMessage(plugin.getMessageManager().getMessage("music.download-failed"));
+                        activeRequestGen.remove(player.getUniqueId(), requestId);
                     }
                 });
                 plugin.getLogger().log(Level.SEVERE, "Failed to download song", e);

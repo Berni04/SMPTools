@@ -57,54 +57,34 @@ public class MessageManager {
     public Component getMessage(String path, Player player, Map<String, String> placeholders) {
         String msg = messagesConfig.getString(path, "Missing message: " + path);
 
-        // Replace simple {placeholder} values
+        java.util.List<TagResolver> resolvers = new java.util.ArrayList<>();
+        resolvers.add(buildPlayerTagResolver(player));
+
         for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-            msg = msg.replace("{" + entry.getKey() + "}", entry.getValue());
+            String key = entry.getKey();
+            String val = entry.getValue() == null ? "" : entry.getValue();
+            msg = msg.replace("{" + key + "}", "<" + key + ">");
+            resolvers.add(net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.unparsed(key, val));
         }
 
-        // Build dynamic tag resolvers
-        TagResolver resolver = buildPlayerTagResolver(player);
-
-        return MiniMessage.miniMessage().deserialize(msg, resolver);
+        return MiniMessage.miniMessage().deserialize(msg, TagResolver.resolver(resolvers));
     }
 
-    /**
-     * Gets a message from the configuration with a primary player context,
-     * an optional secondary player (e.g. the requester in a TPA flow), and
-     * placeholder values.
-     *
-     * <p>Exposes the following MiniMessage tags for the secondary player:</p>
-     * <ul>
-     *   <li>{@code <requester>} - full formatted name (color + prefix + name + title)</li>
-     *   <li>{@code <requester_name>} - just the raw player name</li>
-     *   <li>{@code <requester_name_color>} - player name with their chosen color</li>
-     *   <li>{@code <requester_color>} - just the color tag</li>
-     *   <li>{@code <requester_prefix>} - just the prefix</li>
-     *   <li>{@code <requester_title>} - just the equipped title</li>
-     * </ul>
-     *
-     * @param path the message path in messages.yml
-     * @param context the primary player context (can be null) for {@code <player*...>} tags
-     * @param placeholders the placeholder values to replace ({@code {key}} syntax)
-     * @param secondary the secondary player (can be null) for {@code <requester*...>} tags
-     * @return the formatted Component message
-     */
     public Component getMessage(String path, Player context, Map<String, String> placeholders, Player secondary) {
         String msg = messagesConfig.getString(path, "Missing message: " + path);
 
+        java.util.List<TagResolver> resolvers = new java.util.ArrayList<>();
+        resolvers.add(buildPlayerTagResolver(context));
+        resolvers.add(buildSecondaryPlayerTagResolver(secondary));
+
         for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-            String raw = entry.getValue() == null ? "" : entry.getValue();
-            msg = msg.replace("{" + entry.getKey() + "}", raw);
+            String key = entry.getKey();
+            String val = entry.getValue() == null ? "" : entry.getValue();
+            msg = msg.replace("{" + key + "}", "<" + key + ">");
+            resolvers.add(net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.unparsed(key, val));
         }
 
-        TagResolver primary = buildPlayerTagResolver(context);
-        TagResolver secondaryResolver = buildSecondaryPlayerTagResolver(secondary);
-
-        TagResolver combined = TagResolver.builder()
-                .resolvers(primary, secondaryResolver)
-                .build();
-
-        return MiniMessage.miniMessage().deserialize(msg, combined);
+        return MiniMessage.miniMessage().deserialize(msg, TagResolver.resolver(resolvers));
     }
 
     /**

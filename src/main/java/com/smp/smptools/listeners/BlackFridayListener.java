@@ -107,6 +107,8 @@ public class BlackFridayListener implements Listener {
                 restoredRecipe.setSpecialPrice(live.getSpecialPrice());
             } else {
                 restoredRecipe.setUses(base.getUses());
+                restoredRecipe.setDemand(base.getDemand());
+                restoredRecipe.setSpecialPrice(base.getSpecialPrice());
             }
 
             restored.add(restoredRecipe);

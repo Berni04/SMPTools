@@ -112,6 +112,7 @@ stats:
   rollback-no-permission: "<red>You do not have permission to roll back inventories.</red>"
   rollback-already-done: "<red>This death has already been rolled back.</red>"
   rollback-player-offline: "<red>Target player must be online to receive their items.</red>"
+  rollback-failed: "<red>Failed to rollback death #{index} for {target}. Some items could not be deserialized.</red>"
   gui-title-stats: "{player}'s Stats"
   gui-title-deaths: "{player}'s Deaths"
   gui-title-death: "{player}'s Death #{index}"
