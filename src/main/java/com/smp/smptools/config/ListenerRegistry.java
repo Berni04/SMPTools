@@ -34,30 +34,53 @@ public final class ListenerRegistry {
     }
 
     public static void registerCoreListeners(SMPTools plugin, StatsCommand statsCommand, AdventGUIListener adventGUIListener) {
-        // Core listeners that are always registered
-        Bukkit.getPluginManager().registerEvents(new VaultListener(plugin), plugin);
+        // Core listeners
         Bukkit.getPluginManager().registerEvents(new StatsListener(plugin), plugin);
-        Bukkit.getPluginManager().registerEvents(new StatsGUIListener(statsCommand), plugin);
         Bukkit.getPluginManager().registerEvents(new JoinLeaveListener(plugin), plugin);
         Bukkit.getPluginManager().registerEvents(new ChatListener(plugin), plugin);
-        Bukkit.getPluginManager().registerEvents(new HomesGUIListener(plugin), plugin);
-        Bukkit.getPluginManager().registerEvents(new PrefixGUIListener(plugin), plugin);
-        Bukkit.getPluginManager().registerEvents(new LeaderboardGUIListener(plugin), plugin);
-        Bukkit.getPluginManager().registerEvents(new TagsGUIListener(plugin), plugin);
-        Bukkit.getPluginManager().registerEvents(new TabHealthListener(plugin), plugin);
-        Bukkit.getPluginManager().registerEvents(new TeleportListener(plugin), plugin);
-        Bukkit.getPluginManager().registerEvents(new AdvancementListener(plugin), plugin);
 
-        // Feature-gated listeners - only register if feature is enabled
+        if (plugin.getConfig().getBoolean("features.private-vault.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new VaultListener(plugin), plugin);
+        }
+        if (plugin.getConfig().getBoolean("features.stats.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new StatsGUIListener(statsCommand), plugin);
+        }
+        if (plugin.getConfig().getBoolean("features.homes.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new HomesGUIListener(plugin), plugin);
+        }
+        if (plugin.getConfig().getBoolean("features.prefix-color.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new PrefixGUIListener(plugin), plugin);
+        }
+        if (plugin.getConfig().getBoolean("features.leaderboard.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new LeaderboardGUIListener(plugin), plugin);
+        }
+        if (plugin.getConfig().getBoolean("features.tags.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new TagsGUIListener(plugin), plugin);
+        }
+        if (plugin.getConfig().getBoolean("features.tab-health.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new TabHealthListener(plugin), plugin);
+        }
+        if (plugin.getConfig().getBoolean("features.tpa.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new TeleportListener(plugin), plugin);
+        }
+        if (plugin.getConfig().getBoolean("features.advancements.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new AdvancementListener(plugin), plugin);
+        }
+
+        // Feature-gated listeners
         if (plugin.getConfig().getBoolean("features.chunk-loaders.enabled", true)) {
             Bukkit.getPluginManager().registerEvents(new ChunkLoaderListener(plugin), plugin);
         }
 
-        // Invsee and Troll are admin commands, always register
-        InvseeGUIListener invseeGUIListener = new InvseeGUIListener(plugin);
-        plugin.setInvseeGUIListener(invseeGUIListener);
-        Bukkit.getPluginManager().registerEvents(invseeGUIListener, plugin);
-        Bukkit.getPluginManager().registerEvents(new TrollGUIListener(plugin), plugin);
+        if (plugin.getConfig().getBoolean("features.invsee.enabled", true)) {
+            InvseeGUIListener invseeGUIListener = new InvseeGUIListener(plugin);
+            plugin.setInvseeGUIListener(invseeGUIListener);
+            Bukkit.getPluginManager().registerEvents(invseeGUIListener, plugin);
+        }
+
+        if (plugin.getConfig().getBoolean("features.troll.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new TrollGUIListener(plugin), plugin);
+        }
 
         // Mission system listeners
         if (plugin.getConfig().getBoolean("features.missions.enabled", true)) {
@@ -67,8 +90,10 @@ public final class ListenerRegistry {
             Bukkit.getPluginManager().registerEvents(new MissionTrackerListener(plugin), plugin);
         }
 
-        // Elytra trail - always register (no config check needed)
-        Bukkit.getPluginManager().registerEvents(new ElytraTrailListener(), plugin);
+        // Elytra trail
+        if (plugin.getConfig().getBoolean("features.elytra-trail.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new ElytraTrailListener(), plugin);
+        }
 
         // Christmas features
         if (plugin.getConfig().getBoolean("features.christmas.enabled", true)) {

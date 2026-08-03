@@ -16,6 +16,23 @@ public final class ConfigDefaults {
         FileConfiguration config = plugin.getConfig();
 
         // Feature toggles
+        config.addDefault("features.fly.enabled", true);
+        config.addDefault("features.private-vault.enabled", true);
+        config.addDefault("features.homes.enabled", true);
+        config.addDefault("features.tpa.enabled", true);
+        config.addDefault("features.msg.enabled", true);
+        config.addDefault("features.tags.enabled", true);
+        config.addDefault("features.prefix-color.enabled", true);
+        config.addDefault("features.item-rename.enabled", true);
+        config.addDefault("features.invsee.enabled", true);
+        config.addDefault("features.troll.enabled", true);
+        config.addDefault("features.sudo.enabled", true);
+        config.addDefault("features.npcs.enabled", true);
+        config.addDefault("features.leaderboard.enabled", true);
+        config.addDefault("features.stats.enabled", true);
+        config.addDefault("features.tab-health.enabled", true);
+        config.addDefault("features.advancements.enabled", true);
+        config.addDefault("features.elytra-trail.enabled", true);
         config.addDefault("features.daily-rewards.enabled", true);
         config.addDefault("features.custom-enchants.enabled", true);
         config.addDefault("features.mmo-skills.enabled", true);

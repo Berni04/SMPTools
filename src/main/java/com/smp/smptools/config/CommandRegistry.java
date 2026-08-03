@@ -44,39 +44,94 @@ public final class CommandRegistry {
 
     public static void registerAll(SMPTools plugin, LeaderboardCommand leaderboardCommand,
                                    TpaCommand tpaCommand, AdventGUIListener adventGUIListener) {
-        // Core commands
-        plugin.getCommand("fly").setExecutor(new FlyCommand(plugin));
-        plugin.getCommand("pv").setExecutor(new PrivateVaultCommand(plugin));
-        plugin.getCommand("sethome").setExecutor(new SetHomeCommand(plugin));
-        plugin.getCommand("home").setExecutor(new HomeCommand(plugin));
-        plugin.getCommand("delhome").setExecutor(new DelHomeCommand(plugin));
-        plugin.getCommand("homes").setExecutor(new HomesCommand(plugin));
-        plugin.getCommand("msg").setExecutor(new MsgCommand(plugin));
-        plugin.getCommand("clearstats").setExecutor(new ClearStatsCommand(plugin));
-        plugin.getCommand("prefix").setExecutor(new PrefixCommand(plugin));
-        plugin.getCommand("color").setExecutor(new ColorCommand(plugin));
-        plugin.getCommand("tags").setExecutor(new TagsCommand(plugin));
+        // Fly
+        if (plugin.getConfig().getBoolean("features.fly.enabled", true)) {
+            plugin.getCommand("fly").setExecutor(new FlyCommand(plugin));
+        }
+
+        // Private Vault
+        if (plugin.getConfig().getBoolean("features.private-vault.enabled", true)) {
+            plugin.getCommand("pv").setExecutor(new PrivateVaultCommand(plugin));
+        }
+
+        // Homes
+        if (plugin.getConfig().getBoolean("features.homes.enabled", true)) {
+            plugin.getCommand("sethome").setExecutor(new SetHomeCommand(plugin));
+            plugin.getCommand("home").setExecutor(new HomeCommand(plugin));
+            plugin.getCommand("delhome").setExecutor(new DelHomeCommand(plugin));
+            plugin.getCommand("homes").setExecutor(new HomesCommand(plugin));
+        }
+
+        // Messaging
+        if (plugin.getConfig().getBoolean("features.msg.enabled", true)) {
+            plugin.getCommand("msg").setExecutor(new MsgCommand(plugin));
+            Objects.requireNonNull(plugin.getCommand("r")).setExecutor(new ReplyCommand(plugin));
+        }
+
+        // Stats & Leaderboard
+        if (plugin.getConfig().getBoolean("features.stats.enabled", true)) {
+            plugin.getCommand("clearstats").setExecutor(new ClearStatsCommand(plugin));
+        }
+        if (plugin.getConfig().getBoolean("features.leaderboard.enabled", true)) {
+            plugin.getCommand("leaderboard").setExecutor(leaderboardCommand);
+        }
+
+        // Prefix & Color
+        if (plugin.getConfig().getBoolean("features.prefix-color.enabled", true)) {
+            plugin.getCommand("prefix").setExecutor(new PrefixCommand(plugin));
+            plugin.getCommand("color").setExecutor(new ColorCommand(plugin));
+        }
+
+        // Tags
+        if (plugin.getConfig().getBoolean("features.tags.enabled", true)) {
+            plugin.getCommand("tags").setExecutor(new TagsCommand(plugin));
+        }
 
         // TPA commands
-        plugin.getCommand("tpr").setExecutor(tpaCommand);
-        plugin.getCommand("tpa").setExecutor(tpaCommand);
-        plugin.getCommand("tpd").setExecutor(tpaCommand);
-        plugin.getCommand("tptoggle").setExecutor(tpaCommand);
+        if (plugin.getConfig().getBoolean("features.tpa.enabled", true)) {
+            plugin.getCommand("tpr").setExecutor(tpaCommand);
+            plugin.getCommand("tpa").setExecutor(tpaCommand);
+            plugin.getCommand("tpd").setExecutor(tpaCommand);
+            plugin.getCommand("tptoggle").setExecutor(tpaCommand);
+        }
 
-        // Leaderboard
-        plugin.getCommand("leaderboard").setExecutor(leaderboardCommand);
+        // Chunk Loaders
+        if (plugin.getConfig().getBoolean("features.chunk-loaders.enabled", true)) {
+            Objects.requireNonNull(plugin.getCommand("givechunkloader")).setExecutor(new ChunkLoaderCommand(plugin));
+        }
 
-        // Feature commands
-        Objects.requireNonNull(plugin.getCommand("givechunkloader")).setExecutor(new ChunkLoaderCommand(plugin));
-        Objects.requireNonNull(plugin.getCommand("invsee")).setExecutor(new InvseeCommand(plugin));
-        Objects.requireNonNull(plugin.getCommand("troll")).setExecutor(new TrollCommand(plugin));
-        Objects.requireNonNull(plugin.getCommand("missions")).setExecutor(new MissionCommand(plugin));
-        Objects.requireNonNull(plugin.getCommand("sudo")).setExecutor(new SudoCommand(plugin));
+        // Invsee
+        if (plugin.getConfig().getBoolean("features.invsee.enabled", true)) {
+            Objects.requireNonNull(plugin.getCommand("invsee")).setExecutor(new InvseeCommand(plugin));
+        }
+
+        // Troll
+        if (plugin.getConfig().getBoolean("features.troll.enabled", true)) {
+            Objects.requireNonNull(plugin.getCommand("troll")).setExecutor(new TrollCommand(plugin));
+        }
+
+        // Missions
+        if (plugin.getConfig().getBoolean("features.missions.enabled", true)) {
+            Objects.requireNonNull(plugin.getCommand("missions")).setExecutor(new MissionCommand(plugin));
+        }
+
+        // Sudo
+        if (plugin.getConfig().getBoolean("features.sudo.enabled", true)) {
+            Objects.requireNonNull(plugin.getCommand("sudo")).setExecutor(new SudoCommand(plugin));
+        }
+
+        // Rename
+        if (plugin.getConfig().getBoolean("features.item-rename.enabled", true)) {
+            Objects.requireNonNull(plugin.getCommand("rename")).setExecutor(new RenameCommand(plugin));
+        }
+
+        // NPCs
+        if (plugin.getConfig().getBoolean("features.npcs.enabled", true)) {
+            Objects.requireNonNull(plugin.getCommand("npc")).setExecutor(new NPCCommand(plugin));
+        }
+
         Objects.requireNonNull(plugin.getCommand("customitem")).setExecutor(new CustomItemCommand(plugin));
-        Objects.requireNonNull(plugin.getCommand("r")).setExecutor(new ReplyCommand(plugin));
-        Objects.requireNonNull(plugin.getCommand("rename")).setExecutor(new RenameCommand(plugin));
         Objects.requireNonNull(plugin.getCommand("advent")).setExecutor(new AdventCommand(plugin, adventGUIListener));
-        Objects.requireNonNull(plugin.getCommand("npc")).setExecutor(new NPCCommand(plugin));
 
         // Utility commands
         plugin.getCommand("uptime").setExecutor(new UptimeCommand(plugin));

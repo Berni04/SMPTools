@@ -9,6 +9,52 @@ home-limits:
   admin: 10
 
 features:
+  fly:
+    enabled: true
+  private-vault:
+    enabled: true
+  homes:
+    enabled: true
+  tpa:
+    enabled: true
+  msg:
+    enabled: true
+  tags:
+    enabled: true
+  prefix-color:
+    enabled: true
+  item-rename:
+    enabled: true
+  invsee:
+    enabled: true
+  troll:
+    enabled: true
+  sudo:
+    enabled: true
+  npcs:
+    enabled: true
+  leaderboard:
+    enabled: true
+  stats:
+    enabled: true
+  tab-health:
+    enabled: true
+  advancements:
+    enabled: true
+  elytra-trail:
+    enabled: true
+  daily-rewards:
+    enabled: true
+  custom-enchants:
+    enabled: true
+  mmo-skills:
+    enabled: true
+  missions:
+    enabled: true
+  christmas:
+    enabled: true
+  blackfriday:
+    enabled: true
   accelerated-growth:
     enabled: true
     multiplier: 2.0 # Crops grow 2 times faster
