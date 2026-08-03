@@ -128,5 +128,10 @@ public final class CommandRegistry {
         if (plugin.getConfig().getBoolean("features.afk.enabled", true)) {
             plugin.getCommand("afk").setExecutor(new com.smp.smptools.commands.AFKCommand(plugin));
         }
+
+        // Remote Trade
+        if (plugin.getConfig().getBoolean("features.remote-trade.enabled", true)) {
+            plugin.getCommand("trade").setExecutor(new com.smp.smptools.commands.TradeCommand(plugin));
+        }
     }
 }

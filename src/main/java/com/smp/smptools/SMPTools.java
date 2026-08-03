@@ -94,6 +94,7 @@ public class SMPTools extends JavaPlugin {
     private MessageManager messageManager;
     private StorageManager storageManager;
     private com.smp.smptools.afk.AFKManager afkManager;
+    private com.smp.smptools.trade.TradeManager tradeManager;
     private com.smp.smptools.listeners.InvseeGUIListener invseeGUIListener;
 
     @Override
@@ -115,6 +116,7 @@ public class SMPTools extends JavaPlugin {
 
         // Instantiate Managers
         this.afkManager = new com.smp.smptools.afk.AFKManager(this);
+        this.tradeManager = new com.smp.smptools.trade.TradeManager(this);
         this.leaderboardManager = new LeaderboardManager(this);
         this.tagManager = new TagManager(this);
         this.tpaManager = new TpaManager(this);
@@ -179,6 +181,9 @@ public class SMPTools extends JavaPlugin {
         }
         if (getConfig().getBoolean("features.afk.enabled", true)) {
             Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.AFKListener(this), this);
+        }
+        if (getConfig().getBoolean("features.remote-trade.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.TradeListener(this), this);
         }
 
         // Register Commands
@@ -504,6 +509,10 @@ public class SMPTools extends JavaPlugin {
 
     public com.smp.smptools.afk.AFKManager getAFKManager() {
         return afkManager;
+    }
+
+    public com.smp.smptools.trade.TradeManager getTradeManager() {
+        return tradeManager;
     }
 
     public com.smp.smptools.listeners.InvseeGUIListener getInvseeGUIListener() {

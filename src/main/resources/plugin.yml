@@ -146,6 +146,9 @@ commands:
   afk:
     description: Toggle your AFK status.
     usage: /afk
+  trade:
+    description: Send or accept a remote item trade request.
+    usage: /trade <player|accept|deny|cancel>
 permissions:
   smptools.missions.admin:
     description: Allows spawning the mission NPC.

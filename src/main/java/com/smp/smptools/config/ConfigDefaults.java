@@ -25,6 +25,8 @@ public final class ConfigDefaults {
         config.addDefault("features.afk.enabled", true);
         config.addDefault("features.afk.timeout-minutes", 30);
         config.addDefault("features.afk.auto-vote-sleep", true);
+        config.addDefault("features.remote-trade.enabled", true);
+        config.addDefault("features.remote-trade.request-timeout-seconds", 60);
 
         // Daily Rewards
         config.addDefault("features.daily-rewards.cooldown-hours", 22);

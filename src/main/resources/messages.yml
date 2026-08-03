@@ -28,6 +28,17 @@ afk:
   now-afk: "<gray><player_name> is now AFK.</gray>"
   no-longer-afk: "<gray><player_name> is no longer AFK.</gray>"
 
+# Remote Trade
+trade:
+  request-sent: "<player_name_color>, trade request sent to <gold>{target}</gold>."
+  request-received: "<gold>{player}</gold> has sent you a trade request!"
+  no-request: "<red>You have no pending trade requests.</red>"
+  already-trading: "<red>You or the target player are already in a trade.</red>"
+  cannot-trade-self: "<red>You cannot trade with yourself.</red>"
+  expired: "<red>Trade request to {target} has expired.</red>"
+  cancelled: "<red>Trade was cancelled.</red>"
+  completed: "<green>Trade completed successfully!</green>"
+
 # Homes
 homes:
   set: "<player_name_color>, your home '<gold>{name}</gold>' has been set!"
