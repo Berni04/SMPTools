@@ -22,6 +22,9 @@ public final class ConfigDefaults {
         config.addDefault("features.missions.enabled", true);
         config.addDefault("features.christmas.enabled", true);
         config.addDefault("features.blackfriday.enabled", true);
+        config.addDefault("features.afk.enabled", true);
+        config.addDefault("features.afk.timeout-minutes", 30);
+        config.addDefault("features.afk.auto-vote-sleep", true);
 
         // Daily Rewards
         config.addDefault("features.daily-rewards.cooldown-hours", 22);

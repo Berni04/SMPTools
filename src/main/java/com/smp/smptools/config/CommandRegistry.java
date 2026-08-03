@@ -123,5 +123,10 @@ public final class CommandRegistry {
         if (plugin.getConfig().getBoolean("features.sleep-voting.enabled")) {
             plugin.getCommand("sleepvote").setExecutor(new com.smp.smptools.sleep.SleepVoteCommand(plugin));
         }
+
+        // AFK Command
+        if (plugin.getConfig().getBoolean("features.afk.enabled", true)) {
+            plugin.getCommand("afk").setExecutor(new com.smp.smptools.commands.AFKCommand(plugin));
+        }
     }
 }

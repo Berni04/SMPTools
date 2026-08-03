@@ -93,6 +93,7 @@ public class SMPTools extends JavaPlugin {
     private BlackFridayManager blackFridayManager;
     private MessageManager messageManager;
     private StorageManager storageManager;
+    private com.smp.smptools.afk.AFKManager afkManager;
     private com.smp.smptools.listeners.InvseeGUIListener invseeGUIListener;
 
     @Override
@@ -113,6 +114,7 @@ public class SMPTools extends JavaPlugin {
         this.storageManager = new StorageManager(this);
 
         // Instantiate Managers
+        this.afkManager = new com.smp.smptools.afk.AFKManager(this);
         this.leaderboardManager = new LeaderboardManager(this);
         this.tagManager = new TagManager(this);
         this.tpaManager = new TpaManager(this);
@@ -174,6 +176,9 @@ public class SMPTools extends JavaPlugin {
         }
         if (getConfig().getBoolean("features.meme-sounds.enabled")) {
             Bukkit.getPluginManager().registerEvents(new ResourcePackListener(this), this);
+        }
+        if (getConfig().getBoolean("features.afk.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.AFKListener(this), this);
         }
 
         // Register Commands
@@ -495,6 +500,10 @@ public class SMPTools extends JavaPlugin {
 
     public StorageManager getStorageManager() {
         return storageManager;
+    }
+
+    public com.smp.smptools.afk.AFKManager getAFKManager() {
+        return afkManager;
     }
 
     public com.smp.smptools.listeners.InvseeGUIListener getInvseeGUIListener() {

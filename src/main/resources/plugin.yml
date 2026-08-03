@@ -143,6 +143,9 @@ commands:
     description: Manage the Black Friday event.
     usage: /blackfriday <start|stop|reload|status>
     permission: smptools.admin
+  afk:
+    description: Toggle your AFK status.
+    usage: /afk
 permissions:
   smptools.missions.admin:
     description: Allows spawning the mission NPC.

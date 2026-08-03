@@ -23,6 +23,11 @@ common:
   success: "<green>{message}</green>"
   info: "<gray>{message}</gray>"
 
+# AFK
+afk:
+  now-afk: "<gray><player_name> is now AFK.</gray>"
+  no-longer-afk: "<gray><player_name> is no longer AFK.</gray>"
+
 # Homes
 homes:
   set: "<player_name_color>, your home '<gold>{name}</gold>' has been set!"

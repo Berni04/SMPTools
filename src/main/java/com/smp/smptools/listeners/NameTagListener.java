@@ -47,6 +47,11 @@ public class NameTagListener implements Listener {
             finalName = finalName.append(Component.space()).append(titleComponent);
         }
 
+        if (plugin.getAFKManager() != null && plugin.getAFKManager().isAFK(player)) {
+            Component afkComponent = MiniMessage.miniMessage().deserialize("<gray> [AFK]</gray>");
+            finalName = finalName.append(afkComponent);
+        }
+
         player.displayName(finalName);
         player.playerListName(finalName);
     }
