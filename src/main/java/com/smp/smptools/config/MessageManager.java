@@ -45,10 +45,13 @@ public class MessageManager {
         }
         messagesConfig = YamlConfiguration.loadConfiguration(file);
 
-        java.io.InputStream defaultStream = plugin.getResource("messages.yml");
-        if (defaultStream != null) {
-            YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(defaultStream, java.nio.charset.StandardCharsets.UTF_8));
-            messagesConfig.setDefaults(defaultConfig);
+        try (java.io.InputStream defaultStream = plugin.getResource("messages.yml")) {
+            if (defaultStream != null) {
+                YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(defaultStream, java.nio.charset.StandardCharsets.UTF_8));
+                messagesConfig.setDefaults(defaultConfig);
+            }
+        } catch (java.io.IOException e) {
+            plugin.getLogger().warning("Could not load default messages.yml stream: " + e.getMessage());
         }
     }
 
@@ -108,10 +111,17 @@ public class MessageManager {
     private boolean isSimpleFormattingTag(String val) {
         if (val == null || val.isEmpty()) return false;
         String trimmed = val.trim();
-        return (trimmed.startsWith("<green>") && trimmed.endsWith("</green>"))
+        if (!((trimmed.startsWith("<green>") && trimmed.endsWith("</green>"))
                 || (trimmed.startsWith("<red>") && trimmed.endsWith("</red>"))
                 || (trimmed.startsWith("<yellow>") && trimmed.endsWith("</yellow>"))
-                || (trimmed.startsWith("<gold>") && trimmed.endsWith("</gold>"));
+                || (trimmed.startsWith("<gold>") && trimmed.endsWith("</gold>")))) {
+            return false;
+        }
+        int firstClose = trimmed.indexOf('>');
+        int lastOpen = trimmed.lastIndexOf('<');
+        if (firstClose < 0 || lastOpen <= firstClose) return false;
+        String inner = trimmed.substring(firstClose + 1, lastOpen);
+        return !inner.contains("<") && !inner.contains(">");
     }
 
     /**
