@@ -44,6 +44,12 @@ public class MessageManager {
             plugin.saveResource("messages.yml", false);
         }
         messagesConfig = YamlConfiguration.loadConfiguration(file);
+
+        java.io.InputStream defaultStream = plugin.getResource("messages.yml");
+        if (defaultStream != null) {
+            YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(defaultStream, java.nio.charset.StandardCharsets.UTF_8));
+            messagesConfig.setDefaults(defaultConfig);
+        }
     }
 
     /**
@@ -63,8 +69,14 @@ public class MessageManager {
         for (Map.Entry<String, String> entry : placeholders.entrySet()) {
             String key = entry.getKey();
             String val = entry.getValue() == null ? "" : entry.getValue();
-            msg = msg.replace("{" + key + "}", "<" + key + ">");
-            resolvers.add(net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.unparsed(key, val));
+            String phKey = "ph_" + key;
+            msg = msg.replace("{" + key + "}", "<" + phKey + ">");
+
+            if (isSimpleFormattingTag(val)) {
+                resolvers.add(net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.parsed(phKey, val));
+            } else {
+                resolvers.add(net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.unparsed(phKey, val));
+            }
         }
 
         return MiniMessage.miniMessage().deserialize(msg, TagResolver.resolver(resolvers));
@@ -80,11 +92,26 @@ public class MessageManager {
         for (Map.Entry<String, String> entry : placeholders.entrySet()) {
             String key = entry.getKey();
             String val = entry.getValue() == null ? "" : entry.getValue();
-            msg = msg.replace("{" + key + "}", "<" + key + ">");
-            resolvers.add(net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.unparsed(key, val));
+            String phKey = "ph_" + key;
+            msg = msg.replace("{" + key + "}", "<" + phKey + ">");
+
+            if (isSimpleFormattingTag(val)) {
+                resolvers.add(net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.parsed(phKey, val));
+            } else {
+                resolvers.add(net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.unparsed(phKey, val));
+            }
         }
 
         return MiniMessage.miniMessage().deserialize(msg, TagResolver.resolver(resolvers));
+    }
+
+    private boolean isSimpleFormattingTag(String val) {
+        if (val == null || val.isEmpty()) return false;
+        String trimmed = val.trim();
+        return (trimmed.startsWith("<green>") && trimmed.endsWith("</green>"))
+                || (trimmed.startsWith("<red>") && trimmed.endsWith("</red>"))
+                || (trimmed.startsWith("<yellow>") && trimmed.endsWith("</yellow>"))
+                || (trimmed.startsWith("<gold>") && trimmed.endsWith("</gold>"));
     }
 
     /**
