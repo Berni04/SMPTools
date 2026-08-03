@@ -188,5 +188,24 @@ public final class CommandRegistry {
         if (plugin.getConfig().getBoolean("features.remote-trade.enabled", true)) {
             plugin.getCommand("trade").setExecutor(new com.smp.smptools.commands.TradeCommand(plugin));
         }
+
+        // Particle Trails
+        if (plugin.getConfig().getBoolean("features.trails.enabled", true)) {
+            plugin.getCommand("trails").setExecutor(new com.smp.smptools.commands.TrailsCommand(plugin));
+        }
+
+        // Bounties
+        if (plugin.getConfig().getBoolean("features.bounties.enabled", true)) {
+            plugin.getCommand("bounty").setExecutor(new com.smp.smptools.commands.BountyCommand(plugin, plugin.getBountyGUIListener()));
+        }
+
+        // Container Locks
+        if (plugin.getConfig().getBoolean("features.container-locks.enabled", true)) {
+            var lockCmd = new com.smp.smptools.commands.LockCommand(plugin);
+            plugin.getCommand("lock").setExecutor(lockCmd);
+            plugin.getCommand("unlock").setExecutor(lockCmd);
+            plugin.getCommand("trust").setExecutor(lockCmd);
+            plugin.getCommand("untrust").setExecutor(lockCmd);
+        }
     }
 }

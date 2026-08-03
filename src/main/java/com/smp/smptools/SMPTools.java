@@ -95,7 +95,11 @@ public class SMPTools extends JavaPlugin {
     private StorageManager storageManager;
     private com.smp.smptools.afk.AFKManager afkManager;
     private com.smp.smptools.trade.TradeManager tradeManager;
+    private com.smp.smptools.trails.TrailManager trailManager;
+    private com.smp.smptools.bounty.BountyManager bountyManager;
+    private com.smp.smptools.locks.LockManager lockManager;
     private com.smp.smptools.listeners.InvseeGUIListener invseeGUIListener;
+    private com.smp.smptools.listeners.BountyGUIListener bountyGUIListener;
 
     @Override
     public void onEnable() {
@@ -117,6 +121,9 @@ public class SMPTools extends JavaPlugin {
         // Instantiate Managers
         this.afkManager = new com.smp.smptools.afk.AFKManager(this);
         this.tradeManager = new com.smp.smptools.trade.TradeManager(this);
+        this.trailManager = new com.smp.smptools.trails.TrailManager(this);
+        this.bountyManager = new com.smp.smptools.bounty.BountyManager(this);
+        this.lockManager = new com.smp.smptools.locks.LockManager(this);
         this.leaderboardManager = new LeaderboardManager(this);
         this.tagManager = new TagManager(this);
         this.tpaManager = new TpaManager(this);
@@ -515,11 +522,31 @@ public class SMPTools extends JavaPlugin {
         return tradeManager;
     }
 
+    public com.smp.smptools.trails.TrailManager getTrailManager() {
+        return trailManager;
+    }
+
+    public com.smp.smptools.bounty.BountyManager getBountyManager() {
+        return bountyManager;
+    }
+
+    public com.smp.smptools.locks.LockManager getLockManager() {
+        return lockManager;
+    }
+
     public com.smp.smptools.listeners.InvseeGUIListener getInvseeGUIListener() {
         return invseeGUIListener;
     }
 
     public void setInvseeGUIListener(com.smp.smptools.listeners.InvseeGUIListener listener) {
         this.invseeGUIListener = listener;
+    }
+
+    public com.smp.smptools.listeners.BountyGUIListener getBountyGUIListener() {
+        return bountyGUIListener;
+    }
+
+    public void setBountyGUIListener(com.smp.smptools.listeners.BountyGUIListener listener) {
+        this.bountyGUIListener = listener;
     }
 }

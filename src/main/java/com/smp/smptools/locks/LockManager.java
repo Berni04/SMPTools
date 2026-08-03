@@ -1,0 +1,203 @@
+package com.smp.smptools.locks;
+
+import com.smp.smptools.SMPTools;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.block.Block;
+import org.bukkit.block.Chest;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.DoubleChestInventory;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class LockManager {
+
+    private final SMPTools plugin;
+    private final Map<String, UUID> containerOwners = new ConcurrentHashMap<>();
+    private final Map<String, Set<UUID>> containerTrusted = new ConcurrentHashMap<>();
+    private File locksFile;
+    private FileConfiguration locksConfig;
+
+    public LockManager(SMPTools plugin) {
+        this.plugin = plugin;
+        loadLocks();
+    }
+
+    private void loadLocks() {
+        locksFile = new File(plugin.getDataFolder(), "locks.yml");
+        if (!locksFile.exists()) {
+            try {
+                locksFile.createNewFile();
+            } catch (IOException e) {
+                plugin.getLogger().severe("Could not create locks.yml: " + e.getMessage());
+            }
+        }
+        locksConfig = YamlConfiguration.loadConfiguration(locksFile);
+
+        ConfigurationSection section = locksConfig.getConfigurationSection("locks");
+        if (section != null) {
+            for (String key : section.getKeys(false)) {
+                String ownerStr = section.getString(key + ".owner");
+                if (ownerStr != null) {
+                    try {
+                        containerOwners.put(key, UUID.fromString(ownerStr));
+                        List<String> trustedList = section.getStringList(key + ".trusted");
+                        Set<UUID> trustedSet = ConcurrentHashMap.newKeySet();
+                        for (String t : trustedList) {
+                            try { trustedSet.add(UUID.fromString(t)); } catch (IllegalArgumentException ignored) {}
+                        }
+                        containerTrusted.put(key, trustedSet);
+                    } catch (IllegalArgumentException ignored) {}
+                }
+            }
+        }
+    }
+
+    public void saveLocks() {
+        if (locksConfig == null) return;
+        locksConfig.set("locks", null);
+
+        for (Map.Entry<String, UUID> entry : containerOwners.entrySet()) {
+            String key = entry.getKey();
+            locksConfig.set("locks." + key + ".owner", entry.getValue().toString());
+            Set<UUID> trusted = containerTrusted.get(key);
+            if (trusted != null && !trusted.isEmpty()) {
+                List<String> list = new ArrayList<>();
+                for (UUID u : trusted) list.add(u.toString());
+                locksConfig.set("locks." + key + ".trusted", list);
+            }
+        }
+
+        try {
+            locksConfig.save(locksFile);
+        } catch (IOException e) {
+            plugin.getLogger().severe("Could not save locks.yml: " + e.getMessage());
+        }
+    }
+
+    public String getBlockKey(Block block) {
+        if (block == null) return null;
+        Location loc = block.getLocation();
+
+        // Handle double chest pairing
+        if (block.getState() instanceof Chest chest) {
+            if (chest.getInventory() instanceof DoubleChestInventory doubleChest) {
+                Location leftLoc = ((Chest) doubleChest.getLeftSide()).getLocation();
+                Location rightLoc = ((Chest) doubleChest.getRightSide()).getLocation();
+                // Pick lower coordinate as canonical primary key for both halves
+                if (leftLoc.getBlockX() < rightLoc.getBlockX() || leftLoc.getBlockZ() < rightLoc.getBlockZ()) {
+                    loc = leftLoc;
+                } else {
+                    loc = rightLoc;
+                }
+            }
+        }
+
+        return loc.getWorld().getName() + ":" + loc.getBlockX() + ":" + loc.getBlockY() + ":" + loc.getBlockZ();
+    }
+
+    public boolean isContainer(Block block) {
+        if (block == null) return false;
+        Material type = block.getType();
+        return type.name().contains("CHEST") ||
+               type.name().contains("BARREL") ||
+               type.name().contains("SHULKER_BOX") ||
+               type.name().contains("FURNACE") ||
+               type.name().contains("SMOKER") ||
+               type.name().contains("HOPPER") ||
+               type.name().contains("DROPPER") ||
+               type.name().contains("DISPENSER");
+    }
+
+    public boolean isLocked(Block block) {
+        String key = getBlockKey(block);
+        return key != null && containerOwners.containsKey(key);
+    }
+
+    public boolean canAccess(Block block, Player player) {
+        if (player == null || block == null) return false;
+        if (player.hasPermission("smptools.locks.admin")) return true;
+
+        String key = getBlockKey(block);
+        if (key == null || !containerOwners.containsKey(key)) return true;
+
+        UUID owner = containerOwners.get(key);
+        if (player.getUniqueId().equals(owner)) return true;
+
+        Set<UUID> trusted = containerTrusted.get(key);
+        return trusted != null && trusted.contains(player.getUniqueId());
+    }
+
+    public boolean lockContainer(Block block, Player owner) {
+        if (!isContainer(block)) return false;
+        String key = getBlockKey(block);
+        if (key == null) return false;
+
+        containerOwners.put(key, owner.getUniqueId());
+        saveLocks();
+        return true;
+    }
+
+    public boolean unlockContainer(Block block, Player player) {
+        String key = getBlockKey(block);
+        if (key == null || !containerOwners.containsKey(key)) return false;
+
+        UUID owner = containerOwners.get(key);
+        if (!player.getUniqueId().equals(owner) && !player.hasPermission("smptools.locks.admin")) {
+            return false;
+        }
+
+        containerOwners.remove(key);
+        containerTrusted.remove(key);
+        saveLocks();
+        return true;
+    }
+
+    public boolean trustPlayer(Block block, Player owner, OfflinePlayer target) {
+        String key = getBlockKey(block);
+        if (key == null || !containerOwners.containsKey(key)) return false;
+        if (!containerOwners.get(key).equals(owner.getUniqueId()) && !owner.hasPermission("smptools.locks.admin")) {
+            return false;
+        }
+
+        containerTrusted.computeIfAbsent(key, k -> ConcurrentHashMap.newKeySet()).add(target.getUniqueId());
+        saveLocks();
+        return true;
+    }
+
+    public boolean untrustPlayer(Block block, Player owner, OfflinePlayer target) {
+        String key = getBlockKey(block);
+        if (key == null || !containerOwners.containsKey(key)) return false;
+        if (!containerOwners.get(key).equals(owner.getUniqueId()) && !owner.hasPermission("smptools.locks.admin")) {
+            return false;
+        }
+
+        Set<UUID> set = containerTrusted.get(key);
+        if (set != null) {
+            set.remove(target.getUniqueId());
+            saveLocks();
+            return true;
+        }
+        return false;
+    }
+
+    public String getOwnerName(Block block) {
+        String key = getBlockKey(block);
+        if (key == null || !containerOwners.containsKey(key)) return "Unknown";
+        UUID uuid = containerOwners.get(key);
+        OfflinePlayer p = Bukkit.getOfflinePlayer(uuid);
+        return p.getName() != null ? p.getName() : "Unknown";
+    }
+
+    public Map<String, UUID> getContainerOwners() {
+        return containerOwners;
+    }
+}

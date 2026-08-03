@@ -149,6 +149,24 @@ commands:
   trade:
     description: Send or accept a remote item trade request.
     usage: /trade <player|accept|deny|cancel>
+  trails:
+    description: Opens the particle trails selection GUI.
+    usage: /trails
+  bounty:
+    description: Place or view player bounties.
+    usage: /bounty <place|list|top>
+  lock:
+    description: Lock a container block.
+    usage: /lock
+  unlock:
+    description: Unlock a container block.
+    usage: /unlock
+  trust:
+    description: Trust a player on a locked container.
+    usage: /trust <player>
+  untrust:
+    description: Untrust a player on a locked container.
+    usage: /untrust <player>
 permissions:
   smptools.missions.admin:
     description: Allows spawning the mission NPC.

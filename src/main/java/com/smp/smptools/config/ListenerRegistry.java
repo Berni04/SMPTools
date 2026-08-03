@@ -106,5 +106,23 @@ public final class ListenerRegistry {
         if (plugin.getConfig().getBoolean("features.player-graves.enabled", true)) {
             Bukkit.getPluginManager().registerEvents(new com.smp.smptools.graves.GraveManager(plugin), plugin);
         }
+
+        // Particle Trails
+        if (plugin.getConfig().getBoolean("features.trails.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.TrailsGUIListener(plugin), plugin);
+        }
+
+        // Bounties
+        if (plugin.getConfig().getBoolean("features.bounties.enabled", true)) {
+            com.smp.smptools.listeners.BountyGUIListener bountyGUIListener = new com.smp.smptools.listeners.BountyGUIListener(plugin);
+            plugin.setBountyGUIListener(bountyGUIListener);
+            Bukkit.getPluginManager().registerEvents(bountyGUIListener, plugin);
+            Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.BountyListener(plugin), plugin);
+        }
+
+        // Container Locks
+        if (plugin.getConfig().getBoolean("features.container-locks.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.LockListener(plugin), plugin);
+        }
     }
 }

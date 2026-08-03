@@ -65,6 +65,12 @@ features:
   remote-trade:
     enabled: true
     request-timeout-seconds: 60
+  trails:
+    enabled: true
+  bounties:
+    enabled: true
+  container-locks:
+    enabled: true
 
 # Storage configuration
 # Supported storage types: FLATFILE, SQLITE, MYSQL, MARIADB, MONGODB
