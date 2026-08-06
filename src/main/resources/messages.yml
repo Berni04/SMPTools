@@ -37,6 +37,7 @@ trade:
   cannot-trade-self: "<red>You cannot trade with yourself.</red>"
   expired: "<red>Trade request to {target} has expired.</red>"
   cancelled: "<red>Trade was cancelled.</red>"
+  cancelled-reason: "<red>Trade cancelled: {reason}</red>"
   completed: "<green>Trade completed successfully!</green>"
 
 # Homes

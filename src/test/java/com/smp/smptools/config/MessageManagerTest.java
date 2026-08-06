@@ -66,6 +66,15 @@ class MessageManagerTest {
     }
 
     @Test
+    void tradeKeys_present() throws IOException {
+        FileConfiguration cfg = loadShippedMessages();
+        assertNotNull(cfg.getString("trade.already-trading"), "trade.already-trading template missing");
+        String cancelledReason = cfg.getString("trade.cancelled-reason");
+        assertNotNull(cancelledReason, "trade.cancelled-reason template missing");
+        assertTrue(cancelledReason.contains("{reason}"), "trade.cancelled-reason must contain {reason} placeholder");
+    }
+
+    @Test
     void blackFridayStatusEnabled_hasStatusPlaceholder() throws IOException {
         FileConfiguration cfg = loadShippedMessages();
         String template = cfg.getString("blackfriday.status-enabled");

@@ -12,27 +12,40 @@ import static org.junit.jupiter.api.Assertions.*;
 public class LockManagerTest {
 
     @Test
-    public void testWorldNameWithDotKeyEncoding() {
-        World stubWorld = createWorldProxy("world.custom.nether");
-        Block stubBlock = createBlockProxy(stubWorld, 100, 64, -200);
+    public void testWorldUidKeyEncodingAndNoCollision() {
+        World worldA = createWorldProxy("world.a");
+        World world_A = createWorldProxy("world_a");
+        Block blockA = createBlockProxy(worldA, 100, 64, -200);
+        Block block_A = createBlockProxy(world_A, 100, 64, -200);
 
         LockManager manager = createTestLockManager();
-        String key = manager.getBlockKey(stubBlock);
+        String keyA = manager.getBlockKey(blockA);
+        String key_A = manager.getBlockKey(block_A);
 
-        assertNotNull(key);
-        assertEquals("world_custom_nether:100:64:-200", key, "World name '.' should be replaced with '_' to avoid YamlConfiguration section nesting bugs.");
-        assertFalse(key.contains("."), "Key must not contain '.' so YamlConfiguration path resolution works properly.");
+        assertNotNull(keyA);
+        assertNotNull(key_A);
+        assertNotEquals(keyA, key_A, "World names 'world.a' and 'world_a' must not collide.");
+        assertFalse(keyA.contains("."), "Key must not contain '.' so YamlConfiguration path resolution works properly.");
     }
 
     @Test
-    public void testNormalWorldKeyEncoding() {
-        World stubWorld = createWorldProxy("world");
-        Block stubBlock = createBlockProxy(stubWorld, 10, 20, 30);
+    public void testDoubleChestLockMigration() {
+        World world = createWorldProxy("world");
+        Block brokenBlock = createBlockProxy(world, 10, 64, 10);
+        Block survivingBlock = createBlockProxy(world, 11, 64, 10);
 
         LockManager manager = createTestLockManager();
-        String key = manager.getBlockKey(stubBlock);
+        java.util.UUID ownerUuid = java.util.UUID.randomUUID();
+        java.util.UUID trustedUuid = java.util.UUID.randomUUID();
 
-        assertEquals("world:10:20:30", key);
+        String oldKey = manager.getBlockKey(brokenBlock);
+        manager.getContainerOwners().put(oldKey, ownerUuid);
+
+        manager.removeOrMigrateLock(brokenBlock, survivingBlock);
+
+        assertFalse(manager.getContainerOwners().containsKey(oldKey), "Old key must be removed.");
+        String newKey = manager.getLocationKey(survivingBlock.getLocation());
+        assertEquals(ownerUuid, manager.getContainerOwners().get(newKey), "Lock owner must be migrated to surviving block location.");
     }
 
     private LockManager createTestLockManager() {
@@ -45,12 +58,16 @@ public class LockManagerTest {
     }
 
     private World createWorldProxy(String worldName) {
+        java.util.UUID worldUid = java.util.UUID.nameUUIDFromBytes(worldName.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         return (World) Proxy.newProxyInstance(
                 World.class.getClassLoader(),
                 new Class<?>[]{World.class},
                 (proxy, method, args) -> {
                     if (method.getName().equals("getName")) {
                         return worldName;
+                    }
+                    if (method.getName().equals("getUID")) {
+                        return worldUid;
                     }
                     if (method.getReturnType().equals(boolean.class)) return false;
                     if (method.getReturnType().equals(int.class)) return 0;

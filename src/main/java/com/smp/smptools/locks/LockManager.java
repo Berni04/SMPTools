@@ -115,8 +115,60 @@ public class LockManager {
             }
         }
 
-        String worldName = loc.getWorld().getName().replace('.', '_');
-        return worldName + ":" + loc.getBlockX() + ":" + loc.getBlockY() + ":" + loc.getBlockZ();
+        return getLocationKey(loc);
+    }
+
+    public String getLocationKey(Location loc) {
+        if (loc == null || loc.getWorld() == null) return null;
+        String worldIdentifier = loc.getWorld().getUID() != null
+                ? loc.getWorld().getUID().toString()
+                : loc.getWorld().getName();
+        return worldIdentifier + ":" + loc.getBlockX() + ":" + loc.getBlockY() + ":" + loc.getBlockZ();
+    }
+
+    public Block getSurvivingDoubleChestHalf(Block brokenBlock) {
+        if (brokenBlock == null) return null;
+        if (brokenBlock.getState() instanceof Chest chest) {
+            if (chest.getInventory() instanceof DoubleChestInventory doubleChest) {
+                Location leftLoc = getLocationFromHolder(doubleChest.getLeftSide() != null ? doubleChest.getLeftSide().getHolder() : null);
+                Location rightLoc = getLocationFromHolder(doubleChest.getRightSide() != null ? doubleChest.getRightSide().getHolder() : null);
+                if (leftLoc != null && rightLoc != null) {
+                    if (isSameBlockLocation(leftLoc, brokenBlock.getLocation())) {
+                        return rightLoc.getBlock();
+                    } else if (isSameBlockLocation(rightLoc, brokenBlock.getLocation())) {
+                        return leftLoc.getBlock();
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private boolean isSameBlockLocation(Location loc1, Location loc2) {
+        if (loc1 == null || loc2 == null) return false;
+        return loc1.getBlockX() == loc2.getBlockX()
+                && loc1.getBlockY() == loc2.getBlockY()
+                && loc1.getBlockZ() == loc2.getBlockZ()
+                && Objects.equals(loc1.getWorld(), loc2.getWorld());
+    }
+
+    public void removeOrMigrateLock(Block brokenBlock, Block survivingBlock) {
+        String oldKey = getBlockKey(brokenBlock);
+        if (oldKey == null || !containerOwners.containsKey(oldKey)) return;
+
+        UUID owner = containerOwners.remove(oldKey);
+        Set<UUID> trusted = containerTrusted.remove(oldKey);
+
+        if (survivingBlock != null) {
+            String newKey = getLocationKey(survivingBlock.getLocation());
+            if (newKey != null && owner != null) {
+                containerOwners.put(newKey, owner);
+                if (trusted != null && !trusted.isEmpty()) {
+                    containerTrusted.put(newKey, trusted);
+                }
+            }
+        }
+        saveLocks();
     }
 
     private Location getLocationFromHolder(InventoryHolder holder) {

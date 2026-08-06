@@ -67,8 +67,14 @@ public class LockListener implements Listener {
 
         Player player = event.getPlayer();
         if (lockManager.canAccess(block, player)) {
-            lockManager.removeLock(block);
-            player.sendMessage(MiniMessage.miniMessage().deserialize("<gray>Container unlocked.</gray>"));
+            Block survivingHalf = lockManager.getSurvivingDoubleChestHalf(block);
+            if (survivingHalf != null) {
+                lockManager.removeOrMigrateLock(block, survivingHalf);
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<gray>Lock transferred to remaining chest half.</gray>"));
+            } else {
+                lockManager.removeLock(block);
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<gray>Container unlocked.</gray>"));
+            }
         }
     }
 

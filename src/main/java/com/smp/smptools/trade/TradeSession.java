@@ -174,12 +174,11 @@ public class TradeSession {
         for (ItemStack item : p2Items) giveOrDrop(player2, item);
 
         if (reason != null && !reason.isEmpty()) {
-            Component msg = MiniMessage.miniMessage().deserialize("<red>Trade cancelled: " + reason + "</red>");
-            player1.sendMessage(msg);
-            player2.sendMessage(msg);
+            player1.sendMessage(plugin.getMessageManager().getMessage("trade.cancelled-reason", player1, java.util.Map.of("reason", reason)));
+            player2.sendMessage(plugin.getMessageManager().getMessage("trade.cancelled-reason", player2, java.util.Map.of("reason", reason)));
         } else {
-            player1.sendMessage(plugin.getMessageManager().getMessage("trade.cancelled"));
-            player2.sendMessage(plugin.getMessageManager().getMessage("trade.cancelled"));
+            player1.sendMessage(plugin.getMessageManager().getMessage("trade.cancelled", player1));
+            player2.sendMessage(plugin.getMessageManager().getMessage("trade.cancelled", player2));
         }
 
         plugin.getTradeManager().removeSession(player1.getUniqueId(), player2.getUniqueId());

@@ -25,17 +25,17 @@ public class TradeManager {
 
     public void sendRequest(Player sender, Player target) {
         if (sender.equals(target)) {
-            sender.sendMessage(plugin.getMessageManager().getMessage("trade.cannot-trade-self"));
+            sender.sendMessage(plugin.getMessageManager().getMessage("trade.cannot-trade-self", sender));
             return;
         }
 
         if (isTrading(sender) || isTrading(target)) {
-            sender.sendMessage(plugin.getMessageManager().getMessage("trade.already-trading"));
+            sender.sendMessage(plugin.getMessageManager().getMessage("trade.already-trading", sender));
             return;
         }
 
         if (pendingRequests.containsKey(target.getUniqueId())) {
-            sender.sendMessage(plugin.getMessageManager().getMessage("trade.already-trading"));
+            sender.sendMessage(plugin.getMessageManager().getMessage("trade.already-trading", sender));
             return;
         }
 
