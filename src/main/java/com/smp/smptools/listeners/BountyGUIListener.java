@@ -242,19 +242,25 @@ public class BountyGUIListener implements Listener {
                         return;
                     }
 
-                    bountyManager.createBounty(player, target, items);
+                    boolean success = bountyManager.createBounty(player, target, items);
+                    if (success) {
+                        // Clear items from GUI only after creation succeeds
+                        for (int i = 0; i < 18; i++) {
+                            inv.setItem(i, null);
+                        }
+                        activePlaceSessions.remove(player.getUniqueId());
 
-                    // Clear items from GUI only after creation succeeds
-                    for (int i = 0; i < 18; i++) {
-                        inv.setItem(i, null);
+                        Bukkit.broadcast(MiniMessage.miniMessage().deserialize(
+                                "<gold>🎯 " + player.getName() + "</gold> <gray>placed a bounty on</gray> <red>" + target.getName() + "</red>!"
+                        ));
+                        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
+                        player.closeInventory();
+                    } else {
+                        returnItemsFromGUI(player, inv);
+                        activePlaceSessions.remove(player.getUniqueId());
+                        player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to create bounty. Items have been returned to your inventory.</red>"));
+                        player.closeInventory();
                     }
-                    activePlaceSessions.remove(player.getUniqueId());
-
-                    Bukkit.broadcast(MiniMessage.miniMessage().deserialize(
-                            "<gold>🎯 " + player.getName() + "</gold> <gray>placed a bounty on</gray> <red>" + target.getName() + "</red>!"
-                    ));
-                    player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
-                    player.closeInventory();
                 }
             }
             return;

@@ -71,6 +71,8 @@ features:
     enabled: true
   container-locks:
     enabled: true
+  funny-death-messages:
+    enabled: true # Enable customized funny death messages when players die
 
 # Storage configuration
 # Supported storage types: FLATFILE, SQLITE, MYSQL, MARIADB, MONGODB

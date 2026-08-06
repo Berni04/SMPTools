@@ -25,7 +25,11 @@ public class LockCommand implements CommandExecutor {
         if (input == null || input.isEmpty()) return null;
         try {
             UUID uuid = UUID.fromString(input);
-            return Bukkit.getOfflinePlayer(uuid);
+            OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(uuid);
+            if (targetPlayer.hasPlayedBefore() || targetPlayer.isOnline()) {
+                return targetPlayer;
+            }
+            return null;
         } catch (IllegalArgumentException ignored) {
             return Bukkit.getOfflinePlayerIfCached(input);
         }

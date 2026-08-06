@@ -29,4 +29,11 @@ public class StorageProviderTest {
         assertEquals(true, StorageProvider.parseCanonicalValue(true, false));
         assertEquals(false, StorageProvider.parseCanonicalValue(false, true));
     }
+
+    @Test
+    public void testParseCanonicalValueDecimalToLong() {
+        assertEquals(1L, StorageProvider.parseCanonicalValue(Double.valueOf(1.0), 0L));
+        assertEquals(1L, StorageProvider.parseCanonicalValue(Float.valueOf(1.0f), 0L));
+        assertEquals(42L, StorageProvider.parseCanonicalValue(Double.valueOf(42.5), 0L));
+    }
 }

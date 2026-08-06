@@ -175,8 +175,8 @@ public class BountyManager {
         }
     }
 
-    private void writeBountiesToFile(List<Bounty> snapshot, Map<UUID, List<ItemStack>> refundsSnapshot) {
-        if (bountiesFile == null) return;
+    private boolean writeBountiesToFile(List<Bounty> snapshot, Map<UUID, List<ItemStack>> refundsSnapshot) {
+        if (bountiesFile == null) return true;
         synchronized (fileLock) {
             YamlConfiguration config = new YamlConfiguration();
 
@@ -203,10 +203,12 @@ public class BountyManager {
 
             try {
                 config.save(bountiesFile);
+                return true;
             } catch (IOException e) {
                 if (plugin != null) {
                     plugin.getLogger().severe("Could not save bounties.yml: " + e.getMessage());
                 }
+                return false;
             }
         }
     }
@@ -221,17 +223,16 @@ public class BountyManager {
         saveExecutor.submit(() -> writeBountiesToFile(snapshot, refundsSnapshot));
     }
 
-    public void saveBountiesSync() {
+    public boolean saveBountiesSync() {
         List<Bounty> snapshot = getBountiesSnapshot();
         Map<UUID, List<ItemStack>> refundsSnapshot = getPendingRefundsSnapshot();
         if (saveExecutor.isShutdown()) {
-            writeBountiesToFile(snapshot, refundsSnapshot);
-            return;
+            return writeBountiesToFile(snapshot, refundsSnapshot);
         }
         try {
-            saveExecutor.submit(() -> writeBountiesToFile(snapshot, refundsSnapshot)).get();
+            return saveExecutor.submit(() -> writeBountiesToFile(snapshot, refundsSnapshot)).get();
         } catch (Exception e) {
-            writeBountiesToFile(snapshot, refundsSnapshot);
+            return writeBountiesToFile(snapshot, refundsSnapshot);
         }
     }
 
@@ -240,8 +241,8 @@ public class BountyManager {
         saveExecutor.shutdown();
     }
 
-    public synchronized void createBounty(Player placer, Player target, List<ItemStack> items) {
-        if (items == null || items.isEmpty()) return;
+    public synchronized boolean createBounty(Player placer, Player target, List<ItemStack> items) {
+        if (placer == null || target == null || items == null || items.isEmpty()) return false;
 
         Bounty bounty = new Bounty(
                 UUID.randomUUID().toString(),
@@ -257,7 +258,12 @@ public class BountyManager {
         );
 
         bounties.add(bounty);
-        saveBounties();
+        boolean saved = saveBountiesSync();
+        if (!saved) {
+            bounties.remove(bounty);
+            return false;
+        }
+        return true;
     }
 
     public synchronized List<Bounty> getActiveBounties() {
@@ -361,9 +367,11 @@ public class BountyManager {
                             placerPending.add(item.clone());
                         }
                     }
-                    Player placer = Bukkit.getPlayer(placerUuid);
-                    if (placer != null && placer.isOnline()) {
-                        processPendingRefunds(placer);
+                    if (Bukkit.getServer() != null) {
+                        Player placer = Bukkit.getPlayer(placerUuid);
+                        if (placer != null && placer.isOnline()) {
+                            processPendingRefunds(placer);
+                        }
                     }
                 }
             }
@@ -378,47 +386,14 @@ public class BountyManager {
         UUID uuid = player.getUniqueId();
         List<ItemStack> pending = pendingRefunds.get(uuid);
         if (pending == null || pending.isEmpty()) return;
+        if (player.getInventory() == null) return;
 
-        if (Bukkit.getServer() == null) {
-            List<ItemStack> remainingPending = new ArrayList<>();
-            for (ItemStack item : pending) {
-                if (item == null || item.getType() == Material.AIR) continue;
-                if (player.getInventory() != null) {
-                    HashMap<Integer, ItemStack> overflow = player.getInventory().addItem(item.clone());
-                    for (ItemStack rem : overflow.values()) {
-                        if (rem != null && rem.getType() != Material.AIR && rem.getAmount() > 0) {
-                            remainingPending.add(rem);
-                        }
-                    }
-                } else {
-                    remainingPending.add(item.clone());
-                }
-            }
-            if (remainingPending.isEmpty()) {
-                pendingRefunds.remove(uuid);
-            } else {
-                pendingRefunds.put(uuid, remainingPending);
-            }
-            saveBountiesSync();
-            return;
-        }
-
-        org.bukkit.inventory.Inventory testInv = Bukkit.createInventory(null, 36);
-        testInv.setContents(player.getInventory().getStorageContents());
-
-        List<ItemStack> itemsToDeliver = new ArrayList<>();
         List<ItemStack> remainingPending = new ArrayList<>();
 
         for (ItemStack item : pending) {
-            if (item == null || item.getType() == Material.AIR) continue;
-            ItemStack toAdd = item.clone();
-            HashMap<Integer, ItemStack> overflow = testInv.addItem(toAdd);
-            int amountAdded = item.getAmount() - (overflow.isEmpty() ? 0 : overflow.values().stream().mapToInt(ItemStack::getAmount).sum());
-            if (amountAdded > 0) {
-                ItemStack delivered = item.clone();
-                delivered.setAmount(amountAdded);
-                itemsToDeliver.add(delivered);
-            }
+            if (item == null || item.getType() == Material.AIR || item.getAmount() <= 0) continue;
+            
+            HashMap<Integer, ItemStack> overflow = player.getInventory().addItem(item.clone());
             for (ItemStack rem : overflow.values()) {
                 if (rem != null && rem.getType() != Material.AIR && rem.getAmount() > 0) {
                     remainingPending.add(rem);
@@ -432,13 +407,7 @@ public class BountyManager {
             pendingRefunds.put(uuid, remainingPending);
         }
 
-        // Persist refund status changes BEFORE item delivery
         saveBountiesSync();
-
-        // Deliver items to player inventory
-        for (ItemStack item : itemsToDeliver) {
-            player.getInventory().addItem(item);
-        }
     }
 
     public synchronized void checkPlayerJoin(Player player) {

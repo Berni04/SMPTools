@@ -29,10 +29,10 @@ public class TradeSession {
     private boolean cancelled = false;
 
     // Slot definitions
-    public static final Set<Integer> P1_SLOTS = Set.of(0, 1, 2, 3, 9, 10, 11, 12, 18, 19, 20, 21, 27, 28, 29, 30);
-    public static final Set<Integer> P2_SLOTS = Set.of(5, 6, 7, 8, 14, 15, 16, 17, 23, 24, 25, 26, 32, 33, 34, 35);
     public static final List<Integer> P1_SLOTS_ORDERED = List.of(0, 1, 2, 3, 9, 10, 11, 12, 18, 19, 20, 21, 27, 28, 29, 30);
     public static final List<Integer> P2_SLOTS_ORDERED = List.of(5, 6, 7, 8, 14, 15, 16, 17, 23, 24, 25, 26, 32, 33, 34, 35);
+    public static final Set<Integer> P1_SLOTS = Set.copyOf(P1_SLOTS_ORDERED);
+    public static final Set<Integer> P2_SLOTS = Set.copyOf(P2_SLOTS_ORDERED);
     public static final Set<Integer> DIVIDER_SLOTS = Set.of(4, 13, 22, 31, 40, 49);
     
     public static final int P1_READY_SLOT = 45;
@@ -92,10 +92,7 @@ public class TradeSession {
 
         this.timeoutTask = Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!completed && !cancelled) {
-                String timeoutReason = plugin.getMessageManager().getRawMessage("trade.timeout");
-                if (timeoutReason == null || timeoutReason.isEmpty()) {
-                    timeoutReason = plugin.getMessageManager().getRawMessage("trade.timed-out");
-                }
+                String timeoutReason = plugin.getMessageManager().getRawMessage("trade.timed-out");
                 if (timeoutReason == null || timeoutReason.isEmpty()) {
                     timeoutReason = "Trade timed out after 60 seconds.";
                 }
@@ -164,7 +161,7 @@ public class TradeSession {
         player2.closeInventory();
     }
 
-    public synchronized void cancelTrade(String reason) {
+    public synchronized void cancelTrade(Component p1Message, Component p2Message) {
         if (completed || cancelled) return;
         cancelled = true;
         cancelTask();
@@ -180,18 +177,27 @@ public class TradeSession {
         for (ItemStack item : p1Items) giveOrDrop(player1, item);
         for (ItemStack item : p2Items) giveOrDrop(player2, item);
 
-        if (reason != null && !reason.isEmpty()) {
-            player1.sendMessage(plugin.getMessageManager().getMessage("trade.cancelled-reason", player1, java.util.Map.of("reason", reason)));
-            player2.sendMessage(plugin.getMessageManager().getMessage("trade.cancelled-reason", player2, java.util.Map.of("reason", reason)));
-        } else {
-            player1.sendMessage(plugin.getMessageManager().getMessage("trade.cancelled", player1));
-            player2.sendMessage(plugin.getMessageManager().getMessage("trade.cancelled", player2));
-        }
+        if (p1Message != null) player1.sendMessage(p1Message);
+        if (p2Message != null) player2.sendMessage(p2Message);
 
         plugin.getTradeManager().removeSession(player1.getUniqueId(), player2.getUniqueId());
 
         player1.closeInventory();
         player2.closeInventory();
+    }
+
+    public synchronized void cancelTrade(String reason) {
+        if (reason != null && !reason.isEmpty()) {
+            cancelTrade(
+                plugin.getMessageManager().getMessage("trade.cancelled-reason", player1, java.util.Map.of("reason", reason)),
+                plugin.getMessageManager().getMessage("trade.cancelled-reason", player2, java.util.Map.of("reason", reason))
+            );
+        } else {
+            cancelTrade(
+                plugin.getMessageManager().getMessage("trade.cancelled", player1),
+                plugin.getMessageManager().getMessage("trade.cancelled", player2)
+            );
+        }
     }
 
     public synchronized void cancelTrade(Player initiator) {

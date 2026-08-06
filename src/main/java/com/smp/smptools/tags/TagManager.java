@@ -5,6 +5,10 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerKickEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -31,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author berni
  * @since 1.0-SNAPSHOT
  */
-public class TagManager {
+public class TagManager implements Listener {
 
     private final SMPTools plugin;
     /** Map of player UUIDs to their equipped titles */
@@ -50,6 +54,27 @@ public class TagManager {
     public TagManager(SMPTools plugin) {
         this.plugin = plugin;
         loadPlayerTitles();
+        if (plugin != null && Bukkit.getServer() != null && plugin.getServer() != null) {
+            try {
+                Bukkit.getPluginManager().registerEvents(this, plugin);
+            } catch (Exception ignored) {}
+        }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        evictPlayerCache(event.getPlayer().getUniqueId());
+    }
+
+    @EventHandler
+    public void onPlayerKick(PlayerKickEvent event) {
+        evictPlayerCache(event.getPlayer().getUniqueId());
+    }
+
+    private void evictPlayerCache(@NotNull UUID uuid) {
+        milestoneStatCache.remove(uuid);
+        playerCacheVersions.remove(uuid);
+        loadingPlayers.remove(uuid);
     }
 
     /**
@@ -74,26 +99,37 @@ public class TagManager {
      * @param uuid the player's UUID
      */
     public void loadPlayerStatsAsync(@NotNull UUID uuid) {
-        if (plugin.getStorageManager() == null || plugin.getStorageManager().getProvider() == null) return;
+        if (plugin == null || plugin.getStorageManager() == null || plugin.getStorageManager().getProvider() == null) return;
         if (!loadingPlayers.add(uuid)) return; // Already loading
 
         int globalVer = globalCacheVersion.get();
         int playerVer = playerCacheVersions.computeIfAbsent(uuid, k -> new java.util.concurrent.atomic.AtomicInteger(0)).get();
 
         boolean isFlatFile = plugin.getStorageManager().getProvider() instanceof com.smp.smptools.storage.FlatFileStorageProvider;
-        Map<String, Object> flatFileSnapshot = isFlatFile ? plugin.getStorageManager().getProvider().getAllPlayerStats(uuid) : null;
+        Map<String, Object> flatFileSnapshotTemp = null;
+        if (isFlatFile) {
+            try {
+                flatFileSnapshotTemp = plugin.getStorageManager().getProvider().getAllPlayerStats(uuid);
+            } catch (Exception e) {
+                plugin.getLogger().warning("Could not load stats for " + uuid + ": " + e.getMessage());
+                loadingPlayers.remove(uuid);
+                return;
+            }
+        }
+        final Map<String, Object> flatFileSnapshot = flatFileSnapshotTemp;
 
         Runnable task = () -> {
             try {
                 Map<String, Object> allStats = isFlatFile ? flatFileSnapshot : plugin.getStorageManager().getProvider().getAllPlayerStats(uuid);
+                if (allStats == null) {
+                    return;
+                }
                 Map<String, Long> parsedStats = new ConcurrentHashMap<>();
-                if (allStats != null) {
-                    for (Map.Entry<String, Object> entry : allStats.entrySet()) {
-                        if (entry.getValue() != null) {
-                            try {
-                                parsedStats.put(entry.getKey(), Long.parseLong(entry.getValue().toString()));
-                            } catch (NumberFormatException ignored) {}
-                        }
+                for (Map.Entry<String, Object> entry : allStats.entrySet()) {
+                    if (entry.getValue() != null) {
+                        try {
+                            parsedStats.put(entry.getKey(), Long.parseLong(entry.getValue().toString()));
+                        } catch (NumberFormatException ignored) {}
                     }
                 }
                 int currentGlobalVer = globalCacheVersion.get();

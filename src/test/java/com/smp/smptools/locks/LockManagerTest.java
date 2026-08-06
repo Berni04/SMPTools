@@ -3,13 +3,19 @@ package com.smp.smptools.locks;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.inventory.DoubleChestInventory;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class LockManagerTest {
+
+    private final Map<String, Block> blockRegistry = new HashMap<>();
+    private final Map<Block, org.bukkit.block.Chest> chestStateRegistry = new HashMap<>();
 
     @Test
     public void testWorldUidKeyEncodingAndNoCollision() {
@@ -34,18 +40,34 @@ public class LockManagerTest {
         Block brokenBlock = createBlockProxy(world, 10, 64, 10);
         Block survivingBlock = createBlockProxy(world, 11, 64, 10);
 
+        createDoubleChestPair(brokenBlock, survivingBlock);
+
         LockManager manager = createTestLockManager();
         java.util.UUID ownerUuid = java.util.UUID.randomUUID();
-        java.util.UUID trustedUuid = java.util.UUID.randomUUID();
 
-        String oldKey = manager.getBlockKey(brokenBlock);
-        manager.getContainerOwners().put(oldKey, ownerUuid);
+        // 1. Verify double chest pairing key is generated for both halves
+        String doubleChestKey = manager.getBlockKey(brokenBlock);
+        assertNotNull(doubleChestKey);
+        assertEquals(doubleChestKey, manager.getBlockKey(survivingBlock), "Both halves of double chest must yield identical key.");
 
+        // 2. Lock the double chest using the double chest key
+        manager.getContainerOwners().put(doubleChestKey, ownerUuid);
+        assertTrue(manager.isLocked(brokenBlock), "Broken block half should be locked.");
+        assertTrue(manager.isLocked(survivingBlock), "Surviving block half should be locked.");
+
+        // 3. Verify getSurvivingDoubleChestHalf identifies the surviving half correctly
+        Block survivingHalf = manager.getSurvivingDoubleChestHalf(brokenBlock);
+        assertEquals(survivingBlock, survivingHalf, "Surviving half of double chest must be correctly resolved.");
+
+        // 4. Simulate break & migration: broken block is removed, surviving block becomes single chest
+        setSingleChest(survivingBlock);
         manager.removeOrMigrateLock(brokenBlock, survivingBlock);
 
-        assertFalse(manager.getContainerOwners().containsKey(oldKey), "Old key must be removed.");
+        // 5. Assert old double chest key is removed and surviving block has lock migrated to its single chest key
+        assertFalse(manager.getContainerOwners().containsKey(doubleChestKey), "Old double chest key must be removed.");
         String newKey = manager.getLocationKey(survivingBlock.getLocation());
         assertEquals(ownerUuid, manager.getContainerOwners().get(newKey), "Lock owner must be migrated to surviving block location.");
+        assertTrue(manager.isLocked(survivingBlock), "Surviving block must remain locked under its single chest key.");
     }
 
     private LockManager createTestLockManager() {
@@ -63,11 +85,15 @@ public class LockManagerTest {
                 World.class.getClassLoader(),
                 new Class<?>[]{World.class},
                 (proxy, method, args) -> {
-                    if (method.getName().equals("getName")) {
-                        return worldName;
-                    }
-                    if (method.getName().equals("getUID")) {
-                        return worldUid;
+                    if (method.getName().equals("getName")) return worldName;
+                    if (method.getName().equals("getUID")) return worldUid;
+                    if (method.getName().equals("getBlockAt")) {
+                        if (args != null && args.length == 3 && args[0] instanceof Integer x && args[1] instanceof Integer y && args[2] instanceof Integer z) {
+                            return blockRegistry.get(x + ":" + y + ":" + z);
+                        }
+                        if (args != null && args.length == 1 && args[0] instanceof Location loc) {
+                            return blockRegistry.get(loc.getBlockX() + ":" + loc.getBlockY() + ":" + loc.getBlockZ());
+                        }
                     }
                     if (method.getReturnType().equals(boolean.class)) return false;
                     if (method.getReturnType().equals(int.class)) return 0;
@@ -80,10 +106,20 @@ public class LockManagerTest {
 
     private Block createBlockProxy(World world, int x, int y, int z) {
         Location loc = new Location(world, x, y, z);
-        return (Block) Proxy.newProxyInstance(
+        Block blockProxy = (Block) Proxy.newProxyInstance(
                 Block.class.getClassLoader(),
                 new Class<?>[]{Block.class},
                 (proxy, method, args) -> {
+                    if (method.getName().equals("equals")) {
+                        if (args == null || args.length != 1 || args[0] == null) return false;
+                        if (proxy == args[0]) return true;
+                        if (args[0] instanceof Block other) {
+                            return x == other.getX() && y == other.getY() && z == other.getZ() && java.util.Objects.equals(world, other.getWorld());
+                        }
+                        return false;
+                    }
+                    if (method.getName().equals("hashCode")) return java.util.Objects.hash(world, x, y, z);
+                    if (method.getName().equals("toString")) return "Block{" + x + "," + y + "," + z + "}";
                     if (method.getName().equals("getWorld")) return world;
                     if (method.getName().equals("getX")) return x;
                     if (method.getName().equals("getY")) return y;
@@ -99,7 +135,7 @@ public class LockManagerTest {
                         return loc;
                     }
                     if (method.getName().equals("getType")) return org.bukkit.Material.CHEST;
-                    if (method.getName().equals("getState")) return null;
+                    if (method.getName().equals("getState")) return chestStateRegistry.get((Block) proxy);
                     if (method.getReturnType().equals(boolean.class)) return false;
                     if (method.getReturnType().equals(int.class)) return 0;
                     if (method.getReturnType().equals(long.class)) return 0L;
@@ -107,5 +143,95 @@ public class LockManagerTest {
                     return null;
                 }
         );
+        blockRegistry.put(x + ":" + y + ":" + z, blockProxy);
+        return blockProxy;
+    }
+
+    private void createDoubleChestPair(Block leftBlock, Block rightBlock) {
+        org.bukkit.inventory.Inventory leftInv = (org.bukkit.inventory.Inventory) Proxy.newProxyInstance(
+                org.bukkit.inventory.Inventory.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.inventory.Inventory.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getHolder")) return chestStateRegistry.get(leftBlock);
+                    return null;
+                }
+        );
+
+        org.bukkit.inventory.Inventory rightInv = (org.bukkit.inventory.Inventory) Proxy.newProxyInstance(
+                org.bukkit.inventory.Inventory.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.inventory.Inventory.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getHolder")) return chestStateRegistry.get(rightBlock);
+                    return null;
+                }
+        );
+
+        DoubleChestInventory doubleChestInv = (DoubleChestInventory) Proxy.newProxyInstance(
+                DoubleChestInventory.class.getClassLoader(),
+                new Class<?>[]{DoubleChestInventory.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getLeftSide")) return leftInv;
+                    if (method.getName().equals("getRightSide")) return rightInv;
+                    return null;
+                }
+        );
+
+        org.bukkit.block.Chest leftChestState = (org.bukkit.block.Chest) Proxy.newProxyInstance(
+                org.bukkit.block.Chest.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.block.Chest.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getInventory")) return doubleChestInv;
+                    if (method.getName().equals("getLocation")) return leftBlock.getLocation();
+                    if (method.getName().equals("getBlock")) return leftBlock;
+                    if (method.getName().equals("getType")) return org.bukkit.Material.CHEST;
+                    if (method.getReturnType().equals(boolean.class)) return false;
+                    if (method.getReturnType().equals(int.class)) return 0;
+                    return null;
+                }
+        );
+
+        org.bukkit.block.Chest rightChestState = (org.bukkit.block.Chest) Proxy.newProxyInstance(
+                org.bukkit.block.Chest.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.block.Chest.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getInventory")) return doubleChestInv;
+                    if (method.getName().equals("getLocation")) return rightBlock.getLocation();
+                    if (method.getName().equals("getBlock")) return rightBlock;
+                    if (method.getName().equals("getType")) return org.bukkit.Material.CHEST;
+                    if (method.getReturnType().equals(boolean.class)) return false;
+                    if (method.getReturnType().equals(int.class)) return 0;
+                    return null;
+                }
+        );
+
+        chestStateRegistry.put(leftBlock, leftChestState);
+        chestStateRegistry.put(rightBlock, rightChestState);
+    }
+
+    private void setSingleChest(Block block) {
+        org.bukkit.inventory.Inventory singleInv = (org.bukkit.inventory.Inventory) Proxy.newProxyInstance(
+                org.bukkit.inventory.Inventory.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.inventory.Inventory.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getHolder")) return chestStateRegistry.get(block);
+                    return null;
+                }
+        );
+
+        org.bukkit.block.Chest singleChestState = (org.bukkit.block.Chest) Proxy.newProxyInstance(
+                org.bukkit.block.Chest.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.block.Chest.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getInventory")) return singleInv;
+                    if (method.getName().equals("getLocation")) return block.getLocation();
+                    if (method.getName().equals("getBlock")) return block;
+                    if (method.getName().equals("getType")) return org.bukkit.Material.CHEST;
+                    if (method.getReturnType().equals(boolean.class)) return false;
+                    if (method.getReturnType().equals(int.class)) return 0;
+                    return null;
+                }
+        );
+
+        chestStateRegistry.put(block, singleChestState);
     }
 }

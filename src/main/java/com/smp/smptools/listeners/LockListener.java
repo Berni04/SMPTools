@@ -57,17 +57,11 @@ public class LockListener implements Listener {
                 event.setCancelled(true);
                 String ownerName = lockManager.getOwnerName(block);
                 player.sendMessage(MiniMessage.miniMessage().deserialize("<red>🔒 You cannot break a container locked by " + ownerName + "!</red>"));
+                return;
             }
         }
-    }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onBlockBreakMonitor(BlockBreakEvent event) {
-        Block block = event.getBlock();
-        if (!lockManager.isContainer(block) || !lockManager.isLocked(block)) return;
-
-        Player player = event.getPlayer();
-        if (lockManager.canAccess(block, player)) {
+        if (!event.isCancelled() && lockManager.isLocked(block)) {
             Block survivingHalf = lockManager.getSurvivingDoubleChestHalf(block);
             if (survivingHalf != null) {
                 lockManager.removeOrMigrateLock(block, survivingHalf);

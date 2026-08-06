@@ -102,24 +102,28 @@ public interface StorageProvider {
 
         String str = rawVal.toString();
         if (defaultValue instanceof Integer) {
+            if (rawVal instanceof Number) return ((Number) rawVal).intValue();
             try {
                 return Integer.parseInt(str);
             } catch (NumberFormatException e) {
                 return defaultValue;
             }
         } else if (defaultValue instanceof Long) {
+            if (rawVal instanceof Number) return ((Number) rawVal).longValue();
             try {
                 return Long.parseLong(str);
             } catch (NumberFormatException e) {
                 return defaultValue;
             }
         } else if (defaultValue instanceof Double) {
+            if (rawVal instanceof Number) return ((Number) rawVal).doubleValue();
             try {
                 return Double.parseDouble(str);
             } catch (NumberFormatException e) {
                 return defaultValue;
             }
         } else if (defaultValue instanceof Float) {
+            if (rawVal instanceof Number) return ((Number) rawVal).floatValue();
             try {
                 return Float.parseFloat(str);
             } catch (NumberFormatException e) {

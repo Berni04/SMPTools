@@ -52,4 +52,31 @@ public class TagManagerTest {
         assertTrue(playerVersions.containsKey(uuid));
         assertTrue(playerVersions.get(uuid).get() > 0);
     }
+
+    @Test
+    public void testEvictPlayerCacheRemovesEntries() throws Exception {
+        TagManager manager = new TagManager(null);
+        UUID uuid = UUID.randomUUID();
+
+        java.lang.reflect.Field statCacheField = TagManager.class.getDeclaredField("milestoneStatCache");
+        statCacheField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Map<UUID, Map<String, Long>> statCache = (Map<UUID, Map<String, Long>>) statCacheField.get(manager);
+
+        java.lang.reflect.Field playerMapField = TagManager.class.getDeclaredField("playerCacheVersions");
+        playerMapField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Map<UUID, java.util.concurrent.atomic.AtomicInteger> playerVersions = (Map<UUID, java.util.concurrent.atomic.AtomicInteger>) playerMapField.get(manager);
+
+        statCache.put(uuid, new HashMap<>());
+        playerVersions.put(uuid, new java.util.concurrent.atomic.AtomicInteger(5));
+
+        Method evictMethod = TagManager.class.getDeclaredMethod("evictPlayerCache", UUID.class);
+        evictMethod.setAccessible(true);
+        evictMethod.invoke(manager, uuid);
+
+        assertFalse(statCache.containsKey(uuid));
+        assertFalse(playerVersions.containsKey(uuid));
+    }
 }
+

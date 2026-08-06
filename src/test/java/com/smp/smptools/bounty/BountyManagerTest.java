@@ -1,8 +1,11 @@
 package com.smp.smptools.bounty;
 
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -45,6 +48,61 @@ public class BountyManagerTest {
         assertThrows(UnsupportedOperationException.class, () -> manager.getBounties().add(bounty));
     }
 
+
+
+    private static class DummyItemStack extends ItemStack {
+        private final Material type;
+        private int amount;
+
+        public DummyItemStack(Material type, int amount) {
+            this.type = type;
+            this.amount = amount;
+        }
+
+        @Override
+        public Material getType() {
+            return type;
+        }
+
+        @Override
+        public int getAmount() {
+            return amount;
+        }
+
+        @Override
+        public void setAmount(int amount) {
+            this.amount = amount;
+        }
+
+        @Override
+        public ItemStack clone() {
+            return new DummyItemStack(type, amount);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj instanceof ItemStack other) {
+                return this.type == other.getType() && this.amount == other.getAmount();
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return java.util.Objects.hash(type, amount);
+        }
+
+        @Override
+        public String toString() {
+            return "ItemStack{" + type + " x " + amount + "}";
+        }
+    }
+
+    private static ItemStack createTestItemStack(Material type, int amount) {
+        return new DummyItemStack(type, amount);
+    }
+
     @Test
     public void testAutomaticExpiredRefund() throws Exception {
         BountyManager manager = new BountyManager(null);
@@ -52,13 +110,18 @@ public class BountyManagerTest {
         UUID target = UUID.randomUUID();
         UUID killer = UUID.randomUUID();
 
+        List<ItemStack> items = List.of(
+                createTestItemStack(Material.DIAMOND, 5),
+                createTestItemStack(Material.GOLD_INGOT, 10)
+        );
+
         Bounty expiredBounty = new Bounty(
                 "test-id",
                 placer,
                 "Placer",
                 target,
                 "Target",
-                new ArrayList<>(),
+                items,
                 System.currentTimeMillis() - 100000L,
                 killer,
                 System.currentTimeMillis() - (8L * 24 * 60 * 60 * 1000L),
@@ -77,6 +140,16 @@ public class BountyManagerTest {
         manager.checkExpiredBounties();
 
         assertTrue(expiredBounty.isClaimed());
+
+        Map<UUID, List<ItemStack>> pendingRefunds = manager.getPendingRefunds();
+        assertTrue(pendingRefunds.containsKey(placer));
+        List<ItemStack> placerRefunds = pendingRefunds.get(placer);
+        assertNotNull(placerRefunds);
+        assertEquals(2, placerRefunds.size());
+        assertEquals(Material.DIAMOND, placerRefunds.get(0).getType());
+        assertEquals(5, placerRefunds.get(0).getAmount());
+        assertEquals(Material.GOLD_INGOT, placerRefunds.get(1).getType());
+        assertEquals(10, placerRefunds.get(1).getAmount());
     }
 
     @Test
@@ -119,5 +192,12 @@ public class BountyManagerTest {
 
         assertFalse(claimableBounty.isClaimed());
         assertTrue(claimableBounty.isClaimableByKiller(killer));
+    }
+
+    @Test
+    public void testCreateBountyReturnBool() {
+        BountyManager manager = new BountyManager(null);
+        assertFalse(manager.createBounty(null, null, null));
+        assertFalse(manager.createBounty(null, null, List.of()));
     }
 }

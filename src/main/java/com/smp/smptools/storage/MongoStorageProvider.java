@@ -215,12 +215,24 @@ public class MongoStorageProvider implements StorageProvider {
             if (statsCollection == null) return;
             try {
                 Document doc = statsCollection.find(Filters.eq("uuid", uuid.toString())).first();
-                if (doc != null && doc.containsKey("active_trail")) {
-                    Object trail = doc.get("active_trail");
-                    Document newDoc = new Document("uuid", uuid.toString()).append("active_trail", trail);
-                    statsCollection.replaceOne(Filters.eq("uuid", uuid.toString()), newDoc);
-                } else {
-                    statsCollection.deleteOne(Filters.eq("uuid", uuid.toString()));
+                if (doc != null) {
+                    Object trail = null;
+                    if (doc.containsKey("stats") && doc.get("stats") instanceof Document statsDoc) {
+                        if (statsDoc.containsKey("active_trail")) {
+                            trail = statsDoc.get("active_trail");
+                        }
+                    }
+                    if (trail == null && doc.containsKey("active_trail")) {
+                        trail = doc.get("active_trail");
+                    }
+
+                    if (trail != null) {
+                        Document newStatsDoc = new Document("active_trail", trail);
+                        Document newDoc = new Document("uuid", uuid.toString()).append("stats", newStatsDoc);
+                        statsCollection.replaceOne(Filters.eq("uuid", uuid.toString()), newDoc);
+                    } else {
+                        statsCollection.deleteOne(Filters.eq("uuid", uuid.toString()));
+                    }
                 }
             } catch (Exception e) {
                 plugin.getLogger().warning("Failed to clear mongo stats for " + uuid + ": " + e.getMessage());

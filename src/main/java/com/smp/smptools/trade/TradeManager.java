@@ -117,7 +117,12 @@ public class TradeManager {
     public void cleanup() {
         java.util.Set<TradeSession> sessionsToCancel = new java.util.HashSet<>(activeSessions.values());
         for (TradeSession session : sessionsToCancel) {
-            session.cancelTrade("Server restarting / plugin disabling");
+            Player p1 = session.getPlayer1();
+            Player p2 = session.getPlayer2();
+            session.cancelTrade(
+                plugin.getMessageManager().getMessage("trade.server-shutdown", p1),
+                plugin.getMessageManager().getMessage("trade.server-shutdown", p2)
+            );
         }
         activeSessions.clear();
         pendingRequests.clear();

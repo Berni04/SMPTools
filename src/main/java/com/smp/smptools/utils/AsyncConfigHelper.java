@@ -23,13 +23,15 @@ import java.util.logging.Level;
  */
 public final class AsyncConfigHelper {
 
-    private static volatile ExecutorService saveExecutor;
+    private static ExecutorService saveExecutor;
+    private static ExecutorService drainingExecutor;
 
     private AsyncConfigHelper() {
         // Prevent instantiation
     }
 
     private static synchronized ExecutorService getExecutor() {
+        waitForDraining();
         if (saveExecutor == null || saveExecutor.isShutdown()) {
             saveExecutor = Executors.newSingleThreadExecutor(r -> {
                 Thread thread = new Thread(r, "SMPTools-ConfigSaver");
@@ -38,6 +40,29 @@ public final class AsyncConfigHelper {
             });
         }
         return saveExecutor;
+    }
+
+    private static void waitForDraining() {
+        ExecutorService draining;
+        synchronized (AsyncConfigHelper.class) {
+            draining = drainingExecutor;
+        }
+        if (draining != null) {
+            awaitExecutorTermination(draining);
+        }
+    }
+
+    private static void awaitExecutorTermination(ExecutorService executor) {
+        if (executor != null && !executor.isTerminated()) {
+            try {
+                if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
+                    executor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 
     /**
@@ -65,6 +90,8 @@ public final class AsyncConfigHelper {
                 }
             });
         } catch (RejectedExecutionException e) {
+            // Wait for any draining executor to finish before fallback write to prevent out-of-order writes
+            waitForDraining();
             // Fallback synchronous write if executor is already shut down
             try {
                 Files.write(file.toPath(), data.getBytes(StandardCharsets.UTF_8));
@@ -82,18 +109,21 @@ public final class AsyncConfigHelper {
     public static void shutdown() {
         ExecutorService executorToShutdown;
         synchronized (AsyncConfigHelper.class) {
+            waitForDraining();
             executorToShutdown = saveExecutor;
             saveExecutor = null;
+            drainingExecutor = executorToShutdown;
         }
-        if (executorToShutdown != null && !executorToShutdown.isShutdown()) {
-            executorToShutdown.shutdown();
-            try {
-                if (!executorToShutdown.awaitTermination(10, TimeUnit.SECONDS)) {
-                    executorToShutdown.shutdownNow();
+
+        if (executorToShutdown != null) {
+            if (!executorToShutdown.isShutdown()) {
+                executorToShutdown.shutdown();
+            }
+            awaitExecutorTermination(executorToShutdown);
+            synchronized (AsyncConfigHelper.class) {
+                if (drainingExecutor == executorToShutdown) {
+                    drainingExecutor = null;
                 }
-            } catch (InterruptedException e) {
-                executorToShutdown.shutdownNow();
-                Thread.currentThread().interrupt();
             }
         }
     }

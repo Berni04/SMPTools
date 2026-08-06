@@ -27,7 +27,9 @@ public class LeaderboardManager {
 
     public LeaderboardManager(SMPTools plugin) {
         this.plugin = plugin;
-        if (Bukkit.getServer() != null && plugin != null && plugin.isEnabled()) {
+        boolean enabled = plugin != null && plugin.getConfig() != null
+                && plugin.getConfig().getBoolean("features.leaderboard.enabled", true);
+        if (enabled && Bukkit.getServer() != null && plugin.isEnabled()) {
             Bukkit.getScheduler().runTaskAsynchronously(plugin, this::recalculateLeaderboards);
         }
     }
@@ -36,13 +38,17 @@ public class LeaderboardManager {
         long now = System.currentTimeMillis();
         // Cache for 5 minutes
         if (now - lastCacheTime > 300000 || !cachedLeaderboards.containsKey(statPath)) {
-            recalculateLeaderboards();
+            if (Bukkit.getServer() != null && plugin != null && plugin.isEnabled()) {
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, this::recalculateLeaderboards);
+            } else {
+                recalculateLeaderboards();
+            }
         }
         return cachedLeaderboards.getOrDefault(statPath, Collections.emptyMap());
     }
 
     public void recalculateLeaderboards() {
-        if (plugin.getStorageManager() == null || plugin.getStorageManager().getProvider() == null) {
+        if (plugin == null || plugin.getStorageManager() == null || plugin.getStorageManager().getProvider() == null) {
             return;
         }
 
@@ -50,56 +56,26 @@ public class LeaderboardManager {
             return; // Coalesce concurrent refresh calls
         }
 
-        doRecalculate();
+        if (Bukkit.getServer() != null && plugin.isEnabled() && Bukkit.isPrimaryThread()) {
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, this::doRecalculate);
+        } else {
+            doRecalculate();
+        }
     }
 
     private void doRecalculate() {
-        if (Bukkit.getServer() == null || !plugin.isEnabled()) {
-            try {
-                Map<String, Map<String, Long>> rawSnapshots = snapshotRawStatsOnMainThread();
-                Map<String, Map<String, Long>> sorted = sortSnapshots(rawSnapshots);
-                cachedLeaderboards.putAll(sorted);
-                lastCacheTime = System.currentTimeMillis();
-            } finally {
-                isRefreshing.set(false);
-            }
-            return;
-        }
-
-        if (Bukkit.isPrimaryThread()) {
-            Map<String, Map<String, Long>> rawSnapshots = snapshotRawStatsOnMainThread();
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                try {
-                    Map<String, Map<String, Long>> sorted = sortSnapshots(rawSnapshots);
-                    cachedLeaderboards.putAll(sorted);
-                    lastCacheTime = System.currentTimeMillis();
-                } finally {
-                    isRefreshing.set(false);
-                }
-            });
-        } else {
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                try {
-                    Map<String, Map<String, Long>> rawSnapshots = snapshotRawStatsOnMainThread();
-                    Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                        try {
-                            Map<String, Map<String, Long>> sorted = sortSnapshots(rawSnapshots);
-                            cachedLeaderboards.putAll(sorted);
-                            lastCacheTime = System.currentTimeMillis();
-                        } finally {
-                            isRefreshing.set(false);
-                        }
-                    });
-                } catch (Throwable t) {
-                    isRefreshing.set(false);
-                    throw t;
-                }
-            });
+        try {
+            Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
+            Map<String, Map<String, Long>> sorted = sortSnapshots(rawSnapshots);
+            cachedLeaderboards.putAll(sorted);
+            lastCacheTime = System.currentTimeMillis();
+        } finally {
+            isRefreshing.set(false);
         }
     }
 
-    private Map<String, Map<String, Long>> snapshotRawStatsOnMainThread() {
-        if (plugin.getStorageManager() == null || plugin.getStorageManager().getProvider() == null) {
+    private Map<String, Map<String, Long>> snapshotRawStats() {
+        if (plugin == null || plugin.getStorageManager() == null || plugin.getStorageManager().getProvider() == null) {
             return Collections.emptyMap();
         }
 

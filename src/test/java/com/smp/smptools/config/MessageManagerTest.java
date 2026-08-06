@@ -72,6 +72,9 @@ class MessageManagerTest {
         String cancelledReason = cfg.getString("trade.cancelled-reason");
         assertNotNull(cancelledReason, "trade.cancelled-reason template missing");
         assertTrue(cancelledReason.contains("{reason}"), "trade.cancelled-reason must contain {reason} placeholder");
+        assertNotNull(cfg.getString("trade.server-shutdown"), "trade.server-shutdown template missing");
+        assertNotNull(cfg.getString("trade.timed-out"), "trade.timed-out template missing");
+        assertNull(cfg.getString("trade.timeout"), "trade.timeout duplicate template should be removed");
     }
 
     @Test
