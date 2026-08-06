@@ -23,14 +23,21 @@ import java.util.logging.Level;
  */
 public final class AsyncConfigHelper {
 
-    private static final ExecutorService SAVE_EXECUTOR = Executors.newSingleThreadExecutor(r -> {
-        Thread thread = new Thread(r, "SMPTools-ConfigSaver");
-        thread.setDaemon(true);
-        return thread;
-    });
+    private static volatile ExecutorService saveExecutor;
 
     private AsyncConfigHelper() {
         // Prevent instantiation
+    }
+
+    private static synchronized ExecutorService getExecutor() {
+        if (saveExecutor == null || saveExecutor.isShutdown()) {
+            saveExecutor = Executors.newSingleThreadExecutor(r -> {
+                Thread thread = new Thread(r, "SMPTools-ConfigSaver");
+                thread.setDaemon(true);
+                return thread;
+            });
+        }
+        return saveExecutor;
     }
 
     /**
@@ -48,7 +55,7 @@ public final class AsyncConfigHelper {
         String data = config.saveToString();
 
         try {
-            SAVE_EXECUTOR.submit(() -> {
+            getExecutor().submit(() -> {
                 try {
                     Files.write(file.toPath(), data.getBytes(StandardCharsets.UTF_8));
                 } catch (IOException e) {
@@ -73,14 +80,21 @@ public final class AsyncConfigHelper {
      * Shuts down the save executor service, draining and awaiting queued write operations.
      */
     public static void shutdown() {
-        SAVE_EXECUTOR.shutdown();
-        try {
-            if (!SAVE_EXECUTOR.awaitTermination(10, TimeUnit.SECONDS)) {
-                SAVE_EXECUTOR.shutdownNow();
+        ExecutorService executorToShutdown;
+        synchronized (AsyncConfigHelper.class) {
+            executorToShutdown = saveExecutor;
+            saveExecutor = null;
+        }
+        if (executorToShutdown != null && !executorToShutdown.isShutdown()) {
+            executorToShutdown.shutdown();
+            try {
+                if (!executorToShutdown.awaitTermination(10, TimeUnit.SECONDS)) {
+                    executorToShutdown.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                executorToShutdown.shutdownNow();
+                Thread.currentThread().interrupt();
             }
-        } catch (InterruptedException e) {
-            SAVE_EXECUTOR.shutdownNow();
-            Thread.currentThread().interrupt();
         }
     }
 }

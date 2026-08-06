@@ -22,7 +22,11 @@ public class BountyManager {
     private File bountiesFile;
     private FileConfiguration bountiesConfig;
     private final Object fileLock = new Object();
-    private final java.util.concurrent.ExecutorService saveExecutor = java.util.concurrent.Executors.newSingleThreadExecutor();
+    private final java.util.concurrent.ExecutorService saveExecutor = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+        Thread thread = new Thread(r, "BountyManager-SaveThread");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     public BountyManager(SMPTools plugin) {
         this.plugin = plugin;
@@ -128,7 +132,30 @@ public class BountyManager {
 
     private List<Bounty> getBountiesSnapshot() {
         synchronized (this) {
-            return new ArrayList<>(bounties);
+            List<Bounty> snapshot = new ArrayList<>(bounties.size());
+            for (Bounty b : bounties) {
+                List<ItemStack> clonedItems = new ArrayList<>();
+                if (b.getItems() != null) {
+                    for (ItemStack item : b.getItems()) {
+                        if (item != null) {
+                            clonedItems.add(item.clone());
+                        }
+                    }
+                }
+                snapshot.add(new Bounty(
+                        b.getId(),
+                        b.getPlacerUuid(),
+                        b.getPlacerName(),
+                        b.getTargetUuid(),
+                        b.getTargetName(),
+                        clonedItems,
+                        b.getPlacedTimestamp(),
+                        b.getKillerUuid(),
+                        b.getKilledTimestamp(),
+                        b.isClaimed()
+                ));
+            }
+            return snapshot;
         }
     }
 
@@ -296,18 +323,23 @@ public class BountyManager {
 
         if (!isKiller && !isRefund) return false;
 
-        // Atomic claim state persistence: mark claimed and save to disk BEFORE delivering items
+        // Atomic claim state persistence: mark claimed and add items to pending delivery recovery state BEFORE disk write
         bounty.setClaimed(true);
-        saveBountiesSync();
 
-        // Give items to claimer
-        for (ItemStack item : bounty.getItems()) {
-            if (item != null && item.getType() != Material.AIR) {
-                var remaining = claimer.getInventory().addItem(item.clone());
-                for (ItemStack rem : remaining.values()) {
-                    claimer.getWorld().dropItemNaturally(claimer.getLocation(), rem);
+        List<ItemStack> items = bounty.getItems();
+        if (items != null && !items.isEmpty()) {
+            List<ItemStack> pending = pendingRefunds.computeIfAbsent(claimerUuid, k -> new ArrayList<>());
+            for (ItemStack item : items) {
+                if (item != null && item.getType() != Material.AIR) {
+                    pending.add(item.clone());
                 }
             }
+        }
+
+        saveBountiesSync();
+
+        if (claimer != null && claimer.isOnline()) {
+            processPendingRefunds(claimer);
         }
 
         return true;
@@ -346,6 +378,30 @@ public class BountyManager {
         UUID uuid = player.getUniqueId();
         List<ItemStack> pending = pendingRefunds.get(uuid);
         if (pending == null || pending.isEmpty()) return;
+
+        if (Bukkit.getServer() == null) {
+            List<ItemStack> remainingPending = new ArrayList<>();
+            for (ItemStack item : pending) {
+                if (item == null || item.getType() == Material.AIR) continue;
+                if (player.getInventory() != null) {
+                    HashMap<Integer, ItemStack> overflow = player.getInventory().addItem(item.clone());
+                    for (ItemStack rem : overflow.values()) {
+                        if (rem != null && rem.getType() != Material.AIR && rem.getAmount() > 0) {
+                            remainingPending.add(rem);
+                        }
+                    }
+                } else {
+                    remainingPending.add(item.clone());
+                }
+            }
+            if (remainingPending.isEmpty()) {
+                pendingRefunds.remove(uuid);
+            } else {
+                pendingRefunds.put(uuid, remainingPending);
+            }
+            saveBountiesSync();
+            return;
+        }
 
         org.bukkit.inventory.Inventory testInv = Bukkit.createInventory(null, 36);
         testInv.setContents(player.getInventory().getStorageContents());

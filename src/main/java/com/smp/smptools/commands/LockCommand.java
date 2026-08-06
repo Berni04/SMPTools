@@ -11,12 +11,24 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.UUID;
+
 public class LockCommand implements CommandExecutor {
 
     private final SMPTools plugin;
 
     public LockCommand(SMPTools plugin) {
         this.plugin = plugin;
+    }
+
+    private OfflinePlayer resolveOfflinePlayer(String input) {
+        if (input == null || input.isEmpty()) return null;
+        try {
+            UUID uuid = UUID.fromString(input);
+            return Bukkit.getOfflinePlayer(uuid);
+        } catch (IllegalArgumentException ignored) {
+            return Bukkit.getOfflinePlayerIfCached(input);
+        }
     }
 
     @Override
@@ -73,9 +85,9 @@ public class LockCommand implements CommandExecutor {
                 return true;
             }
 
-            OfflinePlayer target = Bukkit.getOfflinePlayerIfCached(args[0]);
+            OfflinePlayer target = resolveOfflinePlayer(args[0]);
             if (target == null) {
-                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Player '" + args[0] + "' is not cached. They must have joined the server before.</red>"));
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Could not find player '" + args[0] + "'. Provide a valid UUID or username of a player who has joined before.</red>"));
                 return true;
             }
 
@@ -93,9 +105,9 @@ public class LockCommand implements CommandExecutor {
                 return true;
             }
 
-            OfflinePlayer target = Bukkit.getOfflinePlayerIfCached(args[0]);
+            OfflinePlayer target = resolveOfflinePlayer(args[0]);
             if (target == null) {
-                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Player '" + args[0] + "' is not cached. They must have joined the server before.</red>"));
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Could not find player '" + args[0] + "'. Provide a valid UUID or username of a player who has joined before.</red>"));
                 return true;
             }
 

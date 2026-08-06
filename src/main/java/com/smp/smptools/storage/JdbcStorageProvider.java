@@ -79,13 +79,21 @@ public class JdbcStorageProvider implements StorageProvider {
     private void executeAsyncWrite(Runnable runnable) {
         if (dataSource == null) return;
         if (writeExecutor.isShutdown()) {
-            runnable.run();
+            try {
+                runnable.run();
+            } catch (Exception e) {
+                plugin.getLogger().severe("Failed to execute JDBC fallback write during shutdown: " + e.getMessage());
+            }
             return;
         }
         try {
             writeExecutor.submit(runnable);
         } catch (RejectedExecutionException e) {
-            runnable.run();
+            try {
+                runnable.run();
+            } catch (Exception ex) {
+                plugin.getLogger().severe("Failed to execute JDBC fallback write after rejection: " + ex.getMessage());
+            }
         }
     }
 
@@ -127,15 +135,24 @@ public class JdbcStorageProvider implements StorageProvider {
             writeExecutor.shutdown();
             try {
                 if (!writeExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
-                    writeExecutor.shutdownNow();
+                    plugin.getLogger().severe("JDBC write executor did not terminate within timeout; forcing shutdown.");
+                    List<Runnable> pending = writeExecutor.shutdownNow();
+                    if (!pending.isEmpty()) {
+                        plugin.getLogger().severe("Failed to complete " + pending.size() + " write operation(s) during JDBC shutdown.");
+                    }
                 }
             } catch (InterruptedException e) {
+                plugin.getLogger().severe("Interrupted while awaiting JDBC write executor termination: " + e.getMessage());
                 writeExecutor.shutdownNow();
                 Thread.currentThread().interrupt();
             }
         }
         if (dataSource != null && !dataSource.isClosed()) {
-            dataSource.close();
+            try {
+                dataSource.close();
+            } catch (Exception e) {
+                plugin.getLogger().severe("Error closing JDBC dataSource: " + e.getMessage());
+            }
         }
     }
 
@@ -241,7 +258,7 @@ public class JdbcStorageProvider implements StorageProvider {
     public void clearPlayerStats(UUID uuid) {
         executeAsyncWrite(() -> {
             if (dataSource == null) return;
-            String sql = "DELETE FROM smptools_player_stats WHERE uuid = ?";
+            String sql = "DELETE FROM smptools_player_stats WHERE uuid = ? AND stat_key != 'active_trail'";
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, uuid.toString());

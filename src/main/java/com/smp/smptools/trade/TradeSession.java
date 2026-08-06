@@ -92,7 +92,14 @@ public class TradeSession {
 
         this.timeoutTask = Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!completed && !cancelled) {
-                cancelTrade("Trade timed out after 60 seconds.");
+                String timeoutReason = plugin.getMessageManager().getRawMessage("trade.timeout");
+                if (timeoutReason == null || timeoutReason.isEmpty()) {
+                    timeoutReason = plugin.getMessageManager().getRawMessage("trade.timed-out");
+                }
+                if (timeoutReason == null || timeoutReason.isEmpty()) {
+                    timeoutReason = "Trade timed out after 60 seconds.";
+                }
+                cancelTrade(timeoutReason);
             }
         }, 60 * 20L);
     }

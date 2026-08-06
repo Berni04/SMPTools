@@ -5,7 +5,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
@@ -24,7 +26,7 @@ public class DeathMessageListener implements Listener {
         this.plugin = plugin;
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
 
@@ -64,17 +66,25 @@ public class DeathMessageListener implements Listener {
                     "ceased to exist.",
                     "went gentle into that good night.",
                     "'s story ends here."));
-            event.deathMessage(
-                    formattedPlayerName.append(Component.text(" " + deathMessageTemplate, NamedTextColor.RED)));
+            event.deathMessage(formatDeathMessage(formattedPlayerName, deathMessageTemplate));
         } else {
             Component finalMessage;
             switch (lastDamage.getCause()) {
                 case ENTITY_ATTACK:
-                    if (lastDamage instanceof EntityDamageByEntityEvent) {
-                        Entity damager = ((EntityDamageByEntityEvent) lastDamage).getDamager();
-                        if (damager instanceof Player) {
+                case ENTITY_SWEEP_ATTACK:
+                case PROJECTILE:
+                    if (lastDamage instanceof EntityDamageByEntityEvent damageEvent) {
+                        Entity damager = damageEvent.getDamager();
+                        if (damager instanceof Projectile projectile) {
+                            if (projectile.getShooter() instanceof Entity shooterEntity) {
+                                damager = shooterEntity;
+                            }
+                        }
+
+                        Player killer = (damager instanceof Player p) ? p : player.getKiller();
+                        if (killer != null) {
                             Component formattedKillerName = plugin.getChatManager()
-                                    .getFormattedDisplayName((Player) damager);
+                                    .getFormattedDisplayName(killer);
                             deathMessageTemplate = getRandomMessage(Arrays.asList(
                                     " was sent back to the lobby by ",
                                     " learned that %killer% is not their friend.",
@@ -91,70 +101,77 @@ public class DeathMessageListener implements Listener {
                             deathMessageTemplate = getRandomMessage(Arrays.asList(
                                     " was slain by a " + damager.getType().name().toLowerCase() + ".",
                                     " had a bone to pick with a " + damager.getType().name().toLowerCase() + "."));
-                            finalMessage = formattedPlayerName
-                                    .append(Component.text(deathMessageTemplate, NamedTextColor.RED));
+                            finalMessage = formatDeathMessage(formattedPlayerName, deathMessageTemplate);
                         }
                     } else {
-                        finalMessage = formattedPlayerName
-                                .append(Component.text(" was killed by something.", NamedTextColor.RED));
+                        finalMessage = formatDeathMessage(formattedPlayerName, "was killed by something.");
                     }
                     break;
                 case ENTITY_EXPLOSION:
                     deathMessageTemplate = getRandomMessage(Arrays.asList(
-                            " got a hug from a Creeper.",
-                            " learned that some hugs are explosive."));
-                    finalMessage = formattedPlayerName.append(Component.text(deathMessageTemplate, NamedTextColor.RED));
+                            "got a hug from a Creeper.",
+                            "learned that some hugs are explosive."));
+                    finalMessage = formatDeathMessage(formattedPlayerName, deathMessageTemplate);
                     break;
                 case BLOCK_EXPLOSION:
                     deathMessageTemplate = getRandomMessage(Arrays.asList(
-                            " should not have slept in the Nether.",
+                            "should not have slept in the Nether.",
                             "'s bed went boom."));
-                    finalMessage = formattedPlayerName.append(Component.text(deathMessageTemplate, NamedTextColor.RED));
+                    finalMessage = formatDeathMessage(formattedPlayerName, deathMessageTemplate);
                     break;
                 case FALL:
                     deathMessageTemplate = getRandomMessage(Arrays.asList(
-                            " thought they were a bird.",
-                            " forgot to deploy their parachute.",
-                            " tested gravity. It still works."));
-                    finalMessage = formattedPlayerName.append(Component.text(deathMessageTemplate, NamedTextColor.RED));
+                            "thought they were a bird.",
+                            "forgot to deploy their parachute.",
+                            "tested gravity. It still works."));
+                    finalMessage = formatDeathMessage(formattedPlayerName, deathMessageTemplate);
                     break;
                 case LAVA:
                     deathMessageTemplate = getRandomMessage(Arrays.asList(
-                            " tried to swim in the forbidden soup.",
-                            " is now one with the magma."));
-                    finalMessage = formattedPlayerName.append(Component.text(deathMessageTemplate, NamedTextColor.RED));
+                            "tried to swim in the forbidden soup.",
+                            "is now one with the magma."));
+                    finalMessage = formatDeathMessage(formattedPlayerName, deathMessageTemplate);
                     break;
                 case DROWNING:
                     deathMessageTemplate = getRandomMessage(Arrays.asList(
-                            " forgot how to breathe.",
-                            " is sleeping with the fishes."));
-                    finalMessage = formattedPlayerName.append(Component.text(deathMessageTemplate, NamedTextColor.RED));
+                            "forgot how to breathe.",
+                            "is sleeping with the fishes."));
+                    finalMessage = formatDeathMessage(formattedPlayerName, deathMessageTemplate);
                     break;
                 case VOID:
                     deathMessageTemplate = getRandomMessage(Arrays.asList(
-                            " fell out of the world.",
-                            " has been deleted from the simulation."));
-                    finalMessage = formattedPlayerName.append(Component.text(deathMessageTemplate, NamedTextColor.RED));
+                            "fell out of the world.",
+                            "has been deleted from the simulation."));
+                    finalMessage = formatDeathMessage(formattedPlayerName, deathMessageTemplate);
                     break;
                 case FIRE:
                 case FIRE_TICK:
                     deathMessageTemplate = getRandomMessage(Arrays.asList(
-                            " is extra crispy now.",
-                            " forgot to stop, drop, and roll."));
-                    finalMessage = formattedPlayerName.append(Component.text(deathMessageTemplate, NamedTextColor.RED));
+                            "is extra crispy now.",
+                            "forgot to stop, drop, and roll."));
+                    finalMessage = formatDeathMessage(formattedPlayerName, deathMessageTemplate);
                     break;
                 default:
                     deathMessageTemplate = getRandomMessage(Arrays.asList(
-                            " died in a mysterious way.",
-                            " met their end."));
-                    finalMessage = formattedPlayerName.append(Component.text(deathMessageTemplate, NamedTextColor.RED));
+                            "died in a mysterious way.",
+                            "met their end."));
+                    finalMessage = formatDeathMessage(formattedPlayerName, deathMessageTemplate);
                     break;
             }
             event.deathMessage(finalMessage);
         }
     }
 
+    private Component formatDeathMessage(Component formattedPlayerName, String template) {
+        if (template.startsWith("'")) {
+            return formattedPlayerName.append(Component.text(template, NamedTextColor.RED));
+        }
+        String text = template.startsWith(" ") ? template : " " + template;
+        return formattedPlayerName.append(Component.text(text, NamedTextColor.RED));
+    }
+
     private String getRandomMessage(List<String> messages) {
         return messages.get(random.nextInt(messages.size()));
     }
 }
+

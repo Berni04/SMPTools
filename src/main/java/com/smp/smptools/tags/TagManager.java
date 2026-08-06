@@ -39,6 +39,8 @@ public class TagManager {
     /** In-memory cache of player milestone stats loaded asynchronously */
     private final Map<UUID, Map<String, Long>> milestoneStatCache = new ConcurrentHashMap<>();
     private final Set<UUID> loadingPlayers = ConcurrentHashMap.newKeySet();
+    private final java.util.concurrent.atomic.AtomicInteger globalCacheVersion = new java.util.concurrent.atomic.AtomicInteger(0);
+    private final Map<UUID, java.util.concurrent.atomic.AtomicInteger> playerCacheVersions = new ConcurrentHashMap<>();
 
     /**
      * Constructs a new TagManager and loads saved player titles.
@@ -54,7 +56,7 @@ public class TagManager {
      * Loads player titles from the configuration file or storage provider.
      */
     private void loadPlayerTitles() {
-        if (plugin.getStorageManager() != null && plugin.getStorageManager().getProvider() != null) {
+        if (plugin != null && plugin.getStorageManager() != null && plugin.getStorageManager().getProvider() != null) {
             try {
                 Map<String, String> titles = plugin.getStorageManager().getProvider().getAllPlayerTitles();
                 if (titles != null) {
@@ -75,9 +77,15 @@ public class TagManager {
         if (plugin.getStorageManager() == null || plugin.getStorageManager().getProvider() == null) return;
         if (!loadingPlayers.add(uuid)) return; // Already loading
 
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        int globalVer = globalCacheVersion.get();
+        int playerVer = playerCacheVersions.computeIfAbsent(uuid, k -> new java.util.concurrent.atomic.AtomicInteger(0)).get();
+
+        boolean isFlatFile = plugin.getStorageManager().getProvider() instanceof com.smp.smptools.storage.FlatFileStorageProvider;
+        Map<String, Object> flatFileSnapshot = isFlatFile ? plugin.getStorageManager().getProvider().getAllPlayerStats(uuid) : null;
+
+        Runnable task = () -> {
             try {
-                Map<String, Object> allStats = plugin.getStorageManager().getProvider().getAllPlayerStats(uuid);
+                Map<String, Object> allStats = isFlatFile ? flatFileSnapshot : plugin.getStorageManager().getProvider().getAllPlayerStats(uuid);
                 Map<String, Long> parsedStats = new ConcurrentHashMap<>();
                 if (allStats != null) {
                     for (Map.Entry<String, Object> entry : allStats.entrySet()) {
@@ -88,13 +96,23 @@ public class TagManager {
                         }
                     }
                 }
-                milestoneStatCache.put(uuid, parsedStats);
+                int currentGlobalVer = globalCacheVersion.get();
+                int currentPlayerVer = playerCacheVersions.computeIfAbsent(uuid, k -> new java.util.concurrent.atomic.AtomicInteger(0)).get();
+                if (globalVer == currentGlobalVer && playerVer == currentPlayerVer) {
+                    milestoneStatCache.put(uuid, parsedStats);
+                }
             } catch (Exception e) {
                 plugin.getLogger().warning("Could not load stats asynchronously for " + uuid + ": " + e.getMessage());
             } finally {
                 loadingPlayers.remove(uuid);
             }
-        });
+        };
+
+        if (Bukkit.getServer() == null || !plugin.isEnabled()) {
+            task.run();
+        } else {
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, task);
+        }
     }
 
     /**
@@ -104,9 +122,11 @@ public class TagManager {
      */
     public void clearCachedStats(@Nullable UUID uuid) {
         if (uuid != null) {
+            playerCacheVersions.computeIfAbsent(uuid, k -> new java.util.concurrent.atomic.AtomicInteger(0)).incrementAndGet();
             milestoneStatCache.remove(uuid);
             loadingPlayers.remove(uuid);
         } else {
+            globalCacheVersion.incrementAndGet();
             milestoneStatCache.clear();
             loadingPlayers.clear();
         }
@@ -196,10 +216,10 @@ public class TagManager {
             if (title == null || statistic == null) continue;
 
             long requiredValue = milestone.getLong("value");
-            long playerValue = stats != null ? stats.getLong(statistic, 0) : 0;
+            long playerValue = getStatFromConfig(stats, statistic);
 
             if (userCache != null) {
-                Long cachedDbVal = userCache.get(statistic);
+                Long cachedDbVal = getStatFromCache(userCache, statistic);
                 if (cachedDbVal != null && cachedDbVal > playerValue) {
                     playerValue = cachedDbVal;
                 }
@@ -211,6 +231,45 @@ public class TagManager {
                 plugin.getServer().broadcast(formattedPlayerName.append(Component.text(" has unlocked the title: " + title, NamedTextColor.GREEN)));
             }
         }
+    }
+
+    private long getStatFromConfig(ConfigurationSection stats, String statistic) {
+        if (stats == null || statistic == null) return 0;
+        if (stats.contains(statistic)) {
+            return stats.getLong(statistic);
+        }
+        String dotVersion = statistic.replace('_', '.');
+        if (stats.contains(dotVersion)) {
+            return stats.getLong(dotVersion);
+        }
+        String underscoreVersion = statistic.replace('.', '_');
+        if (stats.contains(underscoreVersion)) {
+            return stats.getLong(underscoreVersion);
+        }
+        return 0;
+    }
+
+    private Long getStatFromCache(Map<String, Long> userCache, String statistic) {
+        if (userCache == null || statistic == null) return null;
+        Long val = userCache.get(statistic);
+        if (val != null) return val;
+        val = userCache.get(statistic.replace('.', '_'));
+        if (val != null) return val;
+        val = userCache.get(statistic.replace('_', '.'));
+        if (val != null) return val;
+        int lastUnderscore = statistic.lastIndexOf('_');
+        if (lastUnderscore >= 0) {
+            String candidate = statistic.substring(0, lastUnderscore) + "." + statistic.substring(lastUnderscore + 1);
+            val = userCache.get(candidate);
+            if (val != null) return val;
+        }
+        int lastDot = statistic.lastIndexOf('.');
+        if (lastDot >= 0) {
+            String candidate = statistic.substring(0, lastDot) + "_" + statistic.substring(lastDot + 1);
+            val = userCache.get(candidate);
+            if (val != null) return val;
+        }
+        return null;
     }
 
     /**

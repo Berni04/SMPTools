@@ -78,4 +78,46 @@ public class BountyManagerTest {
 
         assertTrue(expiredBounty.isClaimed());
     }
+
+    @Test
+    public void testSaveExecutorIsDaemonThread() throws Exception {
+        BountyManager manager = new BountyManager(null);
+        java.lang.reflect.Field field = BountyManager.class.getDeclaredField("saveExecutor");
+        field.setAccessible(true);
+        java.util.concurrent.ExecutorService executor = (java.util.concurrent.ExecutorService) field.get(manager);
+
+        java.util.concurrent.atomic.AtomicBoolean isDaemon = new java.util.concurrent.atomic.AtomicBoolean(false);
+        executor.submit(() -> isDaemon.set(Thread.currentThread().isDaemon())).get();
+        assertTrue(isDaemon.get(), "saveExecutor thread should be a daemon thread");
+    }
+
+    @Test
+    public void testClaimBountyState() throws Exception {
+        BountyManager manager = new BountyManager(null);
+        UUID placer = UUID.randomUUID();
+        UUID target = UUID.randomUUID();
+        UUID killer = UUID.randomUUID();
+
+        Bounty claimableBounty = new Bounty(
+                "claim-test-id",
+                placer,
+                "Placer",
+                target,
+                "Target",
+                new ArrayList<>(),
+                System.currentTimeMillis() - 1000L,
+                killer,
+                System.currentTimeMillis(),
+                false
+        );
+
+        java.lang.reflect.Field field = BountyManager.class.getDeclaredField("bounties");
+        field.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        List<Bounty> list = (List<Bounty>) field.get(manager);
+        list.add(claimableBounty);
+
+        assertFalse(claimableBounty.isClaimed());
+        assertTrue(claimableBounty.isClaimableByKiller(killer));
+    }
 }

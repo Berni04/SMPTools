@@ -36,7 +36,6 @@ public class TrailManager {
                 if (player != null && player.isOnline() && !player.isDead()) {
                     TrailType trail = entry.getValue();
                     if (!player.hasPermission("smptools.trails.all") && !player.hasPermission(trail.getPermission())) {
-                        setTrail(player, null);
                         continue;
                     }
                     player.getWorld().spawnParticle(

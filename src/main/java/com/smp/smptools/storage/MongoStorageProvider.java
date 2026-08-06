@@ -61,6 +61,11 @@ public class MongoStorageProvider implements StorageProvider {
             plugin.getLogger().info("Storage provider set to MONGODB.");
         } catch (Exception e) {
             plugin.getLogger().severe("Failed to initialize MONGODB storage provider: " + e.getMessage());
+            if (this.mongoClient != null) {
+                try {
+                    this.mongoClient.close();
+                } catch (Exception ignored) {}
+            }
             this.mongoClient = null;
             this.database = null;
             this.statsCollection = null;
@@ -71,13 +76,21 @@ public class MongoStorageProvider implements StorageProvider {
     private void executeAsyncWrite(Runnable runnable) {
         if (statsCollection == null && tagsCollection == null) return;
         if (writeExecutor.isShutdown()) {
-            runnable.run();
+            try {
+                runnable.run();
+            } catch (Exception e) {
+                plugin.getLogger().warning("Failed to execute fallback Mongo write: " + e.getMessage());
+            }
             return;
         }
         try {
             writeExecutor.submit(runnable);
         } catch (RejectedExecutionException e) {
-            runnable.run();
+            try {
+                runnable.run();
+            } catch (Exception ex) {
+                plugin.getLogger().warning("Failed to execute fallback Mongo write after rejection: " + ex.getMessage());
+            }
         }
     }
 
@@ -87,9 +100,14 @@ public class MongoStorageProvider implements StorageProvider {
             writeExecutor.shutdown();
             try {
                 if (!writeExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
-                    writeExecutor.shutdownNow();
+                    plugin.getLogger().warning("Mongo write executor did not terminate within timeout; forcing shutdown.");
+                    List<Runnable> pending = writeExecutor.shutdownNow();
+                    if (!pending.isEmpty()) {
+                        plugin.getLogger().warning("Failed to complete " + pending.size() + " write operation(s) during Mongo shutdown.");
+                    }
                 }
             } catch (InterruptedException e) {
+                plugin.getLogger().warning("Interrupted while awaiting Mongo write executor termination: " + e.getMessage());
                 writeExecutor.shutdownNow();
                 Thread.currentThread().interrupt();
             }
@@ -196,7 +214,14 @@ public class MongoStorageProvider implements StorageProvider {
         executeAsyncWrite(() -> {
             if (statsCollection == null) return;
             try {
-                statsCollection.deleteOne(Filters.eq("uuid", uuid.toString()));
+                Document doc = statsCollection.find(Filters.eq("uuid", uuid.toString())).first();
+                if (doc != null && doc.containsKey("active_trail")) {
+                    Object trail = doc.get("active_trail");
+                    Document newDoc = new Document("uuid", uuid.toString()).append("active_trail", trail);
+                    statsCollection.replaceOne(Filters.eq("uuid", uuid.toString()), newDoc);
+                } else {
+                    statsCollection.deleteOne(Filters.eq("uuid", uuid.toString()));
+                }
             } catch (Exception e) {
                 plugin.getLogger().warning("Failed to clear mongo stats for " + uuid + ": " + e.getMessage());
             }

@@ -83,7 +83,11 @@ public class FlatFileStorageProvider implements StorageProvider {
 
     @Override
     public void clearPlayerStats(UUID uuid) {
+        String activeTrail = plugin.getStatsConfig().getString("stats." + uuid + ".active_trail");
         plugin.getStatsConfig().set("stats." + uuid, null);
+        if (activeTrail != null) {
+            plugin.getStatsConfig().set("stats." + uuid + ".active_trail", activeTrail);
+        }
         plugin.saveStatsConfig();
     }
 

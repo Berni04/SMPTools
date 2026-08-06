@@ -27,7 +27,9 @@ public class LeaderboardManager {
 
     public LeaderboardManager(SMPTools plugin) {
         this.plugin = plugin;
-        recalculateLeaderboards();
+        if (Bukkit.getServer() != null && plugin != null && plugin.isEnabled()) {
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, this::recalculateLeaderboards);
+        }
     }
 
     public Map<String, Long> getLeaderboard(String statPath) {

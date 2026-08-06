@@ -13,6 +13,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockDispenseEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.inventory.InventoryMoveItemEvent;
@@ -88,6 +89,14 @@ public class LockListener implements Listener {
 
         Block destBlock = getBlockFromInventory(event.getDestination());
         if (destBlock != null && lockManager.isContainer(destBlock) && lockManager.isLocked(destBlock)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onBlockDispense(BlockDispenseEvent event) {
+        Block block = event.getBlock();
+        if (block != null && lockManager.isContainer(block) && lockManager.isLocked(block)) {
             event.setCancelled(true);
         }
     }

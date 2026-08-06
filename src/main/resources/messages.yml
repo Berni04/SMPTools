@@ -38,6 +38,8 @@ trade:
   expired: "<red>Trade request to {target} has expired.</red>"
   cancelled: "<red>Trade was cancelled.</red>"
   cancelled-reason: "<red>Trade cancelled: {reason}</red>"
+  timeout: "Trade timed out after 60 seconds."
+  timed-out: "Trade timed out after 60 seconds."
   completed: "<green>Trade completed successfully!</green>"
 
 # Homes
