@@ -6,12 +6,15 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
+import org.bukkit.block.DoubleChest;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.DoubleChestInventory;
+import org.bukkit.inventory.InventoryHolder;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,6 +35,7 @@ public class LockManager {
     }
 
     private void loadLocks() {
+        if (plugin == null) return;
         locksFile = new File(plugin.getDataFolder(), "locks.yml");
         if (!locksFile.exists()) {
             try {
@@ -90,18 +94,44 @@ public class LockManager {
         // Handle double chest pairing
         if (block.getState() instanceof Chest chest) {
             if (chest.getInventory() instanceof DoubleChestInventory doubleChest) {
-                Location leftLoc = ((Chest) doubleChest.getLeftSide()).getLocation();
-                Location rightLoc = ((Chest) doubleChest.getRightSide()).getLocation();
-                // Pick lower coordinate as canonical primary key for both halves
-                if (leftLoc.getBlockX() < rightLoc.getBlockX() || leftLoc.getBlockZ() < rightLoc.getBlockZ()) {
-                    loc = leftLoc;
-                } else {
-                    loc = rightLoc;
+                Location leftLoc = getLocationFromHolder(doubleChest.getLeftSide() != null ? doubleChest.getLeftSide().getHolder() : null);
+                Location rightLoc = getLocationFromHolder(doubleChest.getRightSide() != null ? doubleChest.getRightSide().getHolder() : null);
+                if (leftLoc != null && rightLoc != null) {
+                    // Pick lower coordinate as canonical primary key for both halves
+                    if (leftLoc.getBlockX() < rightLoc.getBlockX()) {
+                        loc = leftLoc;
+                    } else if (leftLoc.getBlockX() > rightLoc.getBlockX()) {
+                        loc = rightLoc;
+                    } else if (leftLoc.getBlockZ() < rightLoc.getBlockZ()) {
+                        loc = leftLoc;
+                    } else if (leftLoc.getBlockZ() > rightLoc.getBlockZ()) {
+                        loc = rightLoc;
+                    } else if (leftLoc.getBlockY() < rightLoc.getBlockY()) {
+                        loc = leftLoc;
+                    } else {
+                        loc = rightLoc;
+                    }
                 }
             }
         }
 
-        return loc.getWorld().getName() + ":" + loc.getBlockX() + ":" + loc.getBlockY() + ":" + loc.getBlockZ();
+        String worldName = loc.getWorld().getName().replace('.', '_');
+        return worldName + ":" + loc.getBlockX() + ":" + loc.getBlockY() + ":" + loc.getBlockZ();
+    }
+
+    private Location getLocationFromHolder(InventoryHolder holder) {
+        if (holder == null) return null;
+        if (holder instanceof BlockState state) {
+            return state.getLocation();
+        }
+        if (holder instanceof DoubleChest doubleChest) {
+            return doubleChest.getLocation();
+        }
+        try {
+            return (Location) holder.getClass().getMethod("getLocation").invoke(holder);
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     public boolean isContainer(Block block) {
@@ -154,6 +184,13 @@ public class LockManager {
         if (!player.getUniqueId().equals(owner) && !player.hasPermission("smptools.locks.admin")) {
             return false;
         }
+
+        return removeLock(block);
+    }
+
+    public boolean removeLock(Block block) {
+        String key = getBlockKey(block);
+        if (key == null || !containerOwners.containsKey(key)) return false;
 
         containerOwners.remove(key);
         containerTrusted.remove(key);

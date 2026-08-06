@@ -47,15 +47,29 @@ public class TagManager {
     }
 
     /**
-     * Loads player titles from the configuration file.
+     * Loads player titles from the configuration file or storage provider.
      */
     private void loadPlayerTitles() {
         if (plugin.getStorageManager() != null && plugin.getStorageManager().getProvider() != null) {
-            Map<String, String> titles = plugin.getStorageManager().getProvider().getAllPlayerTitles();
-            if (titles != null) {
-                playerTitles.putAll(titles);
+            try {
+                Map<String, String> titles = plugin.getStorageManager().getProvider().getAllPlayerTitles();
+                if (titles != null) {
+                    playerTitles.putAll(titles);
+                }
+            } catch (Exception e) {
+                plugin.getLogger().warning("Could not load player titles from storage provider: " + e.getMessage());
             }
         }
+    }
+
+    /**
+     * Gets the equipped title for a player by UUID.
+     *
+     * @param uuid the player's UUID
+     * @return the player's equipped title, or null if none is equipped
+     */
+    public @Nullable String getPlayerTitle(@NotNull UUID uuid) {
+        return playerTitles.get(uuid.toString());
     }
 
     /**
@@ -65,7 +79,7 @@ public class TagManager {
      * @return the player's equipped title, or null if none is equipped
      */
     public @Nullable String getPlayerTitle(@NotNull Player player) {
-        return playerTitles.get(player.getUniqueId().toString());
+        return getPlayerTitle(player.getUniqueId());
     }
 
     /**
@@ -104,7 +118,6 @@ public class TagManager {
     public void checkMilestones(@NotNull Player player) {
         String uuid = player.getUniqueId().toString();
         ConfigurationSection stats = plugin.getStatsConfig().getConfigurationSection("stats." + uuid);
-        if (stats == null) return;
 
         ConfigurationSection milestones = plugin.getTagsConfig().getConfigurationSection("milestones");
         if (milestones == null) return;
@@ -118,7 +131,11 @@ public class TagManager {
             if (title == null || statistic == null) continue;
 
             long requiredValue = milestone.getLong("value");
-            long playerValue = stats.getLong(statistic, 0);
+            long playerValue = stats != null ? stats.getLong(statistic, 0) : 0;
+            if (plugin.getStorageManager() != null && plugin.getStorageManager().getProvider() != null) {
+                long dbVal = plugin.getStorageManager().getProvider().getLongStat(player.getUniqueId(), statistic, 0);
+                if (dbVal > playerValue) playerValue = dbVal;
+            }
 
             if (playerValue >= requiredValue && !hasUnlockedTitle(player, title)) {
                 unlockTitle(player, title);

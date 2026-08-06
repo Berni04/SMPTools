@@ -28,7 +28,11 @@ public class StorageManager {
                 break;
         }
 
-        this.provider.init();
+        try {
+            this.provider.init();
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to initialize storage provider: " + e.getMessage());
+        }
     }
 
     public StorageType getType() {

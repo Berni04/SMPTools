@@ -35,7 +35,6 @@ public final class ListenerRegistry {
 
     public static void registerCoreListeners(SMPTools plugin, StatsCommand statsCommand, AdventGUIListener adventGUIListener) {
         // Core listeners
-        Bukkit.getPluginManager().registerEvents(new StatsListener(plugin), plugin);
         Bukkit.getPluginManager().registerEvents(new JoinLeaveListener(plugin), plugin);
         Bukkit.getPluginManager().registerEvents(new ChatListener(plugin), plugin);
 
@@ -43,6 +42,7 @@ public final class ListenerRegistry {
             Bukkit.getPluginManager().registerEvents(new VaultListener(plugin), plugin);
         }
         if (plugin.getConfig().getBoolean("features.stats.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new StatsListener(plugin), plugin);
             Bukkit.getPluginManager().registerEvents(new StatsGUIListener(statsCommand), plugin);
         }
         if (plugin.getConfig().getBoolean("features.homes.enabled", true)) {

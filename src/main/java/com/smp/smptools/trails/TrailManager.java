@@ -34,6 +34,10 @@ public class TrailManager {
                 Player player = Bukkit.getPlayer(entry.getKey());
                 if (player != null && player.isOnline() && !player.isDead()) {
                     TrailType trail = entry.getValue();
+                    if (!player.hasPermission(trail.getPermission())) {
+                        setTrail(player, null);
+                        continue;
+                    }
                     player.getWorld().spawnParticle(
                             trail.getParticle(),
                             player.getLocation().add(0, 0.2, 0),

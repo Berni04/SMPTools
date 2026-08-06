@@ -155,7 +155,6 @@ public class SMPTools extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(nameTagListener, this);
 
         StatsCommand statsCommand = new StatsCommand(this);
-        this.getCommand("stats").setExecutor(statsCommand);
 
         AdventGUIListener adventGUIListener = new AdventGUIListener(this, adventManager);
 
@@ -196,7 +195,7 @@ public class SMPTools extends JavaPlugin {
         // Register Commands
         TpaCommand tpaCommand = new TpaCommand(this);
         this.leaderboardCommand = new LeaderboardCommand(this);
-        CommandRegistry.registerAll(this, leaderboardCommand, tpaCommand, adventGUIListener);
+        CommandRegistry.registerAll(this, statsCommand, leaderboardCommand, tpaCommand, adventGUIListener);
         CommandRegistry.registerConditionalCommands(this);
 
         // Load NPCs
@@ -258,6 +257,9 @@ public class SMPTools extends JavaPlugin {
         // Cancel all scheduled tasks to prevent firing during/after disable
         Bukkit.getScheduler().cancelTasks(this);
         
+        if (tradeManager != null) {
+            tradeManager.cleanup();
+        }
         if (chunkLoaderManager != null) {
             chunkLoaderManager.unloadAllChunks(); // Unload all force-loaded chunks
         }

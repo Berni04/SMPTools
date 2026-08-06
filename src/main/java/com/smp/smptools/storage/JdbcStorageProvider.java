@@ -53,13 +53,30 @@ public class JdbcStorageProvider implements StorageProvider {
         }
 
         hikari.setPoolName("SMPTools-Pool");
-        this.dataSource = new HikariDataSource(hikari);
+        hikari.setConnectionTimeout(3000);
+        hikari.setValidationTimeout(2000);
+        hikari.setInitializationFailTimeout(3000);
 
-        createTables();
-        plugin.getLogger().info("Storage provider initialized: " + type.name());
+        try {
+            this.dataSource = new HikariDataSource(hikari);
+            createTables();
+            plugin.getLogger().info("Storage provider initialized: " + type.name());
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to initialize JDBC storage provider (" + type.name() + "): " + e.getMessage());
+            this.dataSource = null;
+        }
+    }
+
+    private void executeAsyncWrite(Runnable runnable) {
+        if (Bukkit.getServer() != null && Bukkit.isPrimaryThread() && plugin.isEnabled()) {
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, runnable);
+        } else {
+            runnable.run();
+        }
     }
 
     private void createTables() {
+        if (dataSource == null) return;
         try (Connection conn = dataSource.getConnection();
              Statement stmt = conn.createStatement()) {
 
@@ -99,27 +116,31 @@ public class JdbcStorageProvider implements StorageProvider {
 
     @Override
     public void saveStat(UUID uuid, String statKey, Object value) {
-        String sql;
-        if (type == StorageType.SQLITE) {
-            sql = "INSERT OR REPLACE INTO smptools_player_stats (uuid, stat_key, stat_value) VALUES (?, ?, ?)";
-        } else {
-            sql = "INSERT INTO smptools_player_stats (uuid, stat_key, stat_value) VALUES (?, ?, ?) " +
-                  "ON DUPLICATE KEY UPDATE stat_value = VALUES(stat_value)";
-        }
+        executeAsyncWrite(() -> {
+            if (dataSource == null) return;
+            String sql;
+            if (type == StorageType.SQLITE) {
+                sql = "INSERT OR REPLACE INTO smptools_player_stats (uuid, stat_key, stat_value) VALUES (?, ?, ?)";
+            } else {
+                sql = "INSERT INTO smptools_player_stats (uuid, stat_key, stat_value) VALUES (?, ?, ?) " +
+                      "ON DUPLICATE KEY UPDATE stat_value = VALUES(stat_value)";
+            }
 
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, uuid.toString());
-            ps.setString(2, statKey);
-            ps.setString(3, value != null ? value.toString() : null);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to save stat for " + uuid + ": " + e.getMessage());
-        }
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, uuid.toString());
+                ps.setString(2, statKey);
+                ps.setString(3, value != null ? value.toString() : null);
+                ps.executeUpdate();
+            } catch (SQLException e) {
+                plugin.getLogger().severe("Failed to save stat for " + uuid + ": " + e.getMessage());
+            }
+        });
     }
 
     @Override
     public Object getStat(UUID uuid, String statKey, Object defaultValue) {
+        if (dataSource == null) return defaultValue;
         String sql = "SELECT stat_value FROM smptools_player_stats WHERE uuid = ? AND stat_key = ?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -128,7 +149,7 @@ public class JdbcStorageProvider implements StorageProvider {
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     String val = rs.getString("stat_value");
-                    return val != null ? val : defaultValue;
+                    return StorageProvider.parseCanonicalValue(val, defaultValue);
                 }
             }
         } catch (SQLException e) {
@@ -139,7 +160,10 @@ public class JdbcStorageProvider implements StorageProvider {
 
     @Override
     public long getLongStat(UUID uuid, String statKey, long defaultValue) {
-        Object val = getStat(uuid, statKey, null);
+        Object val = getStat(uuid, statKey, defaultValue);
+        if (val instanceof Number) {
+            return ((Number) val).longValue();
+        }
         if (val != null) {
             try {
                 return Long.parseLong(val.toString());
@@ -151,6 +175,7 @@ public class JdbcStorageProvider implements StorageProvider {
     @Override
     public Map<String, Object> getAllPlayerStats(UUID uuid) {
         Map<String, Object> map = new HashMap<>();
+        if (dataSource == null) return map;
         String sql = "SELECT stat_key, stat_value FROM smptools_player_stats WHERE uuid = ?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -169,6 +194,7 @@ public class JdbcStorageProvider implements StorageProvider {
     @Override
     public Map<UUID, Map<String, Object>> loadAllPlayerStats() {
         Map<UUID, Map<String, Object>> result = new HashMap<>();
+        if (dataSource == null) return result;
         String sql = "SELECT uuid, stat_key, stat_value FROM smptools_player_stats";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -188,38 +214,45 @@ public class JdbcStorageProvider implements StorageProvider {
 
     @Override
     public void clearPlayerStats(UUID uuid) {
-        String sql = "DELETE FROM smptools_player_stats WHERE uuid = ?";
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, uuid.toString());
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to clear stats for " + uuid + ": " + e.getMessage());
-        }
+        executeAsyncWrite(() -> {
+            if (dataSource == null) return;
+            String sql = "DELETE FROM smptools_player_stats WHERE uuid = ?";
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, uuid.toString());
+                ps.executeUpdate();
+            } catch (SQLException e) {
+                plugin.getLogger().severe("Failed to clear stats for " + uuid + ": " + e.getMessage());
+            }
+        });
     }
 
     @Override
     public void savePlayerTitle(UUID uuid, String title) {
-        String sql;
-        if (type == StorageType.SQLITE) {
-            sql = "INSERT OR REPLACE INTO smptools_player_tags (uuid, title) VALUES (?, ?)";
-        } else {
-            sql = "INSERT INTO smptools_player_tags (uuid, title) VALUES (?, ?) " +
-                  "ON DUPLICATE KEY UPDATE title = VALUES(title)";
-        }
+        executeAsyncWrite(() -> {
+            if (dataSource == null) return;
+            String sql;
+            if (type == StorageType.SQLITE) {
+                sql = "INSERT OR REPLACE INTO smptools_player_tags (uuid, title) VALUES (?, ?)";
+            } else {
+                sql = "INSERT INTO smptools_player_tags (uuid, title) VALUES (?, ?) " +
+                      "ON DUPLICATE KEY UPDATE title = VALUES(title)";
+            }
 
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, uuid.toString());
-            ps.setString(2, title);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to save title for " + uuid + ": " + e.getMessage());
-        }
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, uuid.toString());
+                ps.setString(2, title);
+                ps.executeUpdate();
+            } catch (SQLException e) {
+                plugin.getLogger().severe("Failed to save title for " + uuid + ": " + e.getMessage());
+            }
+        });
     }
 
     @Override
     public String getPlayerTitle(UUID uuid) {
+        if (dataSource == null) return null;
         String sql = "SELECT title FROM smptools_player_tags WHERE uuid = ?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -237,19 +270,23 @@ public class JdbcStorageProvider implements StorageProvider {
 
     @Override
     public void removePlayerTitle(UUID uuid) {
-        String sql = "DELETE FROM smptools_player_tags WHERE uuid = ?";
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, uuid.toString());
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to remove title for " + uuid + ": " + e.getMessage());
-        }
+        executeAsyncWrite(() -> {
+            if (dataSource == null) return;
+            String sql = "DELETE FROM smptools_player_tags WHERE uuid = ?";
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, uuid.toString());
+                ps.executeUpdate();
+            } catch (SQLException e) {
+                plugin.getLogger().severe("Failed to remove title for " + uuid + ": " + e.getMessage());
+            }
+        });
     }
 
     @Override
     public Map<String, String> getAllPlayerTitles() {
         Map<String, String> map = new HashMap<>();
+        if (dataSource == null) return map;
         String sql = "SELECT uuid, title FROM smptools_player_tags";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -266,6 +303,7 @@ public class JdbcStorageProvider implements StorageProvider {
     @Override
     public Map<String, Long> getLeaderboardStats(String statPath) {
         Map<String, Long> leaderboard = new LinkedHashMap<>();
+        if (dataSource == null) return leaderboard;
         String sql = "SELECT uuid, stat_value FROM smptools_player_stats WHERE stat_key = ?";
         Map<String, Long> rawMap = new HashMap<>();
 

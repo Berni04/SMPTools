@@ -26,6 +26,7 @@ import com.smp.smptools.commands.RideCommand;
 import com.smp.smptools.commands.SetHomeCommand;
 import com.smp.smptools.commands.SkillsCommand;
 import com.smp.smptools.commands.SoundCommand;
+import com.smp.smptools.commands.StatsCommand;
 import com.smp.smptools.commands.SudoCommand;
 import com.smp.smptools.commands.TagsCommand;
 import com.smp.smptools.commands.TpaCommand;
@@ -42,7 +43,7 @@ public final class CommandRegistry {
         // Prevent instantiation
     }
 
-    public static void registerAll(SMPTools plugin, LeaderboardCommand leaderboardCommand,
+    public static void registerAll(SMPTools plugin, StatsCommand statsCommand, LeaderboardCommand leaderboardCommand,
                                    TpaCommand tpaCommand, AdventGUIListener adventGUIListener) {
         // Fly
         if (plugin.getConfig().getBoolean("features.fly.enabled", true)) {
@@ -70,6 +71,7 @@ public final class CommandRegistry {
 
         // Stats & Leaderboard
         if (plugin.getConfig().getBoolean("features.stats.enabled", true)) {
+            plugin.getCommand("stats").setExecutor(statsCommand);
             plugin.getCommand("clearstats").setExecutor(new ClearStatsCommand(plugin));
         }
         if (plugin.getConfig().getBoolean("features.leaderboard.enabled", true)) {

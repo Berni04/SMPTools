@@ -34,6 +34,11 @@ public class TradeManager {
             return;
         }
 
+        if (pendingRequests.containsKey(target.getUniqueId())) {
+            sender.sendMessage(plugin.getMessageManager().getMessage("trade.already-trading"));
+            return;
+        }
+
         pendingRequests.put(target.getUniqueId(), sender.getUniqueId());
 
         Component acceptBtn = Component.text("[Accept]", NamedTextColor.GREEN)
@@ -107,5 +112,14 @@ public class TradeManager {
     public void removeSession(UUID p1, UUID p2) {
         activeSessions.remove(p1);
         activeSessions.remove(p2);
+    }
+
+    public void cleanup() {
+        java.util.Set<TradeSession> sessionsToCancel = new java.util.HashSet<>(activeSessions.values());
+        for (TradeSession session : sessionsToCancel) {
+            session.cancelTrade("Server restarting / plugin disabling");
+        }
+        activeSessions.clear();
+        pendingRequests.clear();
     }
 }

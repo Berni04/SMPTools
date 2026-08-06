@@ -9,15 +9,10 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.*;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
 public class AFKListener implements Listener {
 
     private final SMPTools plugin;
     private final AFKManager afkManager;
-    private final Map<UUID, Location> lastLocationMap = new HashMap<>();
 
     public AFKListener(SMPTools plugin) {
         this.plugin = plugin;
@@ -32,13 +27,17 @@ public class AFKListener implements Listener {
 
         if (to == null) return;
 
-        // Check if player actually moved position or rotated significantly
-        if (from.getBlockX() != to.getBlockX() ||
-            from.getBlockY() != to.getBlockY() ||
-            from.getBlockZ() != to.getBlockZ() ||
-            Math.abs(from.getYaw() - to.getYaw()) > 10.0f ||
-            Math.abs(from.getPitch() - to.getPitch()) > 10.0f) {
-            
+        if (from.getYaw() != to.getYaw() || from.getPitch() != to.getPitch()) {
+            afkManager.updateActivity(player);
+            return;
+        }
+
+        if (from.getWorld() != null && !from.getWorld().equals(to.getWorld())) {
+            afkManager.updateActivity(player);
+            return;
+        }
+
+        if (from.distanceSquared(to) > 0.000001) {
             afkManager.updateActivity(player);
         }
     }
@@ -55,6 +54,11 @@ public class AFKListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerCommand(PlayerCommandPreprocessEvent event) {
+        String message = event.getMessage().trim();
+        String command = message.split("\\s+")[0];
+        if (command.equalsIgnoreCase("/afk") || command.equalsIgnoreCase("/smptools:afk")) {
+            return;
+        }
         afkManager.updateActivity(event.getPlayer());
     }
 

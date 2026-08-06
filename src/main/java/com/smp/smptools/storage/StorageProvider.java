@@ -73,4 +73,65 @@ public interface StorageProvider {
      * Returns a leaderboard map (player name/UUID -> score) sorted descending for a specific stat.
      */
     Map<String, Long> getLeaderboardStats(String statPath);
+
+    /**
+     * Converts a raw stored value into a canonical value matching the type of {@code defaultValue}.
+     */
+    static Object parseCanonicalValue(Object rawVal, Object defaultValue) {
+        if (rawVal == null) {
+            return defaultValue;
+        }
+        if (defaultValue == null) {
+            if (rawVal instanceof Number || rawVal instanceof Boolean) {
+                return rawVal;
+            }
+            String str = rawVal.toString();
+            try {
+                return Long.parseLong(str);
+            } catch (NumberFormatException ignored1) {
+                try {
+                    return Double.parseDouble(str);
+                } catch (NumberFormatException ignored2) {
+                    if (str.equalsIgnoreCase("true") || str.equalsIgnoreCase("false")) {
+                        return Boolean.parseBoolean(str);
+                    }
+                    return str;
+                }
+            }
+        }
+
+        String str = rawVal.toString();
+        if (defaultValue instanceof Integer) {
+            try {
+                return Integer.parseInt(str);
+            } catch (NumberFormatException e) {
+                return defaultValue;
+            }
+        } else if (defaultValue instanceof Long) {
+            try {
+                return Long.parseLong(str);
+            } catch (NumberFormatException e) {
+                return defaultValue;
+            }
+        } else if (defaultValue instanceof Double) {
+            try {
+                return Double.parseDouble(str);
+            } catch (NumberFormatException e) {
+                return defaultValue;
+            }
+        } else if (defaultValue instanceof Float) {
+            try {
+                return Float.parseFloat(str);
+            } catch (NumberFormatException e) {
+                return defaultValue;
+            }
+        } else if (defaultValue instanceof Boolean) {
+            if (rawVal instanceof Boolean) return rawVal;
+            return Boolean.parseBoolean(str);
+        } else if (defaultValue instanceof String) {
+            return str;
+        }
+        return rawVal;
+    }
 }
+

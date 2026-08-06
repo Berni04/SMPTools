@@ -223,7 +223,6 @@ public class BountyGUIListener implements Listener {
                         ItemStack is = inv.getItem(i);
                         if (is != null && is.getType() != Material.AIR) {
                             items.add(is.clone());
-                            inv.setItem(i, null); // Clear item so onClose won't return it
                         }
                     }
 
@@ -232,17 +231,29 @@ public class BountyGUIListener implements Listener {
                         return;
                     }
 
-                    UUID targetUuid = activePlaceSessions.remove(player.getUniqueId());
-                    if (targetUuid != null) {
-                        Player target = Bukkit.getPlayer(targetUuid);
-                        if (target != null) {
-                            bountyManager.createBounty(player, target, items);
-                            Bukkit.broadcast(MiniMessage.miniMessage().deserialize(
-                                    "<gold>🎯 " + player.getName() + "</gold> <gray>placed a bounty on</gray> <red>" + target.getName() + "</red>!"
-                            ));
-                            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
-                        }
+                    UUID targetUuid = activePlaceSessions.get(player.getUniqueId());
+                    Player target = targetUuid != null ? Bukkit.getPlayer(targetUuid) : null;
+
+                    if (target == null || !target.isOnline()) {
+                        player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Target player is no longer online or session is invalid!</red>"));
+                        returnItemsFromGUI(player, inv);
+                        activePlaceSessions.remove(player.getUniqueId());
+                        player.closeInventory();
+                        return;
                     }
+
+                    bountyManager.createBounty(player, target, items);
+
+                    // Clear items from GUI only after creation succeeds
+                    for (int i = 0; i < 18; i++) {
+                        inv.setItem(i, null);
+                    }
+                    activePlaceSessions.remove(player.getUniqueId());
+
+                    Bukkit.broadcast(MiniMessage.miniMessage().deserialize(
+                            "<gold>🎯 " + player.getName() + "</gold> <gray>placed a bounty on</gray> <red>" + target.getName() + "</red>!"
+                    ));
+                    player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
                     player.closeInventory();
                 }
             }
@@ -288,6 +299,20 @@ public class BountyGUIListener implements Listener {
         }
     }
 
+    private void returnItemsFromGUI(Player player, Inventory inv) {
+        if (inv == null) return;
+        for (int i = 0; i < 18; i++) {
+            ItemStack is = inv.getItem(i);
+            if (is != null && is.getType() != Material.AIR) {
+                inv.setItem(i, null);
+                var remaining = player.getInventory().addItem(is.clone());
+                for (ItemStack rem : remaining.values()) {
+                    player.getWorld().dropItemNaturally(player.getLocation(), rem);
+                }
+            }
+        }
+    }
+
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player player)) return;
@@ -296,17 +321,7 @@ public class BountyGUIListener implements Listener {
         if (title.startsWith("Deposit Bounty: ")) {
             UUID targetUuid = activePlaceSessions.remove(player.getUniqueId());
             if (targetUuid != null) {
-                // Return any unconfirmed deposited items back to player
-                Inventory inv = event.getInventory();
-                for (int i = 0; i < 18; i++) {
-                    ItemStack is = inv.getItem(i);
-                    if (is != null && is.getType() != Material.AIR) {
-                        var remaining = player.getInventory().addItem(is.clone());
-                        for (ItemStack rem : remaining.values()) {
-                            player.getWorld().dropItemNaturally(player.getLocation(), rem);
-                        }
-                    }
-                }
+                returnItemsFromGUI(player, event.getInventory());
             }
         }
 

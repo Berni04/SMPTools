@@ -3,6 +3,7 @@ package com.smp.smptools.bounty;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -41,7 +42,7 @@ public class Bounty {
     public String getPlacerName() { return placerName; }
     public UUID getTargetUuid() { return targetUuid; }
     public String getTargetName() { return targetName; }
-    public List<ItemStack> getItems() { return items; }
+    public List<ItemStack> getItems() { return Collections.unmodifiableList(items); }
     public long getPlacedTimestamp() { return placedTimestamp; }
     public UUID getKillerUuid() { return killerUuid; }
     public void setKillerUuid(UUID killerUuid) { this.killerUuid = killerUuid; }

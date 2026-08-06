@@ -21,7 +21,10 @@ public class TrailsGUIListener implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        plugin.getTrailManager().loadPlayerTrail(event.getPlayer());
+        Player player = event.getPlayer();
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            plugin.getTrailManager().loadPlayerTrail(player);
+        });
     }
 
     @EventHandler
@@ -37,6 +40,7 @@ public class TrailsGUIListener implements Listener {
         if (!title.contains("Cosmetic Particle Trails")) return;
 
         event.setCancelled(true);
+        if (event.getClickedInventory() != event.getView().getTopInventory()) return;
         if (event.getCurrentItem() == null) return;
 
         int slot = event.getSlot();

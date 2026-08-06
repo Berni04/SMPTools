@@ -31,11 +31,15 @@ public class TradeSession {
     // Slot definitions
     public static final Set<Integer> P1_SLOTS = Set.of(0, 1, 2, 3, 9, 10, 11, 12, 18, 19, 20, 21, 27, 28, 29, 30);
     public static final Set<Integer> P2_SLOTS = Set.of(5, 6, 7, 8, 14, 15, 16, 17, 23, 24, 25, 26, 32, 33, 34, 35);
+    public static final List<Integer> P1_SLOTS_ORDERED = List.of(0, 1, 2, 3, 9, 10, 11, 12, 18, 19, 20, 21, 27, 28, 29, 30);
+    public static final List<Integer> P2_SLOTS_ORDERED = List.of(5, 6, 7, 8, 14, 15, 16, 17, 23, 24, 25, 26, 32, 33, 34, 35);
     public static final Set<Integer> DIVIDER_SLOTS = Set.of(4, 13, 22, 31, 40, 49);
     
     public static final int P1_READY_SLOT = 45;
     public static final int P2_READY_SLOT = 53;
     public static final int CANCEL_SLOT = 49;
+
+    private org.bukkit.scheduler.BukkitTask timeoutTask;
 
     public TradeSession(SMPTools plugin, Player player1, Player player2) {
         this.plugin = plugin;
@@ -85,6 +89,19 @@ public class TradeSession {
     public void open() {
         player1.openInventory(inventory);
         player2.openInventory(inventory);
+
+        this.timeoutTask = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!completed && !cancelled) {
+                cancelTrade("Trade timed out after 60 seconds.");
+            }
+        }, 60 * 20L);
+    }
+
+    private void cancelTask() {
+        if (timeoutTask != null) {
+            timeoutTask.cancel();
+            timeoutTask = null;
+        }
     }
 
     public void toggleReady(Player player) {
@@ -109,6 +126,7 @@ public class TradeSession {
     public synchronized void completeTrade() {
         if (completed || cancelled) return;
         completed = true;
+        cancelTask();
 
         List<ItemStack> p1Items = getOfferedItems(P1_SLOTS);
         List<ItemStack> p2Items = getOfferedItems(P2_SLOTS);
@@ -139,9 +157,10 @@ public class TradeSession {
         player2.closeInventory();
     }
 
-    public synchronized void cancelTrade(Player initiator) {
+    public synchronized void cancelTrade(String reason) {
         if (completed || cancelled) return;
         cancelled = true;
+        cancelTask();
 
         List<ItemStack> p1Items = getOfferedItems(P1_SLOTS);
         List<ItemStack> p2Items = getOfferedItems(P2_SLOTS);
@@ -154,13 +173,23 @@ public class TradeSession {
         for (ItemStack item : p1Items) giveOrDrop(player1, item);
         for (ItemStack item : p2Items) giveOrDrop(player2, item);
 
-        player1.sendMessage(plugin.getMessageManager().getMessage("trade.cancelled"));
-        player2.sendMessage(plugin.getMessageManager().getMessage("trade.cancelled"));
+        if (reason != null && !reason.isEmpty()) {
+            Component msg = MiniMessage.miniMessage().deserialize("<red>Trade cancelled: " + reason + "</red>");
+            player1.sendMessage(msg);
+            player2.sendMessage(msg);
+        } else {
+            player1.sendMessage(plugin.getMessageManager().getMessage("trade.cancelled"));
+            player2.sendMessage(plugin.getMessageManager().getMessage("trade.cancelled"));
+        }
 
         plugin.getTradeManager().removeSession(player1.getUniqueId(), player2.getUniqueId());
 
         player1.closeInventory();
         player2.closeInventory();
+    }
+
+    public synchronized void cancelTrade(Player initiator) {
+        cancelTrade((String) null);
     }
 
     private List<ItemStack> getOfferedItems(Set<Integer> slots) {

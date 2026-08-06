@@ -35,13 +35,22 @@ public class FlatFileStorageProvider implements StorageProvider {
     @Override
     public Object getStat(UUID uuid, String statKey, Object defaultValue) {
         Object val = plugin.getStatsConfig().get("stats." + uuid + "." + statKey);
-        return val != null ? val : defaultValue;
+        return StorageProvider.parseCanonicalValue(val, defaultValue);
     }
 
     @Override
     public long getLongStat(UUID uuid, String statKey, long defaultValue) {
-        return plugin.getStatsConfig().getLong("stats." + uuid + "." + statKey, defaultValue);
+        Object val = getStat(uuid, statKey, defaultValue);
+        if (val instanceof Number) {
+            return ((Number) val).longValue();
+        }
+        try {
+            return Long.parseLong(val.toString());
+        } catch (Exception e) {
+            return defaultValue;
+        }
     }
+
 
     @Override
     public Map<String, Object> getAllPlayerStats(UUID uuid) {
@@ -116,7 +125,7 @@ public class FlatFileStorageProvider implements StorageProvider {
         Map<String, Long> rawMap = new HashMap<>();
         for (String uuidStr : statsSection.getKeys(false)) {
             ConfigurationSection playerSection = statsSection.getConfigurationSection(uuidStr);
-            if (playerSection != null) {
+            if (playerSection != null && playerSection.contains(statPath)) {
                 try {
                     OfflinePlayer player = Bukkit.getOfflinePlayer(UUID.fromString(uuidStr));
                     String name = player.getName() != null ? player.getName() : "Unknown";

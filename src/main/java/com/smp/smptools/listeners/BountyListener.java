@@ -10,6 +10,8 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 
+import org.bukkit.event.player.PlayerJoinEvent;
+
 public class BountyListener implements Listener {
 
     private final SMPTools plugin;
@@ -18,6 +20,13 @@ public class BountyListener implements Listener {
     public BountyListener(SMPTools plugin) {
         this.plugin = plugin;
         this.bountyManager = plugin.getBountyManager();
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        if (bountyManager != null) {
+            bountyManager.checkPlayerJoin(event.getPlayer());
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGH)

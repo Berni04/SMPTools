@@ -73,7 +73,12 @@ public class LockCommand implements CommandExecutor {
                 return true;
             }
 
-            OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
+            OfflinePlayer target = Bukkit.getOfflinePlayerIfCached(args[0]);
+            if (target == null) {
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Player '" + args[0] + "' is not cached. They must have joined the server before.</red>"));
+                return true;
+            }
+
             if (plugin.getLockManager().trustPlayer(targetBlock, player, target)) {
                 player.sendMessage(MiniMessage.miniMessage().deserialize("<green>Granted container access to " + (target.getName() != null ? target.getName() : args[0]) + ".</green>"));
             } else {
@@ -88,7 +93,12 @@ public class LockCommand implements CommandExecutor {
                 return true;
             }
 
-            OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
+            OfflinePlayer target = Bukkit.getOfflinePlayerIfCached(args[0]);
+            if (target == null) {
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Player '" + args[0] + "' is not cached. They must have joined the server before.</red>"));
+                return true;
+            }
+
             if (plugin.getLockManager().untrustPlayer(targetBlock, player, target)) {
                 player.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>Removed container access for " + (target.getName() != null ? target.getName() : args[0]) + ".</yellow>"));
             } else {

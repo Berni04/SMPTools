@@ -3,13 +3,21 @@ package com.smp.smptools.listeners;
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.trade.TradeManager;
 import com.smp.smptools.trade.TradeSession;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+
+import java.util.List;
+import java.util.Set;
 
 public class TradeListener implements Listener {
 
@@ -27,6 +35,11 @@ public class TradeListener implements Listener {
 
         TradeSession session = tradeManager.getSession(player);
         if (session == null) return;
+
+        if (event.getAction() == InventoryAction.COLLECT_TO_CURSOR) {
+            event.setCancelled(true);
+            return;
+        }
 
         // Ensure click occurred inside trade inventory
         if (event.getClickedInventory() == null) return;
@@ -76,6 +89,81 @@ public class TradeListener implements Listener {
             session.resetReady();
         } else if (event.isShiftClick()) {
             // Shift clicking from player's inventory
+            event.setCancelled(true);
+            ItemStack clickedItem = event.getCurrentItem();
+            if (clickedItem != null && clickedItem.getType() != Material.AIR) {
+                List<Integer> targetSlots = isP1 ? TradeSession.P1_SLOTS_ORDERED : TradeSession.P2_SLOTS_ORDERED;
+                if (transferToTradeSlots(session.getInventory(), clickedItem, targetSlots)) {
+                    event.setCurrentItem(clickedItem.getAmount() > 0 ? clickedItem : null);
+                    session.resetReady();
+                }
+            }
+        }
+    }
+
+    private boolean transferToTradeSlots(Inventory tradeInv, ItemStack clickedItem, List<Integer> targetSlots) {
+        int amountToMove = clickedItem.getAmount();
+        int maxStack = clickedItem.getMaxStackSize();
+        boolean movedAny = false;
+
+        // 1st pass: merge into existing stacks of same item
+        for (int slot : targetSlots) {
+            if (amountToMove <= 0) break;
+            ItemStack current = tradeInv.getItem(slot);
+            if (current != null && current.isSimilar(clickedItem)) {
+                int space = maxStack - current.getAmount();
+                if (space > 0) {
+                    int add = Math.min(space, amountToMove);
+                    current.setAmount(current.getAmount() + add);
+                    amountToMove -= add;
+                    movedAny = true;
+                }
+            }
+        }
+
+        // 2nd pass: place in empty slots
+        for (int slot : targetSlots) {
+            if (amountToMove <= 0) break;
+            ItemStack current = tradeInv.getItem(slot);
+            if (current == null || current.getType() == Material.AIR) {
+                int add = Math.min(maxStack, amountToMove);
+                ItemStack newItem = clickedItem.clone();
+                newItem.setAmount(add);
+                tradeInv.setItem(slot, newItem);
+                amountToMove -= add;
+                movedAny = true;
+            }
+        }
+
+        if (movedAny) {
+            clickedItem.setAmount(amountToMove);
+        }
+
+        return movedAny;
+    }
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+
+        TradeSession session = tradeManager.getSession(player);
+        if (session == null) return;
+
+        boolean isP1 = player.equals(session.getPlayer1());
+        Set<Integer> allowedSlots = isP1 ? TradeSession.P1_SLOTS : TradeSession.P2_SLOTS;
+
+        boolean touchedTradeInv = false;
+        for (int rawSlot : event.getRawSlots()) {
+            if (rawSlot < session.getInventory().getSize()) {
+                if (!allowedSlots.contains(rawSlot)) {
+                    event.setCancelled(true);
+                    return;
+                }
+                touchedTradeInv = true;
+            }
+        }
+
+        if (touchedTradeInv) {
             session.resetReady();
         }
     }
@@ -85,7 +173,7 @@ public class TradeListener implements Listener {
         if (!(event.getPlayer() instanceof Player player)) return;
 
         TradeSession session = tradeManager.getSession(player);
-        if (session != null && !session.isCompleted() && !session.isCancelled()) {
+        if (session != null && event.getInventory().equals(session.getInventory()) && !session.isCompleted() && !session.isCancelled()) {
             session.cancelTrade(player);
         }
     }
