@@ -265,13 +265,7 @@ public class MessageManager {
 
     private String resolvePlayerTitle(Player player) {
         if (player == null) return "";
-        String title = plugin.getTagManager() != null ? plugin.getTagManager().getPlayerTitle(player) : null;
-        if (title == null && plugin.getStorageManager() != null && plugin.getStorageManager().getProvider() != null) {
-            title = plugin.getStorageManager().getProvider().getPlayerTitle(player.getUniqueId());
-        }
-        if (title == null && plugin.getTagsConfig() != null) {
-            title = plugin.getTagsConfig().getString("player-titles." + player.getUniqueId());
-        }
+        String title = plugin.getTagManager() != null ? plugin.getTagManager().getTagTitle(player) : null;
         return title != null ? title : "";
     }
 }

@@ -17,6 +17,7 @@ import com.smp.smptools.listeners.MissionTrackerListener;
 import com.smp.smptools.listeners.NPCListener;
 import com.smp.smptools.listeners.PortalListener;
 import com.smp.smptools.listeners.PrefixGUIListener;
+import com.smp.smptools.listeners.DeathMessageListener;
 import com.smp.smptools.listeners.StatsGUIListener;
 import com.smp.smptools.listeners.StatsListener;
 import com.smp.smptools.listeners.TabHealthListener;
@@ -44,6 +45,9 @@ public final class ListenerRegistry {
         if (plugin.getConfig().getBoolean("features.stats.enabled", true)) {
             Bukkit.getPluginManager().registerEvents(new StatsListener(plugin), plugin);
             Bukkit.getPluginManager().registerEvents(new StatsGUIListener(statsCommand), plugin);
+        }
+        if (plugin.getConfig().getBoolean("features.funny-death-messages.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new DeathMessageListener(plugin), plugin);
         }
         if (plugin.getConfig().getBoolean("features.homes.enabled", true)) {
             Bukkit.getPluginManager().registerEvents(new HomesGUIListener(plugin), plugin);

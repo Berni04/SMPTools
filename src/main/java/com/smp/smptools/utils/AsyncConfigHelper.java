@@ -9,6 +9,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
 /**
@@ -45,24 +47,41 @@ public final class AsyncConfigHelper {
         // Serialize to string on main thread - this creates a deep snapshot
         String data = config.saveToString();
 
-        if (plugin != null && !plugin.isEnabled()) {
+        try {
+            SAVE_EXECUTOR.submit(() -> {
+                try {
+                    Files.write(file.toPath(), data.getBytes(StandardCharsets.UTF_8));
+                } catch (IOException e) {
+                    if (plugin != null) {
+                        plugin.getLogger().log(Level.SEVERE, "Could not save " + name + "!", e);
+                    }
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            // Fallback synchronous write if executor is already shut down
             try {
                 Files.write(file.toPath(), data.getBytes(StandardCharsets.UTF_8));
-            } catch (IOException e) {
-                plugin.getLogger().log(Level.SEVERE, "Could not save " + name + "!", e);
-            }
-            return;
-        }
-
-        SAVE_EXECUTOR.submit(() -> {
-            try {
-                Files.write(file.toPath(), data.getBytes(StandardCharsets.UTF_8));
-            } catch (IOException e) {
+            } catch (IOException ex) {
                 if (plugin != null) {
-                    plugin.getLogger().log(Level.SEVERE, "Could not save " + name + "!", e);
+                    plugin.getLogger().log(Level.SEVERE, "Could not save " + name + "!", ex);
                 }
             }
-        });
+        }
+    }
+
+    /**
+     * Shuts down the save executor service, draining and awaiting queued write operations.
+     */
+    public static void shutdown() {
+        SAVE_EXECUTOR.shutdown();
+        try {
+            if (!SAVE_EXECUTOR.awaitTermination(10, TimeUnit.SECONDS)) {
+                SAVE_EXECUTOR.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            SAVE_EXECUTOR.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 }
 

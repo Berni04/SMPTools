@@ -127,7 +127,12 @@ public interface StorageProvider {
             }
         } else if (defaultValue instanceof Boolean) {
             if (rawVal instanceof Boolean) return rawVal;
-            return Boolean.parseBoolean(str);
+            if (str.equalsIgnoreCase("true")) {
+                return Boolean.TRUE;
+            } else if (str.equalsIgnoreCase("false")) {
+                return Boolean.FALSE;
+            }
+            return defaultValue;
         } else if (defaultValue instanceof String) {
             return str;
         }

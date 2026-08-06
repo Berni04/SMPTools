@@ -23,6 +23,8 @@ public class TrailsGUIListener implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            if (!player.isOnline()) return;
+            if (plugin.getTrailManager().hasExplicitlySet(player)) return;
             plugin.getTrailManager().loadPlayerTrail(player);
         });
     }

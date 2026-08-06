@@ -39,6 +39,12 @@ public class ClearStatsCommand extends AbstractPlayerCommand {
 
         plugin.getStatsConfig().set("stats." + target.getUniqueId().toString(), null);
         plugin.saveStatsConfig();
+        if (plugin.getStorageManager() != null && plugin.getStorageManager().getProvider() != null) {
+            plugin.getStorageManager().getProvider().clearPlayerStats(target.getUniqueId());
+        }
+        if (plugin.getTagManager() != null) {
+            plugin.getTagManager().clearCachedStats(target.getUniqueId());
+        }
 
         sender.sendMessage(plugin.getMessageManager().getMessage("clearstats.cleared",
                 sender instanceof Player p ? p : null,

@@ -22,6 +22,7 @@ public class BountyManager {
     private File bountiesFile;
     private FileConfiguration bountiesConfig;
     private final Object fileLock = new Object();
+    private final java.util.concurrent.ExecutorService saveExecutor = java.util.concurrent.Executors.newSingleThreadExecutor();
 
     public BountyManager(SMPTools plugin) {
         this.plugin = plugin;
@@ -32,7 +33,12 @@ public class BountyManager {
     private void startPeriodicCheck() {
         if (plugin != null && plugin.isEnabled()) {
             try {
-                Bukkit.getScheduler().runTaskTimer(plugin, this::checkExpiredBounties, 1200L, 1200L);
+                Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+                    if (plugin.getConfig() != null && !plugin.getConfig().getBoolean("features.bounties.enabled", true)) {
+                        return;
+                    }
+                    checkExpiredBounties();
+                }, 1200L, 1200L);
             } catch (Exception ignored) {
                 // In testing environment Bukkit scheduler might not be initialized
             }
@@ -181,23 +187,30 @@ public class BountyManager {
     public void saveBounties() {
         List<Bounty> snapshot = getBountiesSnapshot();
         Map<UUID, List<ItemStack>> refundsSnapshot = getPendingRefundsSnapshot();
-        Runnable saveTask = () -> writeBountiesToFile(snapshot, refundsSnapshot);
-
-        if (plugin != null && plugin.isEnabled()) {
-            try {
-                Bukkit.getScheduler().runTaskAsynchronously(plugin, saveTask);
-            } catch (Exception ignored) {
-                saveTask.run();
-            }
-        } else {
-            saveTask.run();
+        if (saveExecutor.isShutdown()) {
+            writeBountiesToFile(snapshot, refundsSnapshot);
+            return;
         }
+        saveExecutor.submit(() -> writeBountiesToFile(snapshot, refundsSnapshot));
     }
 
     public void saveBountiesSync() {
         List<Bounty> snapshot = getBountiesSnapshot();
         Map<UUID, List<ItemStack>> refundsSnapshot = getPendingRefundsSnapshot();
-        writeBountiesToFile(snapshot, refundsSnapshot);
+        if (saveExecutor.isShutdown()) {
+            writeBountiesToFile(snapshot, refundsSnapshot);
+            return;
+        }
+        try {
+            saveExecutor.submit(() -> writeBountiesToFile(snapshot, refundsSnapshot)).get();
+        } catch (Exception e) {
+            writeBountiesToFile(snapshot, refundsSnapshot);
+        }
+    }
+
+    public void shutdown() {
+        saveBountiesSync();
+        saveExecutor.shutdown();
     }
 
     public synchronized void createBounty(Player placer, Player target, List<ItemStack> items) {
@@ -334,10 +347,22 @@ public class BountyManager {
         List<ItemStack> pending = pendingRefunds.get(uuid);
         if (pending == null || pending.isEmpty()) return;
 
+        org.bukkit.inventory.Inventory testInv = Bukkit.createInventory(null, 36);
+        testInv.setContents(player.getInventory().getStorageContents());
+
+        List<ItemStack> itemsToDeliver = new ArrayList<>();
         List<ItemStack> remainingPending = new ArrayList<>();
+
         for (ItemStack item : pending) {
             if (item == null || item.getType() == Material.AIR) continue;
-            HashMap<Integer, ItemStack> overflow = player.getInventory().addItem(item.clone());
+            ItemStack toAdd = item.clone();
+            HashMap<Integer, ItemStack> overflow = testInv.addItem(toAdd);
+            int amountAdded = item.getAmount() - (overflow.isEmpty() ? 0 : overflow.values().stream().mapToInt(ItemStack::getAmount).sum());
+            if (amountAdded > 0) {
+                ItemStack delivered = item.clone();
+                delivered.setAmount(amountAdded);
+                itemsToDeliver.add(delivered);
+            }
             for (ItemStack rem : overflow.values()) {
                 if (rem != null && rem.getType() != Material.AIR && rem.getAmount() > 0) {
                     remainingPending.add(rem);
@@ -350,7 +375,14 @@ public class BountyManager {
         } else {
             pendingRefunds.put(uuid, remainingPending);
         }
-        saveBounties();
+
+        // Persist refund status changes BEFORE item delivery
+        saveBountiesSync();
+
+        // Deliver items to player inventory
+        for (ItemStack item : itemsToDeliver) {
+            player.getInventory().addItem(item);
+        }
     }
 
     public synchronized void checkPlayerJoin(Player player) {
@@ -363,7 +395,15 @@ public class BountyManager {
     public synchronized Map<UUID, List<ItemStack>> getPendingRefunds() {
         Map<UUID, List<ItemStack>> copy = new HashMap<>();
         for (Map.Entry<UUID, List<ItemStack>> e : pendingRefunds.entrySet()) {
-            copy.put(e.getKey(), Collections.unmodifiableList(new ArrayList<>(e.getValue())));
+            List<ItemStack> itemCopies = new ArrayList<>();
+            if (e.getValue() != null) {
+                for (ItemStack is : e.getValue()) {
+                    if (is != null) {
+                        itemCopies.add(is.clone());
+                    }
+                }
+            }
+            copy.put(e.getKey(), Collections.unmodifiableList(itemCopies));
         }
         return Collections.unmodifiableMap(copy);
     }

@@ -46,7 +46,7 @@ public class BountyManagerTest {
     }
 
     @Test
-    public void testAutomaticExpiredRefund() {
+    public void testAutomaticExpiredRefund() throws Exception {
         BountyManager manager = new BountyManager(null);
         UUID placer = UUID.randomUUID();
         UUID target = UUID.randomUUID();
@@ -65,9 +65,17 @@ public class BountyManagerTest {
                 false
         );
 
-        manager.getBounties(); // inspect unmodifiable
-        // Use reflection or load to populate bounties list if needed or test checkExpiredBounties logic
+        java.lang.reflect.Field field = BountyManager.class.getDeclaredField("bounties");
+        field.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        List<Bounty> list = (List<Bounty>) field.get(manager);
+        list.add(expiredBounty);
+
         assertFalse(expiredBounty.isClaimed());
         assertTrue(expiredBounty.isExpired());
+
+        manager.checkExpiredBounties();
+
+        assertTrue(expiredBounty.isClaimed());
     }
 }

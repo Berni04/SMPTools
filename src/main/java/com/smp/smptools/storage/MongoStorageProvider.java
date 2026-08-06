@@ -8,6 +8,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.ReplaceOptions;
+import com.mongodb.client.model.UpdateOptions;
 import com.smp.smptools.SMPTools;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -15,6 +16,9 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bson.Document;
 
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 public class MongoStorageProvider implements StorageProvider {
@@ -24,6 +28,11 @@ public class MongoStorageProvider implements StorageProvider {
     private MongoDatabase database;
     private MongoCollection<Document> statsCollection;
     private MongoCollection<Document> tagsCollection;
+    private final ExecutorService writeExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread thread = new Thread(r, "SMPTools-Mongo-Writer");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     public MongoStorageProvider(SMPTools plugin) {
         this.plugin = plugin;
@@ -60,15 +69,31 @@ public class MongoStorageProvider implements StorageProvider {
     }
 
     private void executeAsyncWrite(Runnable runnable) {
-        if (Bukkit.getServer() != null && Bukkit.isPrimaryThread() && plugin.isEnabled()) {
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, runnable);
-        } else {
+        if (statsCollection == null && tagsCollection == null) return;
+        if (writeExecutor.isShutdown()) {
+            runnable.run();
+            return;
+        }
+        try {
+            writeExecutor.submit(runnable);
+        } catch (RejectedExecutionException e) {
             runnable.run();
         }
     }
 
     @Override
     public void shutdown() {
+        if (writeExecutor != null) {
+            writeExecutor.shutdown();
+            try {
+                if (!writeExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
+                    writeExecutor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                writeExecutor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
         if (mongoClient != null) {
             try {
                 mongoClient.close();
@@ -82,15 +107,9 @@ public class MongoStorageProvider implements StorageProvider {
             if (statsCollection == null) return;
             try {
                 Document filter = new Document("uuid", uuid.toString());
-                Document existing = statsCollection.find(filter).first();
-                if (existing == null) {
-                    existing = new Document("uuid", uuid.toString());
-                }
-                Document statsDoc = (Document) existing.getOrDefault("stats", new Document());
-                statsDoc.put(statKey.replace(".", "_"), value);
-                existing.put("stats", statsDoc);
-
-                statsCollection.replaceOne(filter, existing, new ReplaceOptions().upsert(true));
+                String fieldPath = "stats." + statKey.replace(".", "_");
+                Document update = new Document("$set", new Document(fieldPath, value));
+                statsCollection.updateOne(filter, update, new UpdateOptions().upsert(true));
             } catch (Exception e) {
                 plugin.getLogger().warning("Failed to save mongo stat for " + uuid + ": " + e.getMessage());
             }
@@ -190,8 +209,8 @@ public class MongoStorageProvider implements StorageProvider {
             if (tagsCollection == null) return;
             try {
                 Document filter = new Document("uuid", uuid.toString());
-                Document doc = new Document("uuid", uuid.toString()).append("title", title);
-                tagsCollection.replaceOne(filter, doc, new ReplaceOptions().upsert(true));
+                Document update = new Document("$set", new Document("title", title));
+                tagsCollection.updateOne(filter, update, new UpdateOptions().upsert(true));
             } catch (Exception e) {
                 plugin.getLogger().warning("Failed to save mongo title for " + uuid + ": " + e.getMessage());
             }

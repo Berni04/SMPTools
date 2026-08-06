@@ -12,6 +12,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -35,6 +36,9 @@ public class TagManager {
     private final SMPTools plugin;
     /** Map of player UUIDs to their equipped titles */
     private final Map<String, String> playerTitles = new ConcurrentHashMap<>();
+    /** In-memory cache of player milestone stats loaded asynchronously */
+    private final Map<UUID, Map<String, Long>> milestoneStatCache = new ConcurrentHashMap<>();
+    private final Set<UUID> loadingPlayers = ConcurrentHashMap.newKeySet();
 
     /**
      * Constructs a new TagManager and loads saved player titles.
@@ -63,6 +67,52 @@ public class TagManager {
     }
 
     /**
+     * Loads a player's statistics asynchronously from the storage provider into the in-memory cache.
+     *
+     * @param uuid the player's UUID
+     */
+    public void loadPlayerStatsAsync(@NotNull UUID uuid) {
+        if (plugin.getStorageManager() == null || plugin.getStorageManager().getProvider() == null) return;
+        if (!loadingPlayers.add(uuid)) return; // Already loading
+
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                Map<String, Object> allStats = plugin.getStorageManager().getProvider().getAllPlayerStats(uuid);
+                Map<String, Long> parsedStats = new ConcurrentHashMap<>();
+                if (allStats != null) {
+                    for (Map.Entry<String, Object> entry : allStats.entrySet()) {
+                        if (entry.getValue() != null) {
+                            try {
+                                parsedStats.put(entry.getKey(), Long.parseLong(entry.getValue().toString()));
+                            } catch (NumberFormatException ignored) {}
+                        }
+                    }
+                }
+                milestoneStatCache.put(uuid, parsedStats);
+            } catch (Exception e) {
+                plugin.getLogger().warning("Could not load stats asynchronously for " + uuid + ": " + e.getMessage());
+            } finally {
+                loadingPlayers.remove(uuid);
+            }
+        });
+    }
+
+    /**
+     * Clears cached milestone stats for a specific player (or all players if uuid is null).
+     *
+     * @param uuid the player's UUID
+     */
+    public void clearCachedStats(@Nullable UUID uuid) {
+        if (uuid != null) {
+            milestoneStatCache.remove(uuid);
+            loadingPlayers.remove(uuid);
+        } else {
+            milestoneStatCache.clear();
+            loadingPlayers.clear();
+        }
+    }
+
+    /**
      * Gets the equipped title for a player by UUID.
      *
      * @param uuid the player's UUID
@@ -80,6 +130,14 @@ public class TagManager {
      */
     public @Nullable String getPlayerTitle(@NotNull Player player) {
         return getPlayerTitle(player.getUniqueId());
+    }
+
+    public @Nullable String getTagTitle(@NotNull UUID uuid) {
+        return getPlayerTitle(uuid);
+    }
+
+    public @Nullable String getTagTitle(@NotNull Player player) {
+        return getPlayerTitle(player);
     }
 
     /**
@@ -112,15 +170,22 @@ public class TagManager {
     /**
      * Checks if a player has achieved any new milestones and unlocks titles accordingly.
      * Broadcasts a message when a new title is unlocked.
+     * Uses in-memory cached stats and async loading to prevent blocking the main thread.
      *
      * @param player the player to check milestones for
      */
     public void checkMilestones(@NotNull Player player) {
-        String uuid = player.getUniqueId().toString();
+        UUID playerUuid = player.getUniqueId();
+        String uuid = playerUuid.toString();
         ConfigurationSection stats = plugin.getStatsConfig().getConfigurationSection("stats." + uuid);
 
         ConfigurationSection milestones = plugin.getTagsConfig().getConfigurationSection("milestones");
         if (milestones == null) return;
+
+        Map<String, Long> userCache = milestoneStatCache.get(playerUuid);
+        if (userCache == null && plugin.getStorageManager() != null && plugin.getStorageManager().getProvider() != null) {
+            loadPlayerStatsAsync(playerUuid);
+        }
 
         for (String key : milestones.getKeys(false)) {
             ConfigurationSection milestone = milestones.getConfigurationSection(key);
@@ -132,9 +197,12 @@ public class TagManager {
 
             long requiredValue = milestone.getLong("value");
             long playerValue = stats != null ? stats.getLong(statistic, 0) : 0;
-            if (plugin.getStorageManager() != null && plugin.getStorageManager().getProvider() != null) {
-                long dbVal = plugin.getStorageManager().getProvider().getLongStat(player.getUniqueId(), statistic, 0);
-                if (dbVal > playerValue) playerValue = dbVal;
+
+            if (userCache != null) {
+                Long cachedDbVal = userCache.get(statistic);
+                if (cachedDbVal != null && cachedDbVal > playerValue) {
+                    playerValue = cachedDbVal;
+                }
             }
 
             if (playerValue >= requiredValue && !hasUnlockedTitle(player, title)) {

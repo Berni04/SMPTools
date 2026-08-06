@@ -10,12 +10,21 @@ import org.bukkit.configuration.file.FileConfiguration;
 import java.io.File;
 import java.sql.*;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 
 public class JdbcStorageProvider implements StorageProvider {
 
     private final SMPTools plugin;
     private final StorageType type;
     private HikariDataSource dataSource;
+    private final ExecutorService writeExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread thread = new Thread(r, "SMPTools-JDBC-Writer");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     public JdbcStorageProvider(SMPTools plugin, StorageType type) {
         this.plugin = plugin;
@@ -61,16 +70,21 @@ public class JdbcStorageProvider implements StorageProvider {
             this.dataSource = new HikariDataSource(hikari);
             createTables();
             plugin.getLogger().info("Storage provider initialized: " + type.name());
-        } catch (Exception e) {
-            plugin.getLogger().severe("Failed to initialize JDBC storage provider (" + type.name() + "): " + e.getMessage());
+        } catch (Throwable e) {
+            plugin.getLogger().severe("Failed to initialize JDBC storage provider (" + type.name() + "): " + e.getMessage() + ". Operating in graceful fallback mode.");
             this.dataSource = null;
         }
     }
 
     private void executeAsyncWrite(Runnable runnable) {
-        if (Bukkit.getServer() != null && Bukkit.isPrimaryThread() && plugin.isEnabled()) {
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, runnable);
-        } else {
+        if (dataSource == null) return;
+        if (writeExecutor.isShutdown()) {
+            runnable.run();
+            return;
+        }
+        try {
+            writeExecutor.submit(runnable);
+        } catch (RejectedExecutionException e) {
             runnable.run();
         }
     }
@@ -109,6 +123,17 @@ public class JdbcStorageProvider implements StorageProvider {
 
     @Override
     public void shutdown() {
+        if (writeExecutor != null) {
+            writeExecutor.shutdown();
+            try {
+                if (!writeExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
+                    writeExecutor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                writeExecutor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
         }

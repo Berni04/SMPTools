@@ -272,11 +272,15 @@ public class SMPTools extends JavaPlugin {
         if (storageManager != null) {
             storageManager.shutdown();
         }
+        if (bountyManager != null) {
+            bountyManager.shutdown();
+        }
         // Save configs
         saveStatsConfig();
         saveTagsConfig();
         saveRewardsConfig();
         saveImageMapsConfig();
+        AsyncConfigHelper.shutdown();
     }
 
     public void setupStatsConfig() {
