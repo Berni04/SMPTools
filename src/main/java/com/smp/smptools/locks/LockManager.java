@@ -1,6 +1,7 @@
 package com.smp.smptools.locks;
 
 import com.smp.smptools.SMPTools;
+import com.smp.smptools.utils.AsyncConfigHelper;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -66,24 +67,28 @@ public class LockManager {
     }
 
     public void saveLocks() {
-        if (locksConfig == null) return;
-        locksConfig.set("locks", null);
+        if (locksFile == null) return;
+        YamlConfiguration config = new YamlConfiguration();
 
         for (Map.Entry<String, UUID> entry : containerOwners.entrySet()) {
             String key = entry.getKey();
-            locksConfig.set("locks." + key + ".owner", entry.getValue().toString());
+            config.set("locks." + key + ".owner", entry.getValue().toString());
             Set<UUID> trusted = containerTrusted.get(key);
             if (trusted != null && !trusted.isEmpty()) {
                 List<String> list = new ArrayList<>();
                 for (UUID u : trusted) list.add(u.toString());
-                locksConfig.set("locks." + key + ".trusted", list);
+                config.set("locks." + key + ".trusted", list);
             }
         }
 
-        try {
-            locksConfig.save(locksFile);
-        } catch (IOException e) {
-            plugin.getLogger().severe("Could not save locks.yml: " + e.getMessage());
+        if (plugin != null) {
+            AsyncConfigHelper.saveConfigAsync(plugin, config, locksFile, "locks.yml");
+        } else {
+            try {
+                config.save(locksFile);
+            } catch (IOException e) {
+                // Ignore in unit tests
+            }
         }
     }
 
@@ -111,6 +116,33 @@ public class LockManager {
                     } else {
                         loc = rightLoc;
                     }
+
+                    String doubleKey = getLocationKey(loc);
+                    String leftKey = getLocationKey(leftLoc);
+                    String rightKey = getLocationKey(rightLoc);
+
+                    // Check single-half lock migration when chest is paired into a double chest
+                    if (!containerOwners.containsKey(doubleKey)) {
+                        if (containerOwners.containsKey(leftKey)) {
+                            UUID owner = containerOwners.remove(leftKey);
+                            Set<UUID> trusted = containerTrusted.remove(leftKey);
+                            containerOwners.put(doubleKey, owner);
+                            if (trusted != null && !trusted.isEmpty()) {
+                                containerTrusted.put(doubleKey, trusted);
+                            }
+                            saveLocks();
+                        } else if (containerOwners.containsKey(rightKey)) {
+                            UUID owner = containerOwners.remove(rightKey);
+                            Set<UUID> trusted = containerTrusted.remove(rightKey);
+                            containerOwners.put(doubleKey, owner);
+                            if (trusted != null && !trusted.isEmpty()) {
+                                containerTrusted.put(doubleKey, trusted);
+                            }
+                            saveLocks();
+                        }
+                    }
+
+                    return doubleKey;
                 }
             }
         }
@@ -196,7 +228,9 @@ public class LockManager {
                type.name().contains("SMOKER") ||
                type.name().contains("HOPPER") ||
                type.name().contains("DROPPER") ||
-               type.name().contains("DISPENSER");
+               type.name().contains("DISPENSER") ||
+               type.name().contains("BREWING_STAND") ||
+               type.name().contains("CHISELED_BOOKSHELF");
     }
 
     public boolean isLocked(Block block) {

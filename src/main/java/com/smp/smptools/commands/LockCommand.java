@@ -2,6 +2,7 @@ package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
@@ -53,11 +54,11 @@ public class LockCommand implements CommandExecutor {
             return true;
         }
 
-        String cmd = label.toLowerCase();
+        String cmd = command.getName().toLowerCase();
         if (cmd.equals("lock")) {
             if (plugin.getLockManager().isLocked(targetBlock)) {
                 String owner = plugin.getLockManager().getOwnerName(targetBlock);
-                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>This container is already locked by " + owner + ".</red>"));
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>This container is already locked by <owner>.</red>", Placeholder.unparsed("owner", owner)));
                 return true;
             }
 
@@ -91,12 +92,13 @@ public class LockCommand implements CommandExecutor {
 
             OfflinePlayer target = resolveOfflinePlayer(args[0]);
             if (target == null) {
-                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Could not find player '" + args[0] + "'. Provide a valid UUID or username of a player who has joined before.</red>"));
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Could not find player '<target>'. Provide a valid UUID or username of a player who has joined before.</red>", Placeholder.unparsed("target", args[0])));
                 return true;
             }
 
+            String targetName = target.getName() != null ? target.getName() : args[0];
             if (plugin.getLockManager().trustPlayer(targetBlock, player, target)) {
-                player.sendMessage(MiniMessage.miniMessage().deserialize("<green>Granted container access to " + (target.getName() != null ? target.getName() : args[0]) + ".</green>"));
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<green>Granted container access to <target>.</green>", Placeholder.unparsed("target", targetName)));
             } else {
                 player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Could not add trust. Make sure you own this locked container.</red>"));
             }
@@ -111,12 +113,13 @@ public class LockCommand implements CommandExecutor {
 
             OfflinePlayer target = resolveOfflinePlayer(args[0]);
             if (target == null) {
-                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Could not find player '" + args[0] + "'. Provide a valid UUID or username of a player who has joined before.</red>"));
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Could not find player '<target>'. Provide a valid UUID or username of a player who has joined before.</red>", Placeholder.unparsed("target", args[0])));
                 return true;
             }
 
+            String targetName = target.getName() != null ? target.getName() : args[0];
             if (plugin.getLockManager().untrustPlayer(targetBlock, player, target)) {
-                player.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>Removed container access for " + (target.getName() != null ? target.getName() : args[0]) + ".</yellow>"));
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>Removed container access for <target>.</yellow>", Placeholder.unparsed("target", targetName)));
             } else {
                 player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Could not remove trust.</red>"));
             }

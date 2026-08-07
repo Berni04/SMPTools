@@ -56,27 +56,44 @@ public class LeaderboardManager {
             return; // Coalesce concurrent refresh calls
         }
 
-        boolean isFlatFile = plugin.getStorageManager().getProvider() instanceof com.smp.smptools.storage.FlatFileStorageProvider;
+        try {
+            boolean isFlatFile = plugin.getStorageManager().getProvider() instanceof com.smp.smptools.storage.FlatFileStorageProvider;
 
-        if (isFlatFile && Bukkit.getServer() != null && plugin.isEnabled()) {
-            if (Bukkit.isPrimaryThread()) {
-                Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
-                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> doSortAndPublish(rawSnapshots));
-            } else {
-                try {
-                    Bukkit.getScheduler().callSyncMethod(plugin, () -> {
-                        Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
-                        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> doSortAndPublish(rawSnapshots));
-                        return null;
-                    });
-                } catch (Exception e) {
-                    doSortAndPublish(snapshotRawStats());
+            if (isFlatFile && Bukkit.getServer() != null && plugin.isEnabled()) {
+                if (Bukkit.isPrimaryThread()) {
+                    Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
+                    Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> doSortAndPublish(rawSnapshots));
+                } else {
+                    try {
+                        Bukkit.getScheduler().callSyncMethod(plugin, () -> {
+                            try {
+                                Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
+                                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> doSortAndPublish(rawSnapshots));
+                            } catch (Exception e) {
+                                isRefreshing.set(false);
+                            }
+                            return null;
+                        });
+                    } catch (Exception e) {
+                        // Abort gracefully for flatfile sync handoff failure; do NOT run unsafe off-thread YAML read
+                        isRefreshing.set(false);
+                    }
                 }
+            } else if (Bukkit.getServer() != null && plugin.isEnabled()) {
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                    try {
+                        Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
+                        doSortAndPublish(rawSnapshots);
+                    } catch (Exception e) {
+                        isRefreshing.set(false);
+                    }
+                });
+            } else {
+                Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
+                doSortAndPublish(rawSnapshots);
             }
-        } else if (Bukkit.getServer() != null && plugin.isEnabled()) {
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> doSortAndPublish(snapshotRawStats()));
-        } else {
-            doSortAndPublish(snapshotRawStats());
+        } catch (Exception e) {
+            isRefreshing.set(false);
         }
     }
 

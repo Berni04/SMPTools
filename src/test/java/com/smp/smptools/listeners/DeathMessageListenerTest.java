@@ -57,4 +57,17 @@ public class DeathMessageListenerTest {
 
         assertEquals("PlayerA was outplayed by PlayerB", plainText);
     }
+
+    @Test
+    public void testUsernameBoundaryMatching() {
+        Component originalMessage = Component.text("Alexis was slain by Alex");
+        Component formattedPlayerName = Component.text("[VIP] Alex");
+
+        Component result = originalMessage.replaceText(builder ->
+                builder.match("\\b" + java.util.regex.Pattern.quote("Alex") + "\\b")
+                        .replacement(formattedPlayerName));
+
+        String plainText = PlainTextComponentSerializer.plainText().serialize(result);
+        assertEquals("Alexis was slain by [VIP] Alex", plainText);
+    }
 }

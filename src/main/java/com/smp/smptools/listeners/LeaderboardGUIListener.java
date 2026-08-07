@@ -19,6 +19,7 @@ import org.bukkit.inventory.meta.SkullMeta;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class LeaderboardGUIListener implements Listener {
@@ -112,8 +113,17 @@ public class LeaderboardGUIListener implements Listener {
         }
 
         AtomicInteger rank = new AtomicInteger(1);
-        leaderboard.forEach((playerName, score) -> {
-            OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(playerName);
+        leaderboard.forEach((key, score) -> {
+            OfflinePlayer offlinePlayer = null;
+            String playerName = key;
+            try {
+                UUID uuid = UUID.fromString(key);
+                offlinePlayer = Bukkit.getOfflinePlayer(uuid);
+                if (offlinePlayer.getName() != null) {
+                    playerName = offlinePlayer.getName();
+                }
+            } catch (IllegalArgumentException ignored) {}
+
             ItemStack playerHead = new ItemStack(Material.PLAYER_HEAD);
             SkullMeta headMeta = (SkullMeta) playerHead.getItemMeta();
 

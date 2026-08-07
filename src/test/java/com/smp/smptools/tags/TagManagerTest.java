@@ -1,7 +1,6 @@
 package com.smp.smptools.tags;
 
 import org.junit.jupiter.api.Test;
-import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -10,24 +9,39 @@ import static org.junit.jupiter.api.Assertions.*;
 public class TagManagerTest {
 
     @Test
-    public void testGetStatFromCacheNormalization() throws Exception {
+    public void testGetStatFromCacheNormalization() {
         TagManager manager = new TagManager(null);
-        Method getStatFromCache = TagManager.class.getDeclaredMethod("getStatFromCache", Map.class, String.class);
-        getStatFromCache.setAccessible(true);
 
         Map<String, Long> cache = new HashMap<>();
         cache.put("playtime_minutes", 150L);
         cache.put("ores_mined.diamond", 25L);
 
         // Lookup with exact key
-        assertEquals(150L, getStatFromCache.invoke(manager, cache, "playtime_minutes"));
-        assertEquals(25L, getStatFromCache.invoke(manager, cache, "ores_mined.diamond"));
+        assertEquals(150L, manager.getStatFromCache(cache, "playtime_minutes"));
+        assertEquals(25L, manager.getStatFromCache(cache, "ores_mined.diamond"));
 
         // Lookup with dot instead of underscore
-        assertEquals(150L, getStatFromCache.invoke(manager, cache, "playtime.minutes"));
+        assertEquals(150L, manager.getStatFromCache(cache, "playtime.minutes"));
 
         // Lookup with underscore instead of dot
-        assertEquals(25L, getStatFromCache.invoke(manager, cache, "ores_mined_diamond"));
+        assertEquals(25L, manager.getStatFromCache(cache, "ores_mined_diamond"));
+    }
+
+    @Test
+    public void testGetStatFromCacheNullAndMissingLookups() {
+        TagManager manager = new TagManager(null);
+
+        Map<String, Long> cache = new HashMap<>();
+        cache.put("playtime_minutes", 100L);
+
+        // Null cache lookup
+        assertNull(manager.getStatFromCache(null, "playtime_minutes"));
+
+        // Null key lookup
+        assertNull(manager.getStatFromCache(cache, null));
+
+        // Missing key lookup
+        assertNull(manager.getStatFromCache(cache, "non_existent_stat"));
     }
 
     @Test
@@ -76,20 +90,16 @@ public class TagManagerTest {
         @SuppressWarnings("unchecked")
         java.util.Set<UUID> loadingPlayers = (java.util.Set<UUID>) loadingField.get(manager);
 
-        Method evictMethod = TagManager.class.getDeclaredMethod("evictPlayerCache", UUID.class);
-        evictMethod.setAccessible(true);
-
         // When loading is in flight, version is incremented and kept
         loadingPlayers.add(uuid);
-        evictMethod.invoke(manager, uuid);
+        manager.evictPlayerCache(uuid);
         assertFalse(statCache.containsKey(uuid));
         assertTrue(playerVersions.containsKey(uuid));
         assertEquals(6, playerVersions.get(uuid).get());
 
         // When loading finishes, player version entry is cleaned up
         loadingPlayers.remove(uuid);
-        evictMethod.invoke(manager, uuid);
+        manager.evictPlayerCache(uuid);
         assertFalse(playerVersions.containsKey(uuid));
     }
 }
-

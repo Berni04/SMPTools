@@ -54,7 +54,7 @@ public class JdbcStorageProvider implements StorageProvider {
             String driver = type == StorageType.MYSQL ? "com.mysql.cj.jdbc.Driver" : "org.mariadb.jdbc.Driver";
             String jdbcPrefix = type == StorageType.MYSQL ? "jdbc:mysql" : "jdbc:mariadb";
 
-            hikari.setJdbcUrl(String.format("%s://%s:%d/%s?useSSL=%b&autoReconnect=true", jdbcPrefix, host, port, db, useSsl));
+            hikari.setJdbcUrl(String.format("%s://%s:%d/%s?useSSL=%b", jdbcPrefix, host, port, db, useSsl));
             hikari.setDriverClassName(driver);
             hikari.setUsername(user);
             hikari.setPassword(pass);
@@ -69,6 +69,7 @@ public class JdbcStorageProvider implements StorageProvider {
         try {
             this.dataSource = new HikariDataSource(hikari);
             createTables();
+            migrateFromFlatFileIfEmpty();
             plugin.getLogger().info("Storage provider initialized: " + type.name());
         } catch (Throwable e) {
             plugin.getLogger().severe("Failed to initialize JDBC storage provider (" + type.name() + "): " + e.getMessage() + ". Operating in graceful fallback mode.");
@@ -129,6 +130,70 @@ public class JdbcStorageProvider implements StorageProvider {
         }
     }
 
+    private void migrateFromFlatFileIfEmpty() {
+        if (dataSource == null) return;
+        try (Connection conn = dataSource.getConnection();
+             Statement stmt = conn.createStatement()) {
+
+            boolean statsEmpty = true;
+            try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM smptools_player_stats")) {
+                if (rs.next() && rs.getInt(1) > 0) {
+                    statsEmpty = false;
+                }
+            }
+
+            boolean tagsEmpty = true;
+            try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM smptools_player_tags")) {
+                if (rs.next() && rs.getInt(1) > 0) {
+                    tagsEmpty = false;
+                }
+            }
+
+            if (statsEmpty && tagsEmpty) {
+                FlatFileStorageProvider flatfile = new FlatFileStorageProvider(plugin);
+                Map<String, String> titles = flatfile.getAllPlayerTitles();
+                Map<UUID, Map<String, Object>> stats = flatfile.loadAllPlayerStats();
+
+                if (!titles.isEmpty() || !stats.isEmpty()) {
+                    plugin.getLogger().info("Performing initial migration of titles, trails, and stats from FLATFILE to JDBC...");
+
+                    String titleSql = type == StorageType.SQLITE
+                            ? "INSERT OR REPLACE INTO smptools_player_tags (uuid, title) VALUES (?, ?)"
+                            : "INSERT INTO smptools_player_tags (uuid, title) VALUES (?, ?) ON DUPLICATE KEY UPDATE title = VALUES(title)";
+                    try (PreparedStatement ps = conn.prepareStatement(titleSql)) {
+                        for (Map.Entry<String, String> entry : titles.entrySet()) {
+                            ps.setString(1, entry.getKey());
+                            ps.setString(2, entry.getValue());
+                            ps.addBatch();
+                        }
+                        ps.executeBatch();
+                    }
+
+                    String statSql = type == StorageType.SQLITE
+                            ? "INSERT OR REPLACE INTO smptools_player_stats (uuid, stat_key, stat_value) VALUES (?, ?, ?)"
+                            : "INSERT INTO smptools_player_stats (uuid, stat_key, stat_value) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE stat_value = VALUES(stat_value)";
+                    try (PreparedStatement ps = conn.prepareStatement(statSql)) {
+                        for (Map.Entry<UUID, Map<String, Object>> playerEntry : stats.entrySet()) {
+                            String uuidStr = playerEntry.getKey().toString();
+                            for (Map.Entry<String, Object> statEntry : playerEntry.getValue().entrySet()) {
+                                ps.setString(1, uuidStr);
+                                ps.setString(2, statEntry.getKey());
+                                ps.setString(3, statEntry.getValue() != null ? statEntry.getValue().toString() : null);
+                                ps.addBatch();
+                            }
+                        }
+                        ps.executeBatch();
+                    }
+
+                    plugin.getLogger().info("Successfully migrated FLATFILE data to JDBC storage.");
+                }
+            }
+
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed flatfile data migration to JDBC: " + e.getMessage());
+        }
+    }
+
     @Override
     public void shutdown() {
         if (writeExecutor != null) {
@@ -137,13 +202,24 @@ public class JdbcStorageProvider implements StorageProvider {
                 if (!writeExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
                     plugin.getLogger().severe("JDBC write executor did not terminate within timeout; forcing shutdown.");
                     List<Runnable> pending = writeExecutor.shutdownNow();
-                    if (!pending.isEmpty()) {
-                        plugin.getLogger().severe("Failed to complete " + pending.size() + " write operation(s) during JDBC shutdown.");
+                    for (Runnable task : pending) {
+                        try {
+                            task.run();
+                        } catch (Exception e) {
+                            plugin.getLogger().severe("Failed to execute pending JDBC write during shutdown: " + e.getMessage());
+                        }
                     }
                 }
             } catch (InterruptedException e) {
                 plugin.getLogger().severe("Interrupted while awaiting JDBC write executor termination: " + e.getMessage());
-                writeExecutor.shutdownNow();
+                List<Runnable> pending = writeExecutor.shutdownNow();
+                for (Runnable task : pending) {
+                    try {
+                        task.run();
+                    } catch (Exception ex) {
+                        plugin.getLogger().severe("Failed to execute pending JDBC write during interruption: " + ex.getMessage());
+                    }
+                }
                 Thread.currentThread().interrupt();
             }
         }
@@ -355,11 +431,11 @@ public class JdbcStorageProvider implements StorageProvider {
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     try {
-                        UUID uuid = UUID.fromString(rs.getString("uuid"));
-                        OfflinePlayer player = Bukkit.getOfflinePlayer(uuid);
-                        String name = player.getName() != null ? player.getName() : "Unknown";
-                        long val = Long.parseLong(rs.getString("stat_value"));
-                        rawMap.put(name, val);
+                        String uuidStr = rs.getString("uuid");
+                        String valStr = rs.getString("stat_value");
+                        Object parsed = StorageProvider.parseCanonicalValue(valStr, 0L);
+                        long val = (parsed instanceof Number) ? ((Number) parsed).longValue() : 0L;
+                        rawMap.put(uuidStr, val);
                     } catch (Exception ignored) {}
                 }
             }

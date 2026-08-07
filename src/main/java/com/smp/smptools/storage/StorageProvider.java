@@ -113,7 +113,11 @@ public interface StorageProvider {
             try {
                 return Long.parseLong(str);
             } catch (NumberFormatException e) {
-                return defaultValue;
+                try {
+                    return (long) Double.parseDouble(str);
+                } catch (NumberFormatException ignored) {
+                    return defaultValue;
+                }
             }
         } else if (defaultValue instanceof Double) {
             if (rawVal instanceof Number) return ((Number) rawVal).doubleValue();

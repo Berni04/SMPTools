@@ -1,5 +1,7 @@
 package com.smp.smptools.storage;
 
+import java.util.Locale;
+
 public enum StorageType {
     FLATFILE,
     SQLITE,
@@ -10,7 +12,7 @@ public enum StorageType {
     public static StorageType parse(String name) {
         if (name == null) return FLATFILE;
         try {
-            return StorageType.valueOf(name.toUpperCase());
+            return StorageType.valueOf(name.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             return FLATFILE;
         }

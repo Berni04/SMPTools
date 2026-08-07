@@ -29,12 +29,16 @@ public class BountyGUIListener implements Listener {
     private final SMPTools plugin;
     private final BountyManager bountyManager;
 
-    // Track active place GUI sessions: placer UUID -> target UUID
-    private final Map<UUID, UUID> activePlaceSessions = new ConcurrentHashMap<>();
+    private static record DepositSession(Inventory inventory, UUID targetUuid) {}
+
+    // Track active place GUI sessions: placer UUID -> DepositSession
+    private final Map<UUID, DepositSession> activePlaceSessions = new ConcurrentHashMap<>();
     // Track target being viewed in details GUI: viewer UUID -> target UUID
     private final Map<UUID, UUID> detailsViewMap = new ConcurrentHashMap<>();
     // Track claim GUI items mapping: viewer UUID -> Map<slot, Bounty>
     private final Map<UUID, Map<Integer, Bounty>> claimMap = new ConcurrentHashMap<>();
+    // Track player's current page in list GUI: viewer UUID -> page
+    private final Map<UUID, Integer> listPageMap = new ConcurrentHashMap<>();
 
     public BountyGUIListener(SMPTools plugin) {
         this.plugin = plugin;
@@ -42,8 +46,14 @@ public class BountyGUIListener implements Listener {
     }
 
     public void openPlaceGUI(Player placer, Player target) {
+        // Refund existing deposit session if placer already has one open (Issue 6)
+        DepositSession oldSession = activePlaceSessions.remove(placer.getUniqueId());
+        if (oldSession != null) {
+            returnItemsFromGUI(placer, oldSession.inventory());
+        }
+
         Inventory inv = Bukkit.createInventory(null, 27, MiniMessage.miniMessage().deserialize("<gold>Deposit Bounty: " + target.getName() + "</gold>"));
-        activePlaceSessions.put(placer.getUniqueId(), target.getUniqueId());
+        activePlaceSessions.put(placer.getUniqueId(), new DepositSession(inv, target.getUniqueId()));
 
         // Fill row 3 control border
         ItemStack border = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
@@ -79,12 +89,29 @@ public class BountyGUIListener implements Listener {
     }
 
     public void openBountyListGUI(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 54, MiniMessage.miniMessage().deserialize("<gold>Active Player Bounties</gold>"));
+        openBountyListGUI(player, 0);
+    }
+
+    public void openBountyListGUI(Player player, int page) {
         Map<UUID, List<Bounty>> grouped = bountyManager.getActiveBountiesGroupedByTarget();
+        List<Map.Entry<UUID, List<Bounty>>> entries = new ArrayList<>(grouped.entrySet());
+
+        int totalEntries = entries.size();
+        int maxPage = (int) Math.ceil((double) totalEntries / 45);
+        if (maxPage == 0) maxPage = 1;
+        if (page < 0) page = 0;
+        if (page >= maxPage) page = maxPage - 1;
+
+        listPageMap.put(player.getUniqueId(), page);
+
+        Inventory inv = Bukkit.createInventory(null, 54, MiniMessage.miniMessage().deserialize("<gold>Active Player Bounties</gold>"));
+
+        int startIndex = page * 45;
+        int endIndex = Math.min(startIndex + 45, totalEntries);
 
         int slot = 0;
-        for (Map.Entry<UUID, List<Bounty>> entry : grouped.entrySet()) {
-            if (slot >= 54) break;
+        for (int i = startIndex; i < endIndex; i++) {
+            Map.Entry<UUID, List<Bounty>> entry = entries.get(i);
             UUID targetUuid = entry.getKey();
             List<Bounty> list = entry.getValue();
 
@@ -109,6 +136,45 @@ public class BountyGUIListener implements Listener {
             inv.setItem(slot++, head);
         }
 
+        // Fill bottom row (slots 45..53) with border controls if total entries > 45 or page navigation is available (Issue 7)
+        ItemStack border = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
+        ItemMeta borderMeta = border.getItemMeta();
+        if (borderMeta != null) {
+            borderMeta.displayName(Component.empty());
+            border.setItemMeta(borderMeta);
+        }
+        for (int i = 45; i < 54; i++) {
+            inv.setItem(i, border);
+        }
+
+        if (page > 0) {
+            ItemStack prev = new ItemStack(Material.ARROW);
+            ItemMeta prevMeta = prev.getItemMeta();
+            if (prevMeta != null) {
+                prevMeta.displayName(MiniMessage.miniMessage().deserialize("<yellow>← Previous Page</yellow>"));
+                prev.setItemMeta(prevMeta);
+            }
+            inv.setItem(45, prev);
+        }
+
+        ItemStack info = new ItemStack(Material.PAPER);
+        ItemMeta infoMeta = info.getItemMeta();
+        if (infoMeta != null) {
+            infoMeta.displayName(MiniMessage.miniMessage().deserialize("<gold>Page " + (page + 1) + " of " + maxPage + "</gold>"));
+            info.setItemMeta(infoMeta);
+        }
+        inv.setItem(49, info);
+
+        if (page < maxPage - 1) {
+            ItemStack next = new ItemStack(Material.ARROW);
+            ItemMeta nextMeta = next.getItemMeta();
+            if (nextMeta != null) {
+                nextMeta.displayName(MiniMessage.miniMessage().deserialize("<yellow>Next Page →</yellow>"));
+                next.setItemMeta(nextMeta);
+            }
+            inv.setItem(53, next);
+        }
+
         player.openInventory(inv);
     }
 
@@ -116,7 +182,6 @@ public class BountyGUIListener implements Listener {
         OfflinePlayer target = Bukkit.getOfflinePlayer(targetUuid);
         String targetName = target.getName() != null ? target.getName() : "Unknown";
         Inventory inv = Bukkit.createInventory(null, 54, MiniMessage.miniMessage().deserialize("<gold>Bounty on " + targetName + "</gold>"));
-        detailsViewMap.put(player.getUniqueId(), targetUuid);
 
         List<Bounty> active = bountyManager.getActiveBountiesForTarget(targetUuid);
         int slot = 0;
@@ -148,6 +213,7 @@ public class BountyGUIListener implements Listener {
         inv.setItem(49, back);
 
         player.openInventory(inv);
+        detailsViewMap.put(player.getUniqueId(), targetUuid);
     }
 
     public void openClaimGUI(Player player) {
@@ -191,8 +257,8 @@ public class BountyGUIListener implements Listener {
             slot++;
         }
 
-        claimMap.put(player.getUniqueId(), slotToBounty);
         player.openInventory(inv);
+        claimMap.put(player.getUniqueId(), slotToBounty); // Installed AFTER openInventory (Issue 8)
     }
 
     @EventHandler(priority = EventPriority.HIGH)
@@ -231,7 +297,8 @@ public class BountyGUIListener implements Listener {
                         return;
                     }
 
-                    UUID targetUuid = activePlaceSessions.get(player.getUniqueId());
+                    DepositSession session = activePlaceSessions.get(player.getUniqueId());
+                    UUID targetUuid = session != null ? session.targetUuid() : null;
                     Player target = targetUuid != null ? Bukkit.getPlayer(targetUuid) : null;
 
                     if (target == null || !target.isOnline()) {
@@ -269,6 +336,26 @@ public class BountyGUIListener implements Listener {
         // 2. Bounty List GUI
         if (title.equals("Active Player Bounties")) {
             event.setCancelled(true);
+            int slot = event.getRawSlot();
+
+            int currentPage = listPageMap.getOrDefault(player.getUniqueId(), 0);
+
+            if (slot == 45) {
+                if (currentPage > 0) {
+                    openBountyListGUI(player, currentPage - 1);
+                }
+                return;
+            }
+
+            if (slot == 53) {
+                Map<UUID, List<Bounty>> grouped = bountyManager.getActiveBountiesGroupedByTarget();
+                int maxPage = (int) Math.ceil((double) grouped.size() / 45);
+                if (currentPage < maxPage - 1) {
+                    openBountyListGUI(player, currentPage + 1);
+                }
+                return;
+            }
+
             ItemStack current = event.getCurrentItem();
             if (current != null && current.getType() == Material.PLAYER_HEAD && current.getItemMeta() instanceof SkullMeta meta) {
                 OfflinePlayer target = meta.getOwningPlayer();
@@ -284,7 +371,8 @@ public class BountyGUIListener implements Listener {
             event.setCancelled(true);
             int slot = event.getRawSlot();
             if (slot == 49) {
-                openBountyListGUI(player);
+                int currentPage = listPageMap.getOrDefault(player.getUniqueId(), 0);
+                openBountyListGUI(player, currentPage);
             }
             return;
         }
@@ -325,13 +413,23 @@ public class BountyGUIListener implements Listener {
 
         String title = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
         if (title.startsWith("Deposit Bounty: ")) {
-            UUID targetUuid = activePlaceSessions.remove(player.getUniqueId());
-            if (targetUuid != null) {
+            DepositSession session = activePlaceSessions.get(player.getUniqueId());
+            if (session != null && session.inventory().equals(event.getInventory())) {
+                activePlaceSessions.remove(player.getUniqueId());
                 returnItemsFromGUI(player, event.getInventory());
             }
         }
 
-        detailsViewMap.remove(player.getUniqueId());
-        claimMap.remove(player.getUniqueId());
+        if (title.startsWith("Bounty on ")) {
+            detailsViewMap.remove(player.getUniqueId());
+        }
+
+        if (title.equals("Claim Bounties & Refunds")) {
+            claimMap.remove(player.getUniqueId());
+        }
+
+        if (title.equals("Active Player Bounties")) {
+            listPageMap.remove(player.getUniqueId());
+        }
     }
 }

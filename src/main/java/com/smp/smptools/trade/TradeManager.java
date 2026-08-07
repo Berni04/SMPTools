@@ -114,6 +114,12 @@ public class TradeManager {
         activeSessions.remove(p2);
     }
 
+    public void cleanupPendingRequests(UUID playerUUID) {
+        if (playerUUID == null) return;
+        pendingRequests.remove(playerUUID);
+        pendingRequests.values().removeIf(senderUUID -> senderUUID.equals(playerUUID));
+    }
+
     public void cleanup() {
         java.util.Set<TradeSession> sessionsToCancel = new java.util.HashSet<>(activeSessions.values());
         for (TradeSession session : sessionsToCancel) {

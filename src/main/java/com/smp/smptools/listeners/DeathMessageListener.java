@@ -39,15 +39,16 @@ public class DeathMessageListener implements Listener {
             Component originalDeathMessage = event.deathMessage();
 
             if (originalDeathMessage != null) {
-                // Use replaceText to replace the player's raw name with the formatted component
+                // Use replaceText with word boundary matching to replace the player's raw name with the formatted component
                 Component finalMessage = originalDeathMessage
-                        .replaceText(builder -> builder.matchLiteral(player.getName())
+                        .replaceText(builder -> builder.match("\\b" + java.util.regex.Pattern.quote(player.getName()) + "\\b")
                                 .replacement(formattedPlayerName));
 
                 if (player.getKiller() != null) {
                     Component formattedKillerName = plugin.getChatManager().getFormattedDisplayName(player.getKiller());
+                    String killerName = player.getKiller().getName();
                     finalMessage = finalMessage
-                            .replaceText(builder -> builder.matchLiteral(player.getKiller().getName())
+                            .replaceText(builder -> builder.match("\\b" + java.util.regex.Pattern.quote(killerName) + "\\b")
                                     .replacement(formattedKillerName));
                 }
 

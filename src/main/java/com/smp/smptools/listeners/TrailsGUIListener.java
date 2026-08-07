@@ -22,11 +22,18 @@ public class TrailsGUIListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
-            if (!player.isOnline()) return;
+        boolean isFlatFile = plugin.getStorageManager() != null &&
+                plugin.getStorageManager().getProvider() instanceof com.smp.smptools.storage.FlatFileStorageProvider;
+        if (isFlatFile) {
             if (plugin.getTrailManager().hasExplicitlySet(player)) return;
             plugin.getTrailManager().loadPlayerTrail(player);
-        });
+        } else {
+            plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                if (!player.isOnline()) return;
+                if (plugin.getTrailManager().hasExplicitlySet(player)) return;
+                plugin.getTrailManager().loadPlayerTrail(player);
+            });
+        }
     }
 
     @EventHandler

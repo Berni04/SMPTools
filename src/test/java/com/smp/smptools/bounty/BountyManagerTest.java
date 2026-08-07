@@ -200,4 +200,23 @@ public class BountyManagerTest {
         assertFalse(manager.createBounty(null, null, null));
         assertFalse(manager.createBounty(null, null, List.of()));
     }
+
+    @Test
+    public void testBountyItemStackImmutability() {
+        UUID placer = UUID.randomUUID();
+        UUID target = UUID.randomUUID();
+        ItemStack originalItem = createTestItemStack(Material.DIAMOND, 10);
+        List<ItemStack> items = new ArrayList<>();
+        items.add(originalItem);
+
+        Bounty bounty = new Bounty("test-id", placer, "Placer", target, "Target", items, System.currentTimeMillis(), null, 0L, false);
+
+        // Mutate original item stack after passing to constructor
+        originalItem.setAmount(99);
+        assertEquals(10, bounty.getItems().get(0).getAmount());
+
+        // Mutate item returned by getItems()
+        bounty.getItems().get(0).setAmount(50);
+        assertEquals(10, bounty.getItems().get(0).getAmount());
+    }
 }

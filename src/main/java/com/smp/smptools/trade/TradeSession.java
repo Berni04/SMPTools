@@ -33,7 +33,7 @@ public class TradeSession {
     public static final List<Integer> P2_SLOTS_ORDERED = List.of(5, 6, 7, 8, 14, 15, 16, 17, 23, 24, 25, 26, 32, 33, 34, 35);
     public static final Set<Integer> P1_SLOTS = Set.copyOf(P1_SLOTS_ORDERED);
     public static final Set<Integer> P2_SLOTS = Set.copyOf(P2_SLOTS_ORDERED);
-    public static final Set<Integer> DIVIDER_SLOTS = Set.of(4, 13, 22, 31, 40, 49);
+    public static final Set<Integer> DIVIDER_SLOTS = Set.of(4, 13, 22, 31, 40);
     
     public static final int P1_READY_SLOT = 45;
     public static final int P2_READY_SLOT = 53;
@@ -90,15 +90,18 @@ public class TradeSession {
         player1.openInventory(inventory);
         player2.openInventory(inventory);
 
+        int timeoutSeconds = plugin.getConfig().getInt("features.remote-trade.session-timeout-seconds",
+                plugin.getConfig().getInt("features.remote-trade.request-timeout-seconds", 60));
+
         this.timeoutTask = Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!completed && !cancelled) {
                 String timeoutReason = plugin.getMessageManager().getRawMessage("trade.timed-out");
                 if (timeoutReason == null || timeoutReason.isEmpty()) {
-                    timeoutReason = "Trade timed out after 60 seconds.";
+                    timeoutReason = "Trade timed out after " + timeoutSeconds + " seconds.";
                 }
                 cancelTrade(timeoutReason);
             }
-        }, 60 * 20L);
+        }, timeoutSeconds * 20L);
     }
 
     private void cancelTask() {
@@ -157,8 +160,7 @@ public class TradeSession {
 
         plugin.getTradeManager().removeSession(player1.getUniqueId(), player2.getUniqueId());
 
-        player1.closeInventory();
-        player2.closeInventory();
+        scheduleCloseInventories();
     }
 
     public synchronized void cancelTrade(Component p1Message, Component p2Message) {
@@ -182,8 +184,19 @@ public class TradeSession {
 
         plugin.getTradeManager().removeSession(player1.getUniqueId(), player2.getUniqueId());
 
-        player1.closeInventory();
-        player2.closeInventory();
+        scheduleCloseInventories();
+    }
+
+    private void scheduleCloseInventories() {
+        if (plugin != null && plugin.isEnabled()) {
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                player1.closeInventory();
+                player2.closeInventory();
+            });
+        } else {
+            player1.closeInventory();
+            player2.closeInventory();
+        }
     }
 
     public synchronized void cancelTrade(String reason) {

@@ -77,12 +77,28 @@ public class TrailManager {
     public void loadPlayerTrail(Player player) {
         if (player == null || !player.isOnline() || hasExplicitlySet(player)) return;
         if (plugin.getStorageManager() == null || plugin.getStorageManager().getProvider() == null) return;
-        Object val = plugin.getStorageManager().getProvider().getStat(player.getUniqueId(), "active_trail", null);
+        
+        UUID uuid = player.getUniqueId();
+        boolean isFlatFile = plugin.getStorageManager().getProvider() instanceof com.smp.smptools.storage.FlatFileStorageProvider;
+        
+        Object val;
+        if (isFlatFile && Bukkit.getServer() != null && !Bukkit.isPrimaryThread()) {
+            try {
+                val = Bukkit.getScheduler().callSyncMethod(plugin, () ->
+                        plugin.getStorageManager().getProvider().getStat(uuid, "active_trail", null)
+                ).get();
+            } catch (Exception e) {
+                return;
+            }
+        } else {
+            val = plugin.getStorageManager().getProvider().getStat(uuid, "active_trail", null);
+        }
+
         if (val != null && !val.toString().isEmpty()) {
             if (!player.isOnline() || hasExplicitlySet(player)) return;
             TrailType trail = TrailType.fromId(val.toString());
             if (trail != null) {
-                activeTrails.put(player.getUniqueId(), trail);
+                activeTrails.put(uuid, trail);
             }
         }
     }

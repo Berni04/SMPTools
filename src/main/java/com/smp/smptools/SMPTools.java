@@ -118,36 +118,64 @@ public class SMPTools extends JavaPlugin {
         // Initialize Storage Manager
         this.storageManager = new StorageManager(this);
 
-        // Instantiate Managers
-        this.afkManager = new com.smp.smptools.afk.AFKManager(this);
-        this.tradeManager = new com.smp.smptools.trade.TradeManager(this);
-        this.trailManager = new com.smp.smptools.trails.TrailManager(this);
-        this.bountyManager = new com.smp.smptools.bounty.BountyManager(this);
-        this.lockManager = new com.smp.smptools.locks.LockManager(this);
-        this.leaderboardManager = new LeaderboardManager(this);
-        this.tagManager = new TagManager(this);
-        this.tpaManager = new TpaManager(this);
+        // Instantiate Managers conditionally based on feature flags in config.yml
+        if (getConfig().getBoolean("features.afk.enabled", true)) {
+            this.afkManager = new com.smp.smptools.afk.AFKManager(this);
+        }
+        if (getConfig().getBoolean("features.remote-trade.enabled", true)) {
+            this.tradeManager = new com.smp.smptools.trade.TradeManager(this);
+        }
+        if (getConfig().getBoolean("features.trails.enabled", true)) {
+            this.trailManager = new com.smp.smptools.trails.TrailManager(this);
+        }
+        if (getConfig().getBoolean("features.bounties.enabled", true)) {
+            this.bountyManager = new com.smp.smptools.bounty.BountyManager(this);
+        }
+        if (getConfig().getBoolean("features.container-locks.enabled", true)) {
+            this.lockManager = new com.smp.smptools.locks.LockManager(this);
+        }
+        if (getConfig().getBoolean("features.leaderboard.enabled", true)) {
+            this.leaderboardManager = new LeaderboardManager(this);
+        }
+        if (getConfig().getBoolean("features.tags.enabled", true)) {
+            this.tagManager = new TagManager(this);
+        }
+        if (getConfig().getBoolean("features.tpa.enabled", true)) {
+            this.tpaManager = new TpaManager(this);
+        }
         this.teleportManager = new TeleportManager(this);
-        this.sleepManager = new SleepManager(this);
+        if (getConfig().getBoolean("features.sleep-voting.enabled", true)) {
+            this.sleepManager = new SleepManager(this);
+        }
         this.chatManager = new ChatManager(this);
-        this.chunkLoaderManager = new ChunkLoaderManager(this); // Instantiate ChunkLoaderManager
-        if (getConfig().getBoolean("features.mmo-skills.enabled")) {
+        if (getConfig().getBoolean("features.chunk-loaders.enabled", true)) {
+            this.chunkLoaderManager = new ChunkLoaderManager(this);
+        }
+        if (getConfig().getBoolean("features.mmo-skills.enabled", true)) {
             this.skillsManager = new SkillsManager(this);
         }
-        if (getConfig().getBoolean("features.custom-enchants.enabled")) {
+        if (getConfig().getBoolean("features.custom-enchants.enabled", true)) {
             this.enchantmentManager = new EnchantmentManager(this);
         }
-        if (getConfig().getBoolean("features.image-to-map.enabled")) {
+        if (getConfig().getBoolean("features.image-to-map.enabled", true)) {
             this.mapManager = new MapManager(this);
             this.mapManager.loadMaps();
         }
-        this.missionManager = new MissionManager(this);
-        this.adventManager = new AdventManager(this);
-        this.christmasWorldManager = new ChristmasWorldManager(this);
-        this.portalManager = new PortalManager(this);
-        this.npcManager = new NPCManager(this);
+        if (getConfig().getBoolean("features.missions.enabled", true)) {
+            this.missionManager = new MissionManager(this);
+        }
+        if (getConfig().getBoolean("features.christmas.enabled", true)) {
+            this.adventManager = new AdventManager(this);
+            this.christmasWorldManager = new ChristmasWorldManager(this);
+            this.portalManager = new PortalManager(this);
+        }
+        if (getConfig().getBoolean("features.npcs.enabled", true)) {
+            this.npcManager = new NPCManager(this);
+        }
         this.dialogueManager = new DialogueManager(this);
-        this.blackFridayManager = new BlackFridayManager(this);
+        if (getConfig().getBoolean("features.blackfriday.enabled", true)) {
+            this.blackFridayManager = new BlackFridayManager(this);
+        }
         this.messageManager = new MessageManager(this);
 
         // Register Listeners and Commands
@@ -199,7 +227,9 @@ public class SMPTools extends JavaPlugin {
         CommandRegistry.registerConditionalCommands(this);
 
         // Load NPCs
-        npcManager.loadNPCs();
+        if (npcManager != null && getConfig().getBoolean("features.npcs.enabled", true)) {
+            npcManager.loadNPCs();
+        }
 
         // Christmas features (conditional)
         if (getConfig().getBoolean("features.christmas.enabled", true)) {

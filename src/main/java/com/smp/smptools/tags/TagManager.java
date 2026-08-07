@@ -53,7 +53,7 @@ public class TagManager implements Listener {
      */
     public TagManager(SMPTools plugin) {
         this.plugin = plugin;
-        loadPlayerTitles();
+        loadPlayerTitlesAsync();
         if (plugin != null && Bukkit.getServer() != null && plugin.getServer() != null) {
             try {
                 Bukkit.getPluginManager().registerEvents(this, plugin);
@@ -71,7 +71,7 @@ public class TagManager implements Listener {
         evictPlayerCache(event.getPlayer().getUniqueId());
     }
 
-    private void evictPlayerCache(@NotNull UUID uuid) {
+    void evictPlayerCache(@NotNull UUID uuid) {
         playerCacheVersions.computeIfPresent(uuid, (k, v) -> { v.incrementAndGet(); return v; });
         milestoneStatCache.remove(uuid);
         if (!loadingPlayers.contains(uuid)) {
@@ -80,11 +80,43 @@ public class TagManager implements Listener {
     }
 
     /**
-     * Loads player titles from the configuration file or storage provider.
+     * Triggers asynchronous title loading during plugin enable.
      */
-    private void loadPlayerTitles() {
+    public void loadPlayerTitlesAsync() {
+        if (plugin != null && Bukkit.getServer() != null && plugin.isEnabled()) {
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, this::loadPlayerTitles);
+        } else {
+            loadPlayerTitles();
+        }
+    }
+
+    /**
+     * Loads player titles from the configuration file or storage provider.
+     * Also merges/migrates legacy tags.yml titles into the selected provider.
+     */
+    public void loadPlayerTitles() {
         if (plugin != null && plugin.getStorageManager() != null && plugin.getStorageManager().getProvider() != null) {
             try {
+                // Migrate legacy tags.yml titles if present
+                if (plugin.getTagsConfig() != null) {
+                    ConfigurationSection legacySection = plugin.getTagsConfig().getConfigurationSection("player-titles");
+                    if (legacySection == null) {
+                        legacySection = plugin.getTagsConfig().getConfigurationSection("tags");
+                    }
+                    if (legacySection != null) {
+                        for (String key : legacySection.getKeys(false)) {
+                            String legacyTitle = legacySection.getString(key);
+                            if (legacyTitle != null && !legacyTitle.isEmpty()) {
+                                try {
+                                    UUID uuid = UUID.fromString(key);
+                                    plugin.getStorageManager().getProvider().savePlayerTitle(uuid, legacyTitle);
+                                    playerTitles.put(key, legacyTitle);
+                                } catch (IllegalArgumentException ignored) {}
+                            }
+                        }
+                    }
+                }
+
                 Map<String, String> titles = plugin.getStorageManager().getProvider().getAllPlayerTitles();
                 if (titles != null) {
                     playerTitles.putAll(titles);
@@ -120,40 +152,64 @@ public class TagManager implements Listener {
         }
         final Map<String, Object> flatFileSnapshot = flatFileSnapshotTemp;
 
-        Runnable task = () -> {
+        Runnable asyncTask = () -> {
+            Map<String, Long> parsedStats = null;
+            boolean readFailed = false;
             try {
                 Map<String, Object> allStats = isFlatFile ? flatFileSnapshot : plugin.getStorageManager().getProvider().getAllPlayerStats(uuid);
                 if (allStats == null) {
-                    return;
-                }
-                Map<String, Long> parsedStats = new ConcurrentHashMap<>();
-                for (Map.Entry<String, Object> entry : allStats.entrySet()) {
-                    if (entry.getValue() != null) {
-                        try {
-                            parsedStats.put(entry.getKey(), Long.parseLong(entry.getValue().toString()));
-                        } catch (NumberFormatException ignored) {}
+                    readFailed = true;
+                } else {
+                    parsedStats = new ConcurrentHashMap<>();
+                    for (Map.Entry<String, Object> entry : allStats.entrySet()) {
+                        if (entry.getValue() != null) {
+                            try {
+                                parsedStats.put(entry.getKey(), Long.parseLong(entry.getValue().toString()));
+                            } catch (NumberFormatException ignored) {}
+                        }
                     }
-                }
-                int currentGlobalVer = globalCacheVersion.get();
-                int currentPlayerVer = playerCacheVersions.computeIfAbsent(uuid, k -> new java.util.concurrent.atomic.AtomicInteger(0)).get();
-                boolean isOnline = Bukkit.getServer() == null || Bukkit.getPlayer(uuid) != null;
-                if (isOnline && globalVer == currentGlobalVer && playerVer == currentPlayerVer) {
-                    milestoneStatCache.put(uuid, parsedStats);
                 }
             } catch (Exception e) {
                 plugin.getLogger().warning("Could not load stats asynchronously for " + uuid + ": " + e.getMessage());
-            } finally {
-                loadingPlayers.remove(uuid);
-                if (Bukkit.getServer() != null && Bukkit.getPlayer(uuid) == null) {
-                    playerCacheVersions.remove(uuid);
+                readFailed = true;
+            }
+
+            final Map<String, Long> finalParsedStats = parsedStats;
+            final boolean finalReadFailed = readFailed;
+
+            Runnable mainThreadPublishTask = () -> {
+                try {
+                    if (!finalReadFailed && finalParsedStats != null) {
+                        int currentGlobalVer = globalCacheVersion.get();
+                        int currentPlayerVer = playerCacheVersions.computeIfAbsent(uuid, k -> new java.util.concurrent.atomic.AtomicInteger(0)).get();
+                        Player player = Bukkit.getServer() != null ? Bukkit.getPlayer(uuid) : null;
+                        boolean isOnline = Bukkit.getServer() == null || player != null;
+                        if (isOnline && globalVer == currentGlobalVer && playerVer == currentPlayerVer) {
+                            milestoneStatCache.put(uuid, finalParsedStats);
+                            if (player != null && player.isOnline()) {
+                                checkMilestones(player);
+                            }
+                        }
+                    }
+                } finally {
+                    loadingPlayers.remove(uuid);
+                    if (Bukkit.getServer() != null && Bukkit.getPlayer(uuid) == null) {
+                        playerCacheVersions.remove(uuid);
+                    }
                 }
+            };
+
+            if (Bukkit.getServer() == null || !plugin.isEnabled()) {
+                mainThreadPublishTask.run();
+            } else {
+                Bukkit.getScheduler().runTask(plugin, mainThreadPublishTask);
             }
         };
 
         if (Bukkit.getServer() == null || !plugin.isEnabled()) {
-            task.run();
+            asyncTask.run();
         } else {
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, task);
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, asyncTask);
         }
     }
 
@@ -291,7 +347,7 @@ public class TagManager implements Listener {
         return 0;
     }
 
-    private Long getStatFromCache(Map<String, Long> userCache, String statistic) {
+    Long getStatFromCache(Map<String, Long> userCache, String statistic) {
         if (userCache == null || statistic == null) return null;
         Long val = userCache.get(statistic);
         if (val != null) return val;

@@ -131,10 +131,11 @@ public class FlatFileStorageProvider implements StorageProvider {
             ConfigurationSection playerSection = statsSection.getConfigurationSection(uuidStr);
             if (playerSection != null && playerSection.contains(statPath)) {
                 try {
-                    OfflinePlayer player = Bukkit.getOfflinePlayer(UUID.fromString(uuidStr));
-                    String name = player.getName() != null ? player.getName() : "Unknown";
-                    long val = playerSection.getLong(statPath, 0);
-                    rawMap.put(name, val);
+                    Object rawVal = playerSection.get(statPath);
+                    if (rawVal == null || rawVal instanceof ConfigurationSection) continue;
+                    Object parsed = StorageProvider.parseCanonicalValue(rawVal, 0L);
+                    long val = (parsed instanceof Number) ? ((Number) parsed).longValue() : 0L;
+                    rawMap.put(uuidStr, val);
                 } catch (Exception ignored) {}
             }
         }

@@ -36,7 +36,7 @@ public class TradeListener implements Listener {
         TradeSession session = tradeManager.getSession(player);
         if (session == null) return;
 
-        if (event.getAction() == InventoryAction.COLLECT_TO_CURSOR) {
+        if (event.getAction() == InventoryAction.COLLECT_TO_CURSOR || event.getAction() == InventoryAction.CLONE_STACK) {
             event.setCancelled(true);
             return;
         }
@@ -51,7 +51,7 @@ public class TradeListener implements Listener {
 
         if (isTradeInv) {
             // Divider, border, cancel, or ready buttons click logic
-            if (TradeSession.DIVIDER_SLOTS.contains(rawSlot) || (rawSlot >= 36 && rawSlot < 54 && rawSlot != TradeSession.P1_READY_SLOT && rawSlot != TradeSession.P2_READY_SLOT && rawSlot != TradeSession.CANCEL_SLOT)) {
+            if ((TradeSession.DIVIDER_SLOTS.contains(rawSlot) && rawSlot != TradeSession.CANCEL_SLOT) || (rawSlot >= 36 && rawSlot < 54 && rawSlot != TradeSession.P1_READY_SLOT && rawSlot != TradeSession.P2_READY_SLOT && rawSlot != TradeSession.CANCEL_SLOT)) {
                 event.setCancelled(true);
                 return;
             }
@@ -181,6 +181,7 @@ public class TradeListener implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
+        tradeManager.cleanupPendingRequests(player.getUniqueId());
         TradeSession session = tradeManager.getSession(player);
         if (session != null && !session.isCompleted() && !session.isCancelled()) {
             session.cancelTrade(player);

@@ -58,6 +58,7 @@ public class MongoStorageProvider implements StorageProvider {
             this.statsCollection = database.getCollection(prefix + "stats");
             this.tagsCollection = database.getCollection(prefix + "tags");
 
+            migrateFromFlatFileIfEmpty();
             plugin.getLogger().info("Storage provider set to MONGODB.");
         } catch (Exception e) {
             plugin.getLogger().severe("Failed to initialize MONGODB storage provider: " + e.getMessage());
@@ -70,6 +71,49 @@ public class MongoStorageProvider implements StorageProvider {
             this.database = null;
             this.statsCollection = null;
             this.tagsCollection = null;
+        }
+    }
+
+    private String encodeKey(String key) {
+        if (key == null) return null;
+        return key.replace(".", "$DOT$");
+    }
+
+    private String decodeKey(String key) {
+        if (key == null) return null;
+        if (key.contains("$DOT$")) {
+            return key.replace("$DOT$", ".");
+        }
+        return key;
+    }
+
+    private void migrateFromFlatFileIfEmpty() {
+        if (statsCollection == null || tagsCollection == null) return;
+        try {
+            if (statsCollection.countDocuments() == 0 && tagsCollection.countDocuments() == 0) {
+                FlatFileStorageProvider flatfile = new FlatFileStorageProvider(plugin);
+                Map<String, String> titles = flatfile.getAllPlayerTitles();
+                Map<UUID, Map<String, Object>> stats = flatfile.loadAllPlayerStats();
+
+                if (!titles.isEmpty() || !stats.isEmpty()) {
+                    plugin.getLogger().info("Performing initial migration of titles, trails, and stats from FLATFILE to MONGODB...");
+
+                    for (Map.Entry<String, String> entry : titles.entrySet()) {
+                        savePlayerTitle(UUID.fromString(entry.getKey()), entry.getValue());
+                    }
+
+                    for (Map.Entry<UUID, Map<String, Object>> playerEntry : stats.entrySet()) {
+                        UUID uuid = playerEntry.getKey();
+                        for (Map.Entry<String, Object> statEntry : playerEntry.getValue().entrySet()) {
+                            saveStat(uuid, statEntry.getKey(), statEntry.getValue());
+                        }
+                    }
+
+                    plugin.getLogger().info("Successfully migrated FLATFILE data to MONGODB storage.");
+                }
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed flatfile data migration to MONGODB: " + e.getMessage());
         }
     }
 
@@ -102,13 +146,24 @@ public class MongoStorageProvider implements StorageProvider {
                 if (!writeExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
                     plugin.getLogger().warning("Mongo write executor did not terminate within timeout; forcing shutdown.");
                     List<Runnable> pending = writeExecutor.shutdownNow();
-                    if (!pending.isEmpty()) {
-                        plugin.getLogger().warning("Failed to complete " + pending.size() + " write operation(s) during Mongo shutdown.");
+                    for (Runnable task : pending) {
+                        try {
+                            task.run();
+                        } catch (Exception e) {
+                            plugin.getLogger().warning("Failed to execute pending Mongo write during shutdown: " + e.getMessage());
+                        }
                     }
                 }
             } catch (InterruptedException e) {
                 plugin.getLogger().warning("Interrupted while awaiting Mongo write executor termination: " + e.getMessage());
-                writeExecutor.shutdownNow();
+                List<Runnable> pending = writeExecutor.shutdownNow();
+                for (Runnable task : pending) {
+                    try {
+                        task.run();
+                    } catch (Exception ex) {
+                        plugin.getLogger().warning("Failed to execute pending Mongo write during interruption: " + ex.getMessage());
+                    }
+                }
                 Thread.currentThread().interrupt();
             }
         }
@@ -125,7 +180,7 @@ public class MongoStorageProvider implements StorageProvider {
             if (statsCollection == null) return;
             try {
                 Document filter = new Document("uuid", uuid.toString());
-                String fieldPath = "stats." + statKey.replace(".", "_");
+                String fieldPath = "stats." + encodeKey(statKey);
                 Document update = new Document("$set", new Document(fieldPath, value));
                 statsCollection.updateOne(filter, update, new UpdateOptions().upsert(true));
             } catch (Exception e) {
@@ -142,7 +197,10 @@ public class MongoStorageProvider implements StorageProvider {
             Document doc = statsCollection.find(filter).first();
             if (doc != null && doc.containsKey("stats")) {
                 Document statsDoc = (Document) doc.get("stats");
-                Object val = statsDoc.get(statKey.replace(".", "_"));
+                Object val = statsDoc.get(encodeKey(statKey));
+                if (val == null) {
+                    val = statsDoc.get(statKey.replace(".", "_"));
+                }
                 return StorageProvider.parseCanonicalValue(val, defaultValue);
             }
         } catch (Exception e) {
@@ -175,7 +233,7 @@ public class MongoStorageProvider implements StorageProvider {
             if (doc != null && doc.containsKey("stats")) {
                 Document statsDoc = (Document) doc.get("stats");
                 for (Map.Entry<String, Object> entry : statsDoc.entrySet()) {
-                    map.put(entry.getKey().replace("_", "."), entry.getValue());
+                    map.put(decodeKey(entry.getKey()), entry.getValue());
                 }
             }
         } catch (Exception e) {
@@ -197,7 +255,7 @@ public class MongoStorageProvider implements StorageProvider {
                         Document statsDoc = (Document) doc.get("stats");
                         Map<String, Object> map = new HashMap<>();
                         for (Map.Entry<String, Object> entry : statsDoc.entrySet()) {
-                            map.put(entry.getKey().replace("_", "."), entry.getValue());
+                            map.put(decodeKey(entry.getKey()), entry.getValue());
                         }
                         result.put(uuid, map);
                     } catch (IllegalArgumentException ignored) {}
@@ -301,7 +359,7 @@ public class MongoStorageProvider implements StorageProvider {
         Map<String, Long> leaderboard = new LinkedHashMap<>();
         if (statsCollection == null) return leaderboard;
         Map<String, Long> rawMap = new HashMap<>();
-        String safeKey = statPath.replace(".", "_");
+        String safeKey = encodeKey(statPath);
 
         try {
             for (Document doc : statsCollection.find()) {
@@ -309,12 +367,14 @@ public class MongoStorageProvider implements StorageProvider {
                 if (uuidStr != null && doc.containsKey("stats")) {
                     Document statsDoc = (Document) doc.get("stats");
                     Object valObj = statsDoc.get(safeKey);
+                    if (valObj == null) {
+                        valObj = statsDoc.get(statPath.replace(".", "_"));
+                    }
                     if (valObj != null) {
                         try {
-                            long val = Long.parseLong(valObj.toString());
-                            OfflinePlayer player = Bukkit.getOfflinePlayer(UUID.fromString(uuidStr));
-                            String name = player.getName() != null ? player.getName() : "Unknown";
-                            rawMap.put(name, val);
+                            Object parsed = StorageProvider.parseCanonicalValue(valObj, 0L);
+                            long val = (parsed instanceof Number) ? ((Number) parsed).longValue() : 0L;
+                            rawMap.put(uuidStr, val);
                         } catch (Exception ignored) {}
                     }
                 }

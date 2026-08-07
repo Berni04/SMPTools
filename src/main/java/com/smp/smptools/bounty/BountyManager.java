@@ -181,6 +181,9 @@ public class BountyManager {
             YamlConfiguration config = new YamlConfiguration();
 
             for (Bounty bounty : snapshot) {
+                if (bounty.isClaimed()) {
+                    continue; // Compact / omit claimed records once pending delivery is persisted
+                }
                 String path = "bounties." + bounty.getId();
                 config.set(path + ".placerUuid", bounty.getPlacerUuid().toString());
                 config.set(path + ".placerName", bounty.getPlacerName());
@@ -258,11 +261,7 @@ public class BountyManager {
         );
 
         bounties.add(bounty);
-        boolean saved = saveBountiesSync();
-        if (!saved) {
-            bounties.remove(bounty);
-            return false;
-        }
+        saveBounties();
         return true;
     }
 
@@ -342,7 +341,8 @@ public class BountyManager {
             }
         }
 
-        saveBountiesSync();
+        bounties.remove(bounty);
+        saveBounties();
 
         if (claimer != null && claimer.isOnline()) {
             processPendingRefunds(claimer);
@@ -377,6 +377,7 @@ public class BountyManager {
             }
         }
         if (changed) {
+            bounties.removeIf(Bounty::isClaimed);
             saveBounties();
         }
     }
@@ -388,26 +389,45 @@ public class BountyManager {
         if (pending == null || pending.isEmpty()) return;
         if (player.getInventory() == null) return;
 
-        List<ItemStack> remainingPending = new ArrayList<>();
+        boolean stateChanged = false;
+        Iterator<ItemStack> iterator = pending.iterator();
+        while (iterator.hasNext()) {
+            ItemStack item = iterator.next();
+            if (item == null || item.getType() == Material.AIR || item.getAmount() <= 0) {
+                iterator.remove();
+                stateChanged = true;
+                continue;
+            }
 
-        for (ItemStack item : pending) {
-            if (item == null || item.getType() == Material.AIR || item.getAmount() <= 0) continue;
-            
+            int originalAmount = item.getAmount();
             HashMap<Integer, ItemStack> overflow = player.getInventory().addItem(item.clone());
+
+            int undeliveredAmount = 0;
             for (ItemStack rem : overflow.values()) {
-                if (rem != null && rem.getType() != Material.AIR && rem.getAmount() > 0) {
-                    remainingPending.add(rem);
+                if (rem != null && rem.getType() != Material.AIR) {
+                    undeliveredAmount += rem.getAmount();
+                }
+            }
+
+            int deliveredAmount = originalAmount - undeliveredAmount;
+            if (deliveredAmount > 0) {
+                stateChanged = true;
+                if (undeliveredAmount <= 0) {
+                    iterator.remove();
+                } else {
+                    item.setAmount(undeliveredAmount);
                 }
             }
         }
 
-        if (remainingPending.isEmpty()) {
+        if (pending.isEmpty()) {
             pendingRefunds.remove(uuid);
-        } else {
-            pendingRefunds.put(uuid, remainingPending);
+            stateChanged = true;
         }
 
-        saveBountiesSync();
+        if (stateChanged) {
+            saveBounties();
+        }
     }
 
     public synchronized void checkPlayerJoin(Player player) {

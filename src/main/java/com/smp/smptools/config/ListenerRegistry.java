@@ -89,9 +89,13 @@ public final class ListenerRegistry {
         // Mission system listeners
         if (plugin.getConfig().getBoolean("features.missions.enabled", true)) {
             Bukkit.getPluginManager().registerEvents(new MissionNPCListener(plugin), plugin);
-            Bukkit.getPluginManager().registerEvents(new NPCListener(plugin), plugin);
             Bukkit.getPluginManager().registerEvents(new MissionGUIListener(plugin), plugin);
             Bukkit.getPluginManager().registerEvents(new MissionTrackerListener(plugin), plugin);
+        }
+
+        // NPC listeners
+        if (plugin.getConfig().getBoolean("features.npcs.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new NPCListener(plugin), plugin);
         }
 
         // Elytra trail

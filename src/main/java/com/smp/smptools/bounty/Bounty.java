@@ -30,7 +30,15 @@ public class Bounty {
         this.placerName = placerName;
         this.targetUuid = targetUuid;
         this.targetName = targetName;
-        this.items = items != null ? items : new ArrayList<>();
+        List<ItemStack> clonedItems = new ArrayList<>();
+        if (items != null) {
+            for (ItemStack item : items) {
+                if (item != null) {
+                    clonedItems.add(item.clone());
+                }
+            }
+        }
+        this.items = clonedItems;
         this.placedTimestamp = placedTimestamp > 0 ? placedTimestamp : System.currentTimeMillis();
         this.killerUuid = killerUuid;
         this.killedTimestamp = killedTimestamp;
@@ -42,7 +50,13 @@ public class Bounty {
     public String getPlacerName() { return placerName; }
     public UUID getTargetUuid() { return targetUuid; }
     public String getTargetName() { return targetName; }
-    public List<ItemStack> getItems() { return Collections.unmodifiableList(items); }
+    public List<ItemStack> getItems() {
+        List<ItemStack> copy = new ArrayList<>(items.size());
+        for (ItemStack item : items) {
+            copy.add(item != null ? item.clone() : null);
+        }
+        return Collections.unmodifiableList(copy);
+    }
     public long getPlacedTimestamp() { return placedTimestamp; }
     public UUID getKillerUuid() { return killerUuid; }
     public void setKillerUuid(UUID killerUuid) { this.killerUuid = killerUuid; }
