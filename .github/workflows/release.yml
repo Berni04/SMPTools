@@ -7,10 +7,6 @@ on:
       - main
     tags:
       - 'v*'
-  pull_request:
-    branches:
-      - master
-      - main
 
 jobs:
   build:
@@ -32,6 +28,12 @@ jobs:
       - name: Build with Maven
         run: mvn clean package --file pom.xml
 
+      - name: Extract Project Version
+        id: get_version
+        run: |
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "VERSION=v$VERSION" >> $GITHUB_ENV
+
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -39,9 +41,9 @@ jobs:
           path: target/smptools-*.jar
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || env.VERSION }}
           files: target/smptools-*.jar
           generate_release_notes: true
         env:
