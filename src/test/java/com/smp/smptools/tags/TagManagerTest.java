@@ -124,41 +124,30 @@ public class TagManagerTest {
                 }
         );
 
-        com.smp.smptools.storage.StorageManager storageManagerProxy;
-        try {
-            java.lang.reflect.Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
-            unsafeField.setAccessible(true);
-            sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
-            storageManagerProxy = (com.smp.smptools.storage.StorageManager) unsafe.allocateInstance(com.smp.smptools.storage.StorageManager.class);
+        com.smp.smptools.SMPTools plugin = createDummyPlugin();
+        com.smp.smptools.storage.StorageManager storageManager = new com.smp.smptools.storage.StorageManager(plugin, providerProxy);
+        plugin.setStorageManager(storageManager);
 
-            java.lang.reflect.Field providerField = com.smp.smptools.storage.StorageManager.class.getDeclaredField("provider");
-            providerField.setAccessible(true);
-            providerField.set(storageManagerProxy, providerProxy);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        com.smp.smptools.SMPTools pluginProxy;
-        try {
-            java.lang.reflect.Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
-            unsafeField.setAccessible(true);
-            sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
-            pluginProxy = (com.smp.smptools.SMPTools) unsafe.allocateInstance(com.smp.smptools.SMPTools.class);
-
-            java.lang.reflect.Field loggerField = org.bukkit.plugin.java.JavaPlugin.class.getDeclaredField("logger");
-            loggerField.setAccessible(true);
-            loggerField.set(pluginProxy, java.util.logging.Logger.getLogger("TagManagerTest"));
-
-            java.lang.reflect.Field smField = com.smp.smptools.SMPTools.class.getDeclaredField("storageManager");
-            smField.setAccessible(true);
-            smField.set(pluginProxy, storageManagerProxy);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        TagManager manager = new TagManager(pluginProxy);
+        TagManager manager = new TagManager(plugin);
         manager.loadPlayerTitles();
 
         assertFalse(saveCalled[0], "Legacy migration and savePlayerTitle must NOT be triggered when storage read fails (returns null).");
+    }
+
+    private com.smp.smptools.SMPTools createDummyPlugin() {
+        try {
+            java.lang.reflect.Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+            unsafeField.setAccessible(true);
+            sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
+            com.smp.smptools.SMPTools plugin = (com.smp.smptools.SMPTools) unsafe.allocateInstance(com.smp.smptools.SMPTools.class);
+
+            java.lang.reflect.Field loggerField = org.bukkit.plugin.java.JavaPlugin.class.getDeclaredField("logger");
+            loggerField.setAccessible(true);
+            loggerField.set(plugin, java.util.logging.Logger.getLogger("TagManagerTest"));
+
+            return plugin;
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to create dummy plugin for testing", e);
+        }
     }
 }

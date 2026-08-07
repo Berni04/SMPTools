@@ -21,24 +21,59 @@ public class StorageShutdownTest {
 
     private SMPTools createDummyPlugin() {
         try {
-            Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
-            unsafeField.setAccessible(true);
-            sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
-            SMPTools plugin = (SMPTools) unsafe.allocateInstance(SMPTools.class);
+            org.bukkit.UnsafeValues unsafeValuesProxy = (org.bukkit.UnsafeValues) Proxy.newProxyInstance(
+                    org.bukkit.UnsafeValues.class.getClassLoader(),
+                    new Class<?>[]{org.bukkit.UnsafeValues.class},
+                    (proxy, method, args) -> {
+                        if (method.getReturnType().equals(boolean.class)) return false;
+                        if (method.getReturnType().equals(int.class)) return 0;
+                        return null;
+                    }
+            );
 
-            Field loggerField = JavaPlugin.class.getDeclaredField("logger");
-            loggerField.setAccessible(true);
-            loggerField.set(plugin, Logger.getLogger("StorageShutdownTest"));
+            org.bukkit.Server serverProxy = (org.bukkit.Server) Proxy.newProxyInstance(
+                    org.bukkit.Server.class.getClassLoader(),
+                    new Class<?>[]{org.bukkit.Server.class},
+                    (proxy, method, args) -> {
+                        if (method.getName().equals("getLogger")) {
+                            return Logger.getLogger("StorageShutdownTest");
+                        }
+                        if (method.getName().equals("getUnsafe")) {
+                            return unsafeValuesProxy;
+                        }
+                        if (method.getReturnType().equals(boolean.class)) return false;
+                        if (method.getReturnType().equals(int.class)) return 0;
+                        return null;
+                    }
+            );
 
-            return plugin;
+            if (org.bukkit.Bukkit.getServer() == null) {
+                try {
+                    Field serverField = org.bukkit.Bukkit.class.getDeclaredField("server");
+                    serverField.setAccessible(true);
+                    serverField.set(null, serverProxy);
+                } catch (Exception ignored) {}
+            }
+
+            JavaPluginLoader loader = new JavaPluginLoader(serverProxy);
+            PluginDescriptionFile description = new PluginDescriptionFile("SMPTools", "1.0-SNAPSHOT", "com.smp.smptools.SMPTools");
+            File dataFolder = new File("target/test-data");
+            File pluginFile = new File("target/test-plugin.jar");
+
+            Constructor<SMPTools> ctor = SMPTools.class.getDeclaredConstructor(
+                    JavaPluginLoader.class, PluginDescriptionFile.class, File.class, File.class
+            );
+            ctor.setAccessible(true);
+            return ctor.newInstance(loader, description, dataFolder, pluginFile);
         } catch (Exception e) {
-            return null;
+            throw new IllegalStateException("Failed to create dummy plugin for testing", e);
         }
     }
 
     @Test
     public void testJdbcStorageProviderForcedShutdownExecutesPendingTasks() throws Exception {
         SMPTools plugin = createDummyPlugin();
+        assertNotNull(plugin, "Plugin must not be null");
         JdbcStorageProvider provider = new JdbcStorageProvider(plugin, StorageType.SQLITE);
 
         Field field = JdbcStorageProvider.class.getDeclaredField("writeExecutor");
@@ -78,6 +113,7 @@ public class StorageShutdownTest {
     @Test
     public void testMongoStorageProviderForcedShutdownExecutesPendingTasks() throws Exception {
         SMPTools plugin = createDummyPlugin();
+        assertNotNull(plugin, "Plugin must not be null");
         MongoStorageProvider provider = new MongoStorageProvider(plugin);
 
         Field field = MongoStorageProvider.class.getDeclaredField("writeExecutor");

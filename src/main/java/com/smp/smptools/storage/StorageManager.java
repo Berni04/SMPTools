@@ -8,6 +8,12 @@ public class StorageManager {
     private final StorageType type;
     private final StorageProvider provider;
 
+    public StorageManager(SMPTools plugin, StorageProvider provider) {
+        this.plugin = plugin;
+        this.type = StorageType.FLATFILE;
+        this.provider = provider;
+    }
+
     public StorageManager(SMPTools plugin) {
         this.plugin = plugin;
         String typeStr = plugin.getConfig().getString("storage.type", "FLATFILE");
