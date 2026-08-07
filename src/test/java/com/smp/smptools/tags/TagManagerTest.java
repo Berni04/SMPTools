@@ -71,13 +71,25 @@ public class TagManagerTest {
         statCache.put(uuid, new HashMap<>());
         playerVersions.put(uuid, new java.util.concurrent.atomic.AtomicInteger(5));
 
+        java.lang.reflect.Field loadingField = TagManager.class.getDeclaredField("loadingPlayers");
+        loadingField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        java.util.Set<UUID> loadingPlayers = (java.util.Set<UUID>) loadingField.get(manager);
+
         Method evictMethod = TagManager.class.getDeclaredMethod("evictPlayerCache", UUID.class);
         evictMethod.setAccessible(true);
-        evictMethod.invoke(manager, uuid);
 
+        // When loading is in flight, version is incremented and kept
+        loadingPlayers.add(uuid);
+        evictMethod.invoke(manager, uuid);
         assertFalse(statCache.containsKey(uuid));
         assertTrue(playerVersions.containsKey(uuid));
         assertEquals(6, playerVersions.get(uuid).get());
+
+        // When loading finishes, player version entry is cleaned up
+        loadingPlayers.remove(uuid);
+        evictMethod.invoke(manager, uuid);
+        assertFalse(playerVersions.containsKey(uuid));
     }
 }
 

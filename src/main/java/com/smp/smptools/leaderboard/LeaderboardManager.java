@@ -56,33 +56,21 @@ public class LeaderboardManager {
             return; // Coalesce concurrent refresh calls
         }
 
-        if (Bukkit.getServer() != null && plugin.isEnabled()) {
-            if (Bukkit.isPrimaryThread()) {
+        Runnable task = () -> {
+            try {
                 Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
-                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> doSortAndPublish(rawSnapshots));
-            } else {
-                try {
-                    Bukkit.getScheduler().callSyncMethod(plugin, () -> {
-                        Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
-                        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> doSortAndPublish(rawSnapshots));
-                        return null;
-                    });
-                } catch (Exception e) {
-                    doSortAndPublish(snapshotRawStats());
-                }
+                Map<String, Map<String, Long>> sorted = sortSnapshots(rawSnapshots);
+                cachedLeaderboards.putAll(sorted);
+                lastCacheTime = System.currentTimeMillis();
+            } finally {
+                isRefreshing.set(false);
             }
-        } else {
-            doSortAndPublish(snapshotRawStats());
-        }
-    }
+        };
 
-    private void doSortAndPublish(Map<String, Map<String, Long>> rawSnapshots) {
-        try {
-            Map<String, Map<String, Long>> sorted = sortSnapshots(rawSnapshots);
-            cachedLeaderboards.putAll(sorted);
-            lastCacheTime = System.currentTimeMillis();
-        } finally {
-            isRefreshing.set(false);
+        if (Bukkit.getServer() != null && plugin.isEnabled()) {
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, task);
+        } else {
+            task.run();
         }
     }
 

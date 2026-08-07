@@ -74,6 +74,9 @@ public class TagManager implements Listener {
     private void evictPlayerCache(@NotNull UUID uuid) {
         playerCacheVersions.computeIfPresent(uuid, (k, v) -> { v.incrementAndGet(); return v; });
         milestoneStatCache.remove(uuid);
+        if (!loadingPlayers.contains(uuid)) {
+            playerCacheVersions.remove(uuid);
+        }
     }
 
     /**
@@ -141,6 +144,9 @@ public class TagManager implements Listener {
                 plugin.getLogger().warning("Could not load stats asynchronously for " + uuid + ": " + e.getMessage());
             } finally {
                 loadingPlayers.remove(uuid);
+                if (Bukkit.getServer() != null && Bukkit.getPlayer(uuid) == null) {
+                    playerCacheVersions.remove(uuid);
+                }
             }
         };
 
