@@ -76,7 +76,8 @@ public class TagManagerTest {
         evictMethod.invoke(manager, uuid);
 
         assertFalse(statCache.containsKey(uuid));
-        assertFalse(playerVersions.containsKey(uuid));
+        assertTrue(playerVersions.containsKey(uuid));
+        assertEquals(6, playerVersions.get(uuid).get());
     }
 }
 

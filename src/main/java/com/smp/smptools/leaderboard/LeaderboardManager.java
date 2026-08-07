@@ -56,16 +56,28 @@ public class LeaderboardManager {
             return; // Coalesce concurrent refresh calls
         }
 
-        if (Bukkit.getServer() != null && plugin.isEnabled() && Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, this::doRecalculate);
+        if (Bukkit.getServer() != null && plugin.isEnabled()) {
+            if (Bukkit.isPrimaryThread()) {
+                Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> doSortAndPublish(rawSnapshots));
+            } else {
+                try {
+                    Bukkit.getScheduler().callSyncMethod(plugin, () -> {
+                        Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
+                        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> doSortAndPublish(rawSnapshots));
+                        return null;
+                    });
+                } catch (Exception e) {
+                    doSortAndPublish(snapshotRawStats());
+                }
+            }
         } else {
-            doRecalculate();
+            doSortAndPublish(snapshotRawStats());
         }
     }
 
-    private void doRecalculate() {
+    private void doSortAndPublish(Map<String, Map<String, Long>> rawSnapshots) {
         try {
-            Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
             Map<String, Map<String, Long>> sorted = sortSnapshots(rawSnapshots);
             cachedLeaderboards.putAll(sorted);
             lastCacheTime = System.currentTimeMillis();

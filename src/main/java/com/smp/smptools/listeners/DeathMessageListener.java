@@ -93,8 +93,8 @@ public class DeathMessageListener implements Listener {
                             finalMessage = replaceKillerPlaceholder(formattedPlayerName, deathMessageTemplate, formattedKillerName);
                         } else {
                             deathMessageTemplate = getRandomMessage(Arrays.asList(
-                                    " was slain by a " + damager.getType().name().toLowerCase() + ".",
-                                    " had a bone to pick with a " + damager.getType().name().toLowerCase() + "."));
+                                    " was slain by a " + damager.getType().name().toLowerCase(java.util.Locale.ROOT) + ".",
+                                    " had a bone to pick with a " + damager.getType().name().toLowerCase(java.util.Locale.ROOT) + "."));
                             finalMessage = formatDeathMessage(formattedPlayerName, deathMessageTemplate);
                         }
                     } else {
@@ -103,37 +103,36 @@ public class DeathMessageListener implements Listener {
                     break;
                 case ENTITY_EXPLOSION:
                 case BLOCK_EXPLOSION:
-                    if (lastDamage instanceof EntityDamageByEntityEvent damageEvent) {
-                        Entity damager = damageEvent.getDamager();
+                    Entity damager = null;
+                    if (event.getEntity().getLastDamageCause() instanceof EntityDamageByEntityEvent edbe) {
+                        damager = edbe.getDamager();
+                    }
+                    if (damager != null) {
                         if (damager instanceof Projectile projectile) {
                             if (projectile.getShooter() instanceof Entity shooterEntity) {
                                 damager = shooterEntity;
                             }
                         }
 
-                        if (damager instanceof Player killer) {
+                        Player killer = (damager instanceof Player p) ? p : null;
+                        if (killer != null) {
                             Component formattedKillerName = plugin.getChatManager().getFormattedDisplayName(killer);
                             deathMessageTemplate = getRandomMessage(Arrays.asList(
                                     " was blown up by %killer%.",
                                     " learned that %killer% plays with explosives."));
                             finalMessage = replaceKillerPlaceholder(formattedPlayerName, deathMessageTemplate, formattedKillerName);
-                        } else if (damager != null && damager.getType() == EntityType.CREEPER) {
+                        } else if (damager.getType() == EntityType.CREEPER) {
                             deathMessageTemplate = getRandomMessage(Arrays.asList(
                                     "got a hug from a Creeper.",
                                     "learned that some hugs are explosive."));
                             finalMessage = formatDeathMessage(formattedPlayerName, deathMessageTemplate);
-                        } else if (damager != null && (damager.getType() == EntityType.TNT || damager.getType() == EntityType.TNT_MINECART)) {
+                        } else if (damager.getType() == EntityType.TNT || damager.getType() == EntityType.TNT_MINECART) {
                             deathMessageTemplate = getRandomMessage(Arrays.asList(
                                     "played with TNT.",
                                     "was blown to pieces."));
                             finalMessage = formatDeathMessage(formattedPlayerName, deathMessageTemplate);
-                        } else if (damager != null) {
-                            deathMessageTemplate = "was blown up by a " + damager.getType().name().toLowerCase() + ".";
-                            finalMessage = formatDeathMessage(formattedPlayerName, deathMessageTemplate);
                         } else {
-                            deathMessageTemplate = getRandomMessage(Arrays.asList(
-                                    "should not have slept in the Nether.",
-                                    "'s bed went boom."));
+                            deathMessageTemplate = "was blown up by a " + damager.getType().name().toLowerCase(java.util.Locale.ROOT) + ".";
                             finalMessage = formatDeathMessage(formattedPlayerName, deathMessageTemplate);
                         }
                     } else {

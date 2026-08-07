@@ -88,11 +88,12 @@ public class LockManagerTest {
                     if (method.getName().equals("getName")) return worldName;
                     if (method.getName().equals("getUID")) return worldUid;
                     if (method.getName().equals("getBlockAt")) {
+                        String worldKey = (worldUid != null ? worldUid.toString() : worldName);
                         if (args != null && args.length == 3 && args[0] instanceof Integer x && args[1] instanceof Integer y && args[2] instanceof Integer z) {
-                            return blockRegistry.get(x + ":" + y + ":" + z);
+                            return blockRegistry.get(worldKey + ":" + x + ":" + y + ":" + z);
                         }
                         if (args != null && args.length == 1 && args[0] instanceof Location loc) {
-                            return blockRegistry.get(loc.getBlockX() + ":" + loc.getBlockY() + ":" + loc.getBlockZ());
+                            return blockRegistry.get(worldKey + ":" + loc.getBlockX() + ":" + loc.getBlockY() + ":" + loc.getBlockZ());
                         }
                     }
                     if (method.getReturnType().equals(boolean.class)) return false;
@@ -143,7 +144,8 @@ public class LockManagerTest {
                     return null;
                 }
         );
-        blockRegistry.put(x + ":" + y + ":" + z, blockProxy);
+        String worldKey = (world.getUID() != null ? world.getUID().toString() : world.getName());
+        blockRegistry.put(worldKey + ":" + x + ":" + y + ":" + z, blockProxy);
         return blockProxy;
     }
 

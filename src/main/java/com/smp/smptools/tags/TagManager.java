@@ -72,9 +72,8 @@ public class TagManager implements Listener {
     }
 
     private void evictPlayerCache(@NotNull UUID uuid) {
+        playerCacheVersions.computeIfPresent(uuid, (k, v) -> { v.incrementAndGet(); return v; });
         milestoneStatCache.remove(uuid);
-        playerCacheVersions.remove(uuid);
-        loadingPlayers.remove(uuid);
     }
 
     /**
@@ -134,7 +133,8 @@ public class TagManager implements Listener {
                 }
                 int currentGlobalVer = globalCacheVersion.get();
                 int currentPlayerVer = playerCacheVersions.computeIfAbsent(uuid, k -> new java.util.concurrent.atomic.AtomicInteger(0)).get();
-                if (globalVer == currentGlobalVer && playerVer == currentPlayerVer) {
+                boolean isOnline = Bukkit.getServer() == null || Bukkit.getPlayer(uuid) != null;
+                if (isOnline && globalVer == currentGlobalVer && playerVer == currentPlayerVer) {
                     milestoneStatCache.put(uuid, parsedStats);
                 }
             } catch (Exception e) {

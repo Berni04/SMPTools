@@ -25,6 +25,7 @@ public final class AsyncConfigHelper {
 
     private static ExecutorService saveExecutor;
     private static ExecutorService drainingExecutor;
+    private static boolean shuttingDown = false;
 
     private AsyncConfigHelper() {
         // Prevent instantiation
@@ -38,6 +39,7 @@ public final class AsyncConfigHelper {
                 thread.setDaemon(true);
                 return thread;
             });
+            shuttingDown = false;
         }
         return saveExecutor;
     }
@@ -49,6 +51,11 @@ public final class AsyncConfigHelper {
         }
         if (draining != null) {
             awaitExecutorTermination(draining);
+            synchronized (AsyncConfigHelper.class) {
+                if (drainingExecutor == draining) {
+                    drainingExecutor = null;
+                }
+            }
         }
     }
 
@@ -109,6 +116,7 @@ public final class AsyncConfigHelper {
     public static void shutdown() {
         ExecutorService executorToShutdown;
         synchronized (AsyncConfigHelper.class) {
+            shuttingDown = true;
             waitForDraining();
             executorToShutdown = saveExecutor;
             saveExecutor = null;
@@ -124,6 +132,11 @@ public final class AsyncConfigHelper {
                 if (drainingExecutor == executorToShutdown) {
                     drainingExecutor = null;
                 }
+                shuttingDown = false;
+            }
+        } else {
+            synchronized (AsyncConfigHelper.class) {
+                shuttingDown = false;
             }
         }
     }

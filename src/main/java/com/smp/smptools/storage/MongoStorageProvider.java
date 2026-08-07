@@ -227,9 +227,9 @@ public class MongoStorageProvider implements StorageProvider {
                     }
 
                     if (trail != null) {
-                        Document newStatsDoc = new Document("active_trail", trail);
-                        Document newDoc = new Document("uuid", uuid.toString()).append("stats", newStatsDoc);
-                        statsCollection.replaceOne(Filters.eq("uuid", uuid.toString()), newDoc);
+                        Document update = new Document("$set", new Document("stats", new Document("active_trail", trail)))
+                                .append("$unset", new Document("active_trail", ""));
+                        statsCollection.updateOne(Filters.eq("uuid", uuid.toString()), update);
                     } else {
                         statsCollection.deleteOne(Filters.eq("uuid", uuid.toString()));
                     }
