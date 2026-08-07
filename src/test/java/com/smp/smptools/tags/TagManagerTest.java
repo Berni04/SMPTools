@@ -1,6 +1,7 @@
 package com.smp.smptools.tags;
 
 import org.junit.jupiter.api.Test;
+import java.lang.reflect.Proxy;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -101,5 +102,63 @@ public class TagManagerTest {
         loadingPlayers.remove(uuid);
         manager.evictPlayerCache(uuid);
         assertFalse(playerVersions.containsKey(uuid));
+    }
+
+    @Test
+    public void testLoadPlayerTitlesDoesNotMigrateOnFailedStorageRead() {
+        boolean[] saveCalled = new boolean[]{false};
+
+        com.smp.smptools.storage.StorageProvider providerProxy = (com.smp.smptools.storage.StorageProvider) Proxy.newProxyInstance(
+                com.smp.smptools.storage.StorageProvider.class.getClassLoader(),
+                new Class<?>[]{com.smp.smptools.storage.StorageProvider.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getAllPlayerTitles")) {
+                        return null; // Transient storage read failure
+                    }
+                    if (method.getName().equals("savePlayerTitle")) {
+                        saveCalled[0] = true;
+                    }
+                    if (method.getReturnType().equals(boolean.class)) return false;
+                    if (method.getReturnType().equals(int.class)) return 0;
+                    return null;
+                }
+        );
+
+        com.smp.smptools.storage.StorageManager storageManagerProxy;
+        try {
+            java.lang.reflect.Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+            unsafeField.setAccessible(true);
+            sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
+            storageManagerProxy = (com.smp.smptools.storage.StorageManager) unsafe.allocateInstance(com.smp.smptools.storage.StorageManager.class);
+
+            java.lang.reflect.Field providerField = com.smp.smptools.storage.StorageManager.class.getDeclaredField("provider");
+            providerField.setAccessible(true);
+            providerField.set(storageManagerProxy, providerProxy);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        com.smp.smptools.SMPTools pluginProxy;
+        try {
+            java.lang.reflect.Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+            unsafeField.setAccessible(true);
+            sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
+            pluginProxy = (com.smp.smptools.SMPTools) unsafe.allocateInstance(com.smp.smptools.SMPTools.class);
+
+            java.lang.reflect.Field loggerField = org.bukkit.plugin.java.JavaPlugin.class.getDeclaredField("logger");
+            loggerField.setAccessible(true);
+            loggerField.set(pluginProxy, java.util.logging.Logger.getLogger("TagManagerTest"));
+
+            java.lang.reflect.Field smField = com.smp.smptools.SMPTools.class.getDeclaredField("storageManager");
+            smField.setAccessible(true);
+            smField.set(pluginProxy, storageManagerProxy);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        TagManager manager = new TagManager(pluginProxy);
+        manager.loadPlayerTitles();
+
+        assertFalse(saveCalled[0], "Legacy migration and savePlayerTitle must NOT be triggered when storage read fails (returns null).");
     }
 }

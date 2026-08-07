@@ -123,32 +123,36 @@ public class LockManager {
 
                     // Check single-half lock migration when chest is paired into a double chest
                     boolean modified = false;
+                    String otherKey = doubleKey.equals(leftKey) ? rightKey : leftKey;
+
                     if (!containerOwners.containsKey(doubleKey)) {
-                        if (containerOwners.containsKey(leftKey)) {
-                            UUID owner = containerOwners.remove(leftKey);
-                            Set<UUID> trusted = containerTrusted.remove(leftKey);
-                            containerOwners.put(doubleKey, owner);
-                            if (trusted != null && !trusted.isEmpty()) {
-                                containerTrusted.put(doubleKey, trusted);
-                            }
-                            modified = true;
-                        } else if (containerOwners.containsKey(rightKey)) {
-                            UUID owner = containerOwners.remove(rightKey);
-                            Set<UUID> trusted = containerTrusted.remove(rightKey);
+                        if (containerOwners.containsKey(otherKey)) {
+                            UUID owner = containerOwners.remove(otherKey);
+                            Set<UUID> trusted = containerTrusted.remove(otherKey);
                             containerOwners.put(doubleKey, owner);
                             if (trusted != null && !trusted.isEmpty()) {
                                 containerTrusted.put(doubleKey, trusted);
                             }
                             modified = true;
                         }
-                    }
+                    } else {
+                        if (containerOwners.containsKey(otherKey)) {
+                            UUID doubleOwner = containerOwners.get(doubleKey);
+                            UUID otherOwner = containerOwners.remove(otherKey);
+                            Set<UUID> otherTrusted = containerTrusted.remove(otherKey);
 
-                    // Clean up non-canonical single-half key if orphaned
-                    String otherKey = doubleKey.equals(leftKey) ? rightKey : leftKey;
-                    if (containerOwners.containsKey(otherKey)) {
-                        containerOwners.remove(otherKey);
-                        containerTrusted.remove(otherKey);
-                        modified = true;
+                            Set<UUID> doubleTrusted = containerTrusted.computeIfAbsent(doubleKey, k -> ConcurrentHashMap.newKeySet());
+                            if (otherOwner != null && !otherOwner.equals(doubleOwner)) {
+                                doubleTrusted.add(otherOwner);
+                            }
+                            if (otherTrusted != null && !otherTrusted.isEmpty()) {
+                                doubleTrusted.addAll(otherTrusted);
+                            }
+                            if (doubleTrusted.isEmpty()) {
+                                containerTrusted.remove(doubleKey);
+                            }
+                            modified = true;
+                        }
                     }
 
                     if (modified) {

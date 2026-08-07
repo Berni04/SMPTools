@@ -213,21 +213,30 @@ public class JdbcStorageProvider implements StorageProvider {
     public void shutdown() {
         if (writeExecutor != null) {
             writeExecutor.shutdown();
+            List<Runnable> pending = null;
             try {
                 if (!writeExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
                     plugin.getLogger().severe("JDBC write executor did not terminate within timeout; forcing shutdown.");
-                    List<Runnable> pending = writeExecutor.shutdownNow();
-                    if (!pending.isEmpty()) {
-                        plugin.getLogger().warning("Discarded " + pending.size() + " pending JDBC write task(s) during forced shutdown.");
-                    }
+                    pending = writeExecutor.shutdownNow();
                 }
             } catch (InterruptedException e) {
                 plugin.getLogger().severe("Interrupted while awaiting JDBC write executor termination: " + e.getMessage());
-                List<Runnable> pending = writeExecutor.shutdownNow();
-                if (!pending.isEmpty()) {
-                    plugin.getLogger().warning("Discarded " + pending.size() + " pending JDBC write task(s) during forced shutdown.");
-                }
+                pending = writeExecutor.shutdownNow();
                 Thread.currentThread().interrupt();
+            }
+            if (pending != null && !pending.isEmpty()) {
+                if (plugin != null) {
+                    plugin.getLogger().info("Executing " + pending.size() + " pending JDBC write task(s) synchronously on shutdown thread.");
+                }
+                for (Runnable task : pending) {
+                    try {
+                        task.run();
+                    } catch (Exception e) {
+                        if (plugin != null) {
+                            plugin.getLogger().severe("Failed to execute pending JDBC write task during shutdown: " + e.getMessage());
+                        }
+                    }
+                }
             }
         }
         if (dataSource != null && !dataSource.isClosed()) {

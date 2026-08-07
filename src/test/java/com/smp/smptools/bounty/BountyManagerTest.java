@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.lang.reflect.Proxy;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class BountyManagerTest {
@@ -218,5 +219,46 @@ public class BountyManagerTest {
         // Mutate item returned by getItems()
         bounty.getItems().get(0).setAmount(50);
         assertEquals(10, bounty.getItems().get(0).getAmount());
+    }
+
+    @Test
+    public void testCreateBountyAddsToInMemoryStateAndSavesAsync() {
+        BountyManager manager = new BountyManager(null);
+
+        UUID placerUuid = UUID.randomUUID();
+        UUID targetUuid = UUID.randomUUID();
+
+        org.bukkit.entity.Player placer = (org.bukkit.entity.Player) Proxy.newProxyInstance(
+                org.bukkit.entity.Player.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.Player.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getUniqueId")) return placerUuid;
+                    if (method.getName().equals("getName")) return "PlacerPlayer";
+                    if (method.getReturnType().equals(boolean.class)) return false;
+                    if (method.getReturnType().equals(int.class)) return 0;
+                    return null;
+                }
+        );
+
+        org.bukkit.entity.Player target = (org.bukkit.entity.Player) Proxy.newProxyInstance(
+                org.bukkit.entity.Player.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.Player.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getUniqueId")) return targetUuid;
+                    if (method.getName().equals("getName")) return "TargetPlayer";
+                    if (method.getReturnType().equals(boolean.class)) return false;
+                    if (method.getReturnType().equals(int.class)) return 0;
+                    return null;
+                }
+        );
+
+        List<ItemStack> items = List.of(createTestItemStack(Material.DIAMOND, 5));
+        boolean result = manager.createBounty(placer, target, items);
+
+        assertTrue(result, "createBounty should return true when valid parameters are passed");
+        List<Bounty> active = manager.getActiveBountiesForTarget(targetUuid);
+        assertEquals(1, active.size(), "Bounty should be immediately present in memory");
+        assertEquals("PlacerPlayer", active.get(0).getPlacerName());
+        assertEquals("TargetPlayer", active.get(0).getTargetName());
     }
 }

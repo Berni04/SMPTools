@@ -88,7 +88,11 @@ public class BountyGUIListener implements Listener {
         inv.setItem(26, cancel);
 
         transitioningPlayers.add(placer.getUniqueId());
-        placer.openInventory(inv);
+        try {
+            placer.openInventory(inv);
+        } finally {
+            transitioningPlayers.remove(placer.getUniqueId());
+        }
     }
 
     public void openBountyListGUI(Player player) {
@@ -179,7 +183,11 @@ public class BountyGUIListener implements Listener {
         }
 
         transitioningPlayers.add(player.getUniqueId());
-        player.openInventory(inv);
+        try {
+            player.openInventory(inv);
+        } finally {
+            transitioningPlayers.remove(player.getUniqueId());
+        }
     }
 
     public void openBountyDetailsGUI(Player player, UUID targetUuid) {
@@ -217,7 +225,11 @@ public class BountyGUIListener implements Listener {
         inv.setItem(49, back);
 
         transitioningPlayers.add(player.getUniqueId());
-        player.openInventory(inv);
+        try {
+            player.openInventory(inv);
+        } finally {
+            transitioningPlayers.remove(player.getUniqueId());
+        }
         detailsViewMap.put(player.getUniqueId(), targetUuid);
     }
 
@@ -262,7 +274,12 @@ public class BountyGUIListener implements Listener {
             slot++;
         }
 
-        player.openInventory(inv);
+        transitioningPlayers.add(player.getUniqueId());
+        try {
+            player.openInventory(inv);
+        } finally {
+            transitioningPlayers.remove(player.getUniqueId());
+        }
         claimMap.put(player.getUniqueId(), slotToBounty); // Installed AFTER openInventory (Issue 8)
     }
 

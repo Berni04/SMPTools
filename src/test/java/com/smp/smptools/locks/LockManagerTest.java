@@ -70,6 +70,51 @@ public class LockManagerTest {
         assertTrue(manager.isLocked(survivingBlock), "Surviving block must remain locked under its single chest key.");
     }
 
+    @Test
+    public void testPairingTwoLockedSingleChestsMergesOwnersAndTrusted() {
+        World world = createWorldProxy("world");
+        Block leftBlock = createBlockProxy(world, 10, 64, 10);
+        Block rightBlock = createBlockProxy(world, 11, 64, 10);
+
+        setSingleChest(leftBlock);
+        setSingleChest(rightBlock);
+
+        LockManager manager = createTestLockManager();
+
+        java.util.UUID ownerA = java.util.UUID.randomUUID();
+        java.util.UUID trustedA = java.util.UUID.randomUUID();
+        java.util.UUID ownerB = java.util.UUID.randomUUID();
+        java.util.UUID trustedB = java.util.UUID.randomUUID();
+
+        String leftKey = manager.getLocationKey(leftBlock.getLocation());
+        String rightKey = manager.getLocationKey(rightBlock.getLocation());
+
+        manager.getContainerOwners().put(leftKey, ownerA);
+        manager.trustPlayer(leftBlock, createPlayerProxy(ownerA), createOfflinePlayerProxy(trustedA));
+
+        manager.getContainerOwners().put(rightKey, ownerB);
+        manager.trustPlayer(rightBlock, createPlayerProxy(ownerB), createOfflinePlayerProxy(trustedB));
+
+        // Now pair into a double chest
+        createDoubleChestPair(leftBlock, rightBlock);
+
+        String doubleKey = manager.getBlockKey(leftBlock);
+        assertNotNull(doubleKey);
+        assertEquals(leftKey, doubleKey); // canonical key is leftKey (x=10)
+
+        // Verify primary owner is ownerA
+        assertEquals(ownerA, manager.getContainerOwners().get(doubleKey));
+
+        // Verify rightKey lock entry was removed from containerOwners
+        assertFalse(manager.getContainerOwners().containsKey(rightKey));
+
+        // Verify both owners and trusted players retain access via canAccess
+        assertTrue(manager.canAccess(leftBlock, createPlayerProxy(ownerA)), "Owner A must retain access.");
+        assertTrue(manager.canAccess(leftBlock, createPlayerProxy(ownerB)), "Owner B must retain access (merged as trusted).");
+        assertTrue(manager.canAccess(leftBlock, createPlayerProxy(trustedA)), "Trusted A must retain access.");
+        assertTrue(manager.canAccess(leftBlock, createPlayerProxy(trustedB)), "Trusted B must retain access.");
+    }
+
     private LockManager createTestLockManager() {
         return new LockManager(null) {
             @Override
@@ -235,5 +280,30 @@ public class LockManagerTest {
         );
 
         chestStateRegistry.put(block, singleChestState);
+    }
+
+    private org.bukkit.entity.Player createPlayerProxy(java.util.UUID uuid) {
+        return (org.bukkit.entity.Player) Proxy.newProxyInstance(
+                org.bukkit.entity.Player.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.Player.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getUniqueId")) return uuid;
+                    if (method.getName().equals("hasPermission")) return false;
+                    if (method.getReturnType().equals(boolean.class)) return false;
+                    return null;
+                }
+        );
+    }
+
+    private org.bukkit.OfflinePlayer createOfflinePlayerProxy(java.util.UUID uuid) {
+        return (org.bukkit.OfflinePlayer) Proxy.newProxyInstance(
+                org.bukkit.OfflinePlayer.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.OfflinePlayer.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getUniqueId")) return uuid;
+                    if (method.getReturnType().equals(boolean.class)) return false;
+                    return null;
+                }
+        );
     }
 }

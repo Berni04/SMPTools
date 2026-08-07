@@ -100,7 +100,7 @@ public class TagManager implements Listener {
                 Map<String, String> titles = plugin.getStorageManager().getProvider().getAllPlayerTitles();
 
                 // Perform legacy title migration ONLY when title storage is empty
-                if (titles == null || titles.isEmpty()) {
+                if (titles != null && titles.isEmpty()) {
                     Map<String, String> legacySnapshot = snapshotLegacyTitlesSync();
                     if (!legacySnapshot.isEmpty()) {
                         for (Map.Entry<String, String> entry : legacySnapshot.entrySet()) {
