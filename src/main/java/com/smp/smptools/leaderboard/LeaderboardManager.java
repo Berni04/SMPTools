@@ -56,21 +56,37 @@ public class LeaderboardManager {
             return; // Coalesce concurrent refresh calls
         }
 
-        Runnable task = () -> {
-            try {
-                Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
-                Map<String, Map<String, Long>> sorted = sortSnapshots(rawSnapshots);
-                cachedLeaderboards.putAll(sorted);
-                lastCacheTime = System.currentTimeMillis();
-            } finally {
-                isRefreshing.set(false);
-            }
-        };
+        boolean isFlatFile = plugin.getStorageManager().getProvider() instanceof com.smp.smptools.storage.FlatFileStorageProvider;
 
-        if (Bukkit.getServer() != null && plugin.isEnabled()) {
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, task);
+        if (isFlatFile && Bukkit.getServer() != null && plugin.isEnabled()) {
+            if (Bukkit.isPrimaryThread()) {
+                Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> doSortAndPublish(rawSnapshots));
+            } else {
+                try {
+                    Bukkit.getScheduler().callSyncMethod(plugin, () -> {
+                        Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
+                        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> doSortAndPublish(rawSnapshots));
+                        return null;
+                    });
+                } catch (Exception e) {
+                    doSortAndPublish(snapshotRawStats());
+                }
+            }
+        } else if (Bukkit.getServer() != null && plugin.isEnabled()) {
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> doSortAndPublish(snapshotRawStats()));
         } else {
-            task.run();
+            doSortAndPublish(snapshotRawStats());
+        }
+    }
+
+    private void doSortAndPublish(Map<String, Map<String, Long>> rawSnapshots) {
+        try {
+            Map<String, Map<String, Long>> sorted = sortSnapshots(rawSnapshots);
+            cachedLeaderboards.putAll(sorted);
+            lastCacheTime = System.currentTimeMillis();
+        } finally {
+            isRefreshing.set(false);
         }
     }
 
