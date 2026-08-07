@@ -25,6 +25,11 @@ public class TagsCommand extends AbstractPlayerCommand {
 
     @Override
     protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
+        if (plugin.getTagManager() == null) {
+            player.sendMessage("Tags feature is currently disabled.");
+            return true;
+        }
+
         if (args.length == 0) {
             openTagsGUI(player);
             return true;

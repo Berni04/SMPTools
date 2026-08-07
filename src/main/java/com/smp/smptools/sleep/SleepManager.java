@@ -41,6 +41,15 @@ public class SleepManager {
         // The initiator automatically votes yes
         yesVotes.add(player.getUniqueId());
 
+        // AFK players automatically vote yes
+        if (plugin.getAFKManager() != null && plugin.getConfig().getBoolean("features.afk.auto-vote-sleep", true)) {
+            for (Player p : player.getWorld().getPlayers()) {
+                if (plugin.getAFKManager().isAFK(p)) {
+                    yesVotes.add(p.getUniqueId());
+                }
+            }
+        }
+
         Component acceptButton = Component.text("[Accept]", NamedTextColor.GREEN)
                 .clickEvent(ClickEvent.runCommand("/sleepvote accept"));
         Component denyButton = Component.text("[Deny]", NamedTextColor.RED)

@@ -187,7 +187,7 @@ public class MessageManager {
         // Get player data
         String colorTag = statsConfig.getString("players." + uuid + ".name-color", "<white>");
         String prefix = statsConfig.getString("players." + uuid + ".prefix", "");
-        String title = tagsConfig.getString("player-titles." + uuid, "");
+        String title = resolvePlayerTitle(player);
 
         // Full formatted name (color + prefix + name + title)
         Component fullPlayer = plugin.getChatManager().getFormattedDisplayName(player);
@@ -240,7 +240,7 @@ public class MessageManager {
 
         String colorTag = statsConfig.getString("players." + uuid + ".name-color", "<white>");
         String prefix = statsConfig.getString("players." + uuid + ".prefix", "");
-        String title = tagsConfig.getString("player-titles." + uuid, "");
+        String title = resolvePlayerTitle(player);
 
         Component fullPlayer = plugin.getChatManager().getFormattedDisplayName(player);
         Component nameColor = MiniMessage.miniMessage().deserialize(colorTag + player.getName());
@@ -261,5 +261,11 @@ public class MessageManager {
             .resolver(TagResolver.resolver("requester_prefix", Tag.selfClosingInserting(prefixComponent)))
             .resolver(TagResolver.resolver("requester_title", Tag.selfClosingInserting(titleComponent)))
             .build();
+    }
+
+    private String resolvePlayerTitle(Player player) {
+        if (player == null) return "";
+        String title = plugin.getTagManager() != null ? plugin.getTagManager().getTagTitle(player) : null;
+        return title != null ? title : "";
     }
 }

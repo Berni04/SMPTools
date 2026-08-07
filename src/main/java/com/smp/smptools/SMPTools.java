@@ -43,6 +43,7 @@ import com.smp.smptools.listeners.ResourcePackListener;
 import com.smp.smptools.listeners.SitListener;
 import com.smp.smptools.listeners.SkillsListener;
 import com.smp.smptools.managers.NPCManager;
+import com.smp.smptools.storage.StorageManager;
 import com.smp.smptools.managers.DialogueManager;
 import com.smp.smptools.managers.BlackFridayManager;
 import org.bukkit.Bukkit;
@@ -91,7 +92,15 @@ public class SMPTools extends JavaPlugin {
     private DialogueManager dialogueManager;
     private BlackFridayManager blackFridayManager;
     private MessageManager messageManager;
+    private StorageManager storageManager;
+    private com.smp.smptools.afk.AFKManager afkManager;
+    private com.smp.smptools.trade.TradeManager tradeManager;
+    private com.smp.smptools.trails.TrailManager trailManager;
+    private com.smp.smptools.bounty.BountyManager bountyManager;
+    private com.smp.smptools.locks.LockManager lockManager;
     private com.smp.smptools.listeners.InvseeGUIListener invseeGUIListener;
+    private com.smp.smptools.listeners.BountyGUIListener bountyGUIListener;
+
 
     @Override
     public void onEnable() {
@@ -107,31 +116,67 @@ public class SMPTools extends JavaPlugin {
         setupRewardsConfig();
         setupImageMapsConfig();
 
-        // Instantiate Managers
-        this.leaderboardManager = new LeaderboardManager(this);
-        this.tagManager = new TagManager(this);
-        this.tpaManager = new TpaManager(this);
+        // Initialize Storage Manager
+        this.storageManager = new StorageManager(this);
+
+        // Instantiate Managers conditionally based on feature flags in config.yml
+        if (getConfig().getBoolean("features.afk.enabled", true)) {
+            this.afkManager = new com.smp.smptools.afk.AFKManager(this);
+        }
+        if (getConfig().getBoolean("features.remote-trade.enabled", true)) {
+            this.tradeManager = new com.smp.smptools.trade.TradeManager(this);
+        }
+        if (getConfig().getBoolean("features.trails.enabled", true)) {
+            this.trailManager = new com.smp.smptools.trails.TrailManager(this);
+        }
+        if (getConfig().getBoolean("features.bounties.enabled", true)) {
+            this.bountyManager = new com.smp.smptools.bounty.BountyManager(this);
+        }
+        if (getConfig().getBoolean("features.container-locks.enabled", true)) {
+            this.lockManager = new com.smp.smptools.locks.LockManager(this);
+        }
+        if (getConfig().getBoolean("features.leaderboard.enabled", true)) {
+            this.leaderboardManager = new LeaderboardManager(this);
+        }
+        if (getConfig().getBoolean("features.tags.enabled", true)) {
+            this.tagManager = new TagManager(this);
+        }
+        if (getConfig().getBoolean("features.tpa.enabled", true)) {
+            this.tpaManager = new TpaManager(this);
+        }
         this.teleportManager = new TeleportManager(this);
-        this.sleepManager = new SleepManager(this);
+        if (getConfig().getBoolean("features.sleep-voting.enabled", true)) {
+            this.sleepManager = new SleepManager(this);
+        }
         this.chatManager = new ChatManager(this);
-        this.chunkLoaderManager = new ChunkLoaderManager(this); // Instantiate ChunkLoaderManager
-        if (getConfig().getBoolean("features.mmo-skills.enabled")) {
+        if (getConfig().getBoolean("features.chunk-loaders.enabled", true)) {
+            this.chunkLoaderManager = new ChunkLoaderManager(this);
+        }
+        if (getConfig().getBoolean("features.mmo-skills.enabled", true)) {
             this.skillsManager = new SkillsManager(this);
         }
-        if (getConfig().getBoolean("features.custom-enchants.enabled")) {
+        if (getConfig().getBoolean("features.custom-enchants.enabled", true)) {
             this.enchantmentManager = new EnchantmentManager(this);
         }
-        if (getConfig().getBoolean("features.image-to-map.enabled")) {
+        if (getConfig().getBoolean("features.image-to-map.enabled", true)) {
             this.mapManager = new MapManager(this);
             this.mapManager.loadMaps();
         }
-        this.missionManager = new MissionManager(this);
-        this.adventManager = new AdventManager(this);
-        this.christmasWorldManager = new ChristmasWorldManager(this);
-        this.portalManager = new PortalManager(this);
-        this.npcManager = new NPCManager(this);
+        if (getConfig().getBoolean("features.missions.enabled", true)) {
+            this.missionManager = new MissionManager(this);
+        }
+        if (getConfig().getBoolean("features.christmas.enabled", true)) {
+            this.adventManager = new AdventManager(this);
+            this.christmasWorldManager = new ChristmasWorldManager(this);
+            this.portalManager = new PortalManager(this);
+        }
+        if (getConfig().getBoolean("features.npcs.enabled", true)) {
+            this.npcManager = new NPCManager(this);
+        }
         this.dialogueManager = new DialogueManager(this);
-        this.blackFridayManager = new BlackFridayManager(this);
+        if (getConfig().getBoolean("features.blackfriday.enabled", true)) {
+            this.blackFridayManager = new BlackFridayManager(this);
+        }
         this.messageManager = new MessageManager(this);
 
         // Register Listeners and Commands
@@ -139,9 +184,9 @@ public class SMPTools extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(nameTagListener, this);
 
         StatsCommand statsCommand = new StatsCommand(this);
-        this.getCommand("stats").setExecutor(statsCommand);
 
-        AdventGUIListener adventGUIListener = new AdventGUIListener(this, adventManager);
+        AdventGUIListener adventGUIListener = getConfig().getBoolean("features.christmas.enabled", true)
+                ? new AdventGUIListener(this, adventManager) : null;
 
         ListenerRegistry.registerCoreListeners(this, statsCommand, adventGUIListener);
 
@@ -170,15 +215,23 @@ public class SMPTools extends JavaPlugin {
         if (getConfig().getBoolean("features.meme-sounds.enabled")) {
             Bukkit.getPluginManager().registerEvents(new ResourcePackListener(this), this);
         }
+        if (getConfig().getBoolean("features.afk.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.AFKListener(this), this);
+        }
+        if (getConfig().getBoolean("features.remote-trade.enabled", true)) {
+            Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.TradeListener(this), this);
+        }
 
         // Register Commands
         TpaCommand tpaCommand = new TpaCommand(this);
         this.leaderboardCommand = new LeaderboardCommand(this);
-        CommandRegistry.registerAll(this, leaderboardCommand, tpaCommand, adventGUIListener);
+        CommandRegistry.registerAll(this, statsCommand, leaderboardCommand, tpaCommand, adventGUIListener);
         CommandRegistry.registerConditionalCommands(this);
 
         // Load NPCs
-        npcManager.loadNPCs();
+        if (npcManager != null && getConfig().getBoolean("features.npcs.enabled", true)) {
+            npcManager.loadNPCs();
+        }
 
         // Christmas features (conditional)
         if (getConfig().getBoolean("features.christmas.enabled", true)) {
@@ -221,6 +274,9 @@ public class SMPTools extends JavaPlugin {
                 long totalTicks = player.getStatistic(org.bukkit.Statistic.PLAY_ONE_MINUTE);
                 long totalMinutes = totalTicks / (20 * 60);
                 getStatsConfig().set("stats." + player.getUniqueId() + ".playtime_minutes", totalMinutes);
+                if (storageManager != null && storageManager.getProvider() != null) {
+                    storageManager.getProvider().saveStat(player.getUniqueId(), "playtime_minutes", totalMinutes);
+                }
             }
             saveStatsConfig();
         }, 6000L, 6000L); // Run every 5 minutes (6000 ticks)
@@ -233,6 +289,9 @@ public class SMPTools extends JavaPlugin {
         // Cancel all scheduled tasks to prevent firing during/after disable
         Bukkit.getScheduler().cancelTasks(this);
         
+        if (tradeManager != null) {
+            tradeManager.cleanup();
+        }
         if (chunkLoaderManager != null) {
             chunkLoaderManager.unloadAllChunks(); // Unload all force-loaded chunks
         }
@@ -242,11 +301,18 @@ public class SMPTools extends JavaPlugin {
         if (npcManager != null) {
             npcManager.removeAllNPCs();
         }
+        if (storageManager != null) {
+            storageManager.shutdown();
+        }
+        if (bountyManager != null) {
+            bountyManager.shutdown();
+        }
         // Save configs
         saveStatsConfig();
         saveTagsConfig();
         saveRewardsConfig();
         saveImageMapsConfig();
+        AsyncConfigHelper.shutdown();
     }
 
     public void setupStatsConfig() {
@@ -482,11 +548,47 @@ public class SMPTools extends JavaPlugin {
         return messageManager;
     }
 
+    public StorageManager getStorageManager() {
+        return storageManager;
+    }
+
+    public void setStorageManager(StorageManager storageManager) {
+        this.storageManager = storageManager;
+    }
+
+    public com.smp.smptools.afk.AFKManager getAFKManager() {
+        return afkManager;
+    }
+
+    public com.smp.smptools.trade.TradeManager getTradeManager() {
+        return tradeManager;
+    }
+
+    public com.smp.smptools.trails.TrailManager getTrailManager() {
+        return trailManager;
+    }
+
+    public com.smp.smptools.bounty.BountyManager getBountyManager() {
+        return bountyManager;
+    }
+
+    public com.smp.smptools.locks.LockManager getLockManager() {
+        return lockManager;
+    }
+
     public com.smp.smptools.listeners.InvseeGUIListener getInvseeGUIListener() {
         return invseeGUIListener;
     }
 
     public void setInvseeGUIListener(com.smp.smptools.listeners.InvseeGUIListener listener) {
         this.invseeGUIListener = listener;
+    }
+
+    public com.smp.smptools.listeners.BountyGUIListener getBountyGUIListener() {
+        return bountyGUIListener;
+    }
+
+    public void setBountyGUIListener(com.smp.smptools.listeners.BountyGUIListener listener) {
+        this.bountyGUIListener = listener;
     }
 }

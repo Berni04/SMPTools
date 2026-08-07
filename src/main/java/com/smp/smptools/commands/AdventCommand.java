@@ -16,6 +16,10 @@ public class AdventCommand extends AbstractPlayerCommand {
 
     @Override
     protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
+        if (guiListener == null) {
+            player.sendMessage("Advent calendar feature is currently disabled.");
+            return true;
+        }
         guiListener.openAdventGUI(player);
         return true;
     }

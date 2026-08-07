@@ -42,7 +42,7 @@ public class ChatManager {
         // 2. Get prefix and tag strings
         String prefixStr = InputValidator.sanitizeMiniMessage(
                 statsConfig.getString("players." + playerUUID + ".prefix", ""));
-        String tagTitle = tagsConfig.getString("player-titles." + playerUUID);
+        String tagTitle = plugin.getTagManager() != null ? plugin.getTagManager().getTagTitle(player) : null;
 
         // 3. Build a single MiniMessage string
         StringBuilder mmString = new StringBuilder();

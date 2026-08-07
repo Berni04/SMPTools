@@ -2,100 +2,157 @@ package com.smp.smptools.leaderboard;
 
 import com.smp.smptools.SMPTools;
 import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
-import org.bukkit.configuration.ConfigurationSection;
 
-import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 public class LeaderboardManager {
 
+    private static final String[] STATS_TO_LOAD = new String[]{
+            "blocks_broken", "blocks_placed", "playtime", "deaths", "player_kills",
+            "ores_mined.coal", "ores_mined.iron", "ores_mined.gold", "ores_mined.lapis",
+            "ores_mined.redstone", "ores_mined.diamond", "ores_mined.emerald"
+    };
+
     private final SMPTools plugin;
-    private final Map<String, Map<String, Long>> cachedLeaderboards = new LinkedHashMap<>();
+    private final Map<String, Map<String, Long>> cachedLeaderboards = new ConcurrentHashMap<>();
+    private final AtomicBoolean isRefreshing = new AtomicBoolean(false);
     private long lastCacheTime = 0;
 
     public LeaderboardManager(SMPTools plugin) {
         this.plugin = plugin;
+        boolean enabled = plugin != null && plugin.getConfig() != null
+                && plugin.getConfig().getBoolean("features.leaderboard.enabled", true);
+        if (enabled && Bukkit.getServer() != null && plugin.isEnabled()) {
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, this::recalculateLeaderboards);
+        }
     }
 
     public Map<String, Long> getLeaderboard(String statPath) {
         long now = System.currentTimeMillis();
         // Cache for 5 minutes
         if (now - lastCacheTime > 300000 || !cachedLeaderboards.containsKey(statPath)) {
-            recalculateLeaderboards();
+            if (Bukkit.getServer() != null && plugin != null && plugin.isEnabled()) {
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, this::recalculateLeaderboards);
+            } else {
+                recalculateLeaderboards();
+            }
         }
         return cachedLeaderboards.getOrDefault(statPath, Collections.emptyMap());
     }
 
     public void recalculateLeaderboards() {
-        lastCacheTime = System.currentTimeMillis();
-        cachedLeaderboards.clear();
-
-        ConfigurationSection statsSection = plugin.getStatsConfig().getConfigurationSection("stats");
-        if (statsSection == null) {
+        if (plugin == null || plugin.getStorageManager() == null || plugin.getStorageManager().getProvider() == null) {
             return;
         }
 
-        Map<String, Long> blocksBroken = new LinkedHashMap<>();
-        Map<String, Long> blocksPlaced = new LinkedHashMap<>();
-        Map<String, Long> playtime = new LinkedHashMap<>();
-        Map<String, Long> deaths = new LinkedHashMap<>();
-        Map<String, Long> playerKills = new LinkedHashMap<>();
-        // New maps for individual ore types
-        Map<String, Long> oresMinedCoal = new LinkedHashMap<>();
-        Map<String, Long> oresMinedIron = new LinkedHashMap<>();
-        Map<String, Long> oresMinedGold = new LinkedHashMap<>();
-        Map<String, Long> oresMinedLapis = new LinkedHashMap<>();
-        Map<String, Long> oresMinedRedstone = new LinkedHashMap<>();
-        Map<String, Long> oresMinedDiamond = new LinkedHashMap<>();
-        Map<String, Long> oresMinedEmerald = new LinkedHashMap<>();
-
-        for (String uuid : statsSection.getKeys(false)) {
-            ConfigurationSection playerSection = statsSection.getConfigurationSection(uuid);
-            if (playerSection != null) {
-                OfflinePlayer player = Bukkit.getOfflinePlayer(java.util.UUID.fromString(uuid));
-                String name = player.getName() != null ? player.getName() : "Unknown";
-
-                blocksBroken.put(name, playerSection.getLong("blocks_broken", 0));
-                blocksPlaced.put(name, playerSection.getLong("blocks_placed", 0));
-                playtime.put(name, playerSection.getLong("playtime_minutes", 0));
-                deaths.put(name, playerSection.getLong("deaths_total", 0));
-                playerKills.put(name, playerSection.getLong("player_kills", 0));
-
-                // Extract individual ore stats
-                ConfigurationSection oresMinedSection = playerSection.getConfigurationSection("ores_mined");
-                if (oresMinedSection != null) {
-                    oresMinedCoal.put(name, oresMinedSection.getLong("coal", 0));
-                    oresMinedIron.put(name, oresMinedSection.getLong("iron", 0));
-                    oresMinedGold.put(name, oresMinedSection.getLong("gold", 0));
-                    oresMinedLapis.put(name, oresMinedSection.getLong("lapis", 0));
-                    oresMinedRedstone.put(name, oresMinedSection.getLong("redstone", 0));
-                    oresMinedDiamond.put(name, oresMinedSection.getLong("diamond", 0));
-                    oresMinedEmerald.put(name, oresMinedSection.getLong("emerald", 0));
-                }
-            }
+        if (!isRefreshing.compareAndSet(false, true)) {
+            return; // Coalesce concurrent refresh calls
         }
 
-        cachedLeaderboards.put("blocks_broken", sortLeaderboard(blocksBroken));
-        cachedLeaderboards.put("blocks_placed", sortLeaderboard(blocksPlaced));
-        cachedLeaderboards.put("playtime", sortLeaderboard(playtime));
-        cachedLeaderboards.put("deaths", sortLeaderboard(deaths));
-        cachedLeaderboards.put("player_kills", sortLeaderboard(playerKills));
-        // Add new ore leaderboards
-        cachedLeaderboards.put("ores_mined.coal", sortLeaderboard(oresMinedCoal));
-        cachedLeaderboards.put("ores_mined.iron", sortLeaderboard(oresMinedIron));
-        cachedLeaderboards.put("ores_mined.gold", sortLeaderboard(oresMinedGold));
-        cachedLeaderboards.put("ores_mined.lapis", sortLeaderboard(oresMinedLapis));
-        cachedLeaderboards.put("ores_mined.redstone", sortLeaderboard(oresMinedRedstone));
-        cachedLeaderboards.put("ores_mined.diamond", sortLeaderboard(oresMinedDiamond));
-        cachedLeaderboards.put("ores_mined.emerald", sortLeaderboard(oresMinedEmerald));
+        try {
+            boolean isFlatFile = plugin.getStorageManager().getProvider() instanceof com.smp.smptools.storage.FlatFileStorageProvider;
+
+            if (isFlatFile && Bukkit.getServer() != null && plugin.isEnabled()) {
+                if (Bukkit.isPrimaryThread()) {
+                    Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
+                    Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> doSortAndPublish(rawSnapshots));
+                } else {
+                    try {
+                        Bukkit.getScheduler().callSyncMethod(plugin, () -> {
+                            try {
+                                Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
+                                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> doSortAndPublish(rawSnapshots));
+                            } catch (Exception e) {
+                                if (plugin != null && plugin.getLogger() != null) {
+                                    plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to recalculate leaderboards in sync task", e);
+                                }
+                                isRefreshing.set(false);
+                            }
+                            return null;
+                        });
+                    } catch (Exception e) {
+                        if (plugin != null && plugin.getLogger() != null) {
+                            plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to hand off sync method for leaderboard recalculation", e);
+                        }
+                        // Abort gracefully for flatfile sync handoff failure; do NOT run unsafe off-thread YAML read
+                        isRefreshing.set(false);
+                    }
+                }
+            } else if (Bukkit.getServer() != null && plugin.isEnabled()) {
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                    try {
+                        Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
+                        doSortAndPublish(rawSnapshots);
+                    } catch (Exception e) {
+                        if (plugin != null && plugin.getLogger() != null) {
+                            plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to recalculate leaderboards asynchronously", e);
+                        }
+                        isRefreshing.set(false);
+                    }
+                });
+            } else {
+                Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
+                doSortAndPublish(rawSnapshots);
+            }
+        } catch (Exception e) {
+            if (plugin != null && plugin.getLogger() != null) {
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to recalculate leaderboards", e);
+            }
+            isRefreshing.set(false);
+        }
+    }
+
+    private void doSortAndPublish(Map<String, Map<String, Long>> rawSnapshots) {
+        try {
+            Map<String, Map<String, Long>> sorted = sortSnapshots(rawSnapshots);
+            cachedLeaderboards.putAll(sorted);
+            lastCacheTime = System.currentTimeMillis();
+        } finally {
+            isRefreshing.set(false);
+        }
+    }
+
+    private Map<String, Map<String, Long>> snapshotRawStats() {
+        if (plugin == null || plugin.getStorageManager() == null || plugin.getStorageManager().getProvider() == null) {
+            return Collections.emptyMap();
+        }
+
+        Map<String, Map<String, Long>> rawSnapshots = new HashMap<>();
+        for (String stat : STATS_TO_LOAD) {
+            String dbKey = getDbStatKey(stat);
+            Map<String, Long> statMap = plugin.getStorageManager().getProvider().getLeaderboardStats(dbKey);
+            rawSnapshots.put(stat, statMap != null ? new HashMap<>(statMap) : Collections.emptyMap());
+        }
+        return rawSnapshots;
+    }
+
+    private Map<String, Map<String, Long>> sortSnapshots(Map<String, Map<String, Long>> rawSnapshots) {
+        Map<String, Map<String, Long>> sortedCache = new ConcurrentHashMap<>();
+        for (Map.Entry<String, Map<String, Long>> entry : rawSnapshots.entrySet()) {
+            sortedCache.put(entry.getKey(), sortLeaderboard(entry.getValue()));
+        }
+        return sortedCache;
+    }
+
+    private String getDbStatKey(String stat) {
+        if ("playtime".equals(stat)) {
+            return "playtime_minutes";
+        }
+        if ("deaths".equals(stat)) {
+            return "deaths_total";
+        }
+        return stat;
     }
 
     private Map<String, Long> sortLeaderboard(Map<String, Long> unsortedMap) {
+        if (unsortedMap == null) return Collections.emptyMap();
         return unsortedMap.entrySet().stream()
                 .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
                 .limit(10)
@@ -107,3 +164,4 @@ public class LeaderboardManager {
                 ));
     }
 }
+

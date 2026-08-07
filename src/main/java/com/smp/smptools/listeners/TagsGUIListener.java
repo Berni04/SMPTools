@@ -27,6 +27,10 @@ public class TagsGUIListener implements Listener {
 
         event.setCancelled(true);
 
+        if (plugin.getTagManager() == null) {
+            return;
+        }
+
         Player player = (Player) event.getWhoClicked();
         ItemStack clickedItem = event.getCurrentItem();
 

@@ -16,12 +16,38 @@ public final class ConfigDefaults {
         FileConfiguration config = plugin.getConfig();
 
         // Feature toggles
+        config.addDefault("features.fly.enabled", true);
+        config.addDefault("features.private-vault.enabled", true);
+        config.addDefault("features.homes.enabled", true);
+        config.addDefault("features.tpa.enabled", true);
+        config.addDefault("features.msg.enabled", true);
+        config.addDefault("features.tags.enabled", true);
+        config.addDefault("features.prefix-color.enabled", true);
+        config.addDefault("features.item-rename.enabled", true);
+        config.addDefault("features.invsee.enabled", true);
+        config.addDefault("features.troll.enabled", true);
+        config.addDefault("features.sudo.enabled", true);
+        config.addDefault("features.npcs.enabled", true);
+        config.addDefault("features.leaderboard.enabled", true);
+        config.addDefault("features.stats.enabled", true);
+        config.addDefault("features.tab-health.enabled", true);
+        config.addDefault("features.advancements.enabled", true);
+        config.addDefault("features.elytra-trail.enabled", true);
         config.addDefault("features.daily-rewards.enabled", true);
         config.addDefault("features.custom-enchants.enabled", true);
         config.addDefault("features.mmo-skills.enabled", true);
         config.addDefault("features.missions.enabled", true);
         config.addDefault("features.christmas.enabled", true);
         config.addDefault("features.blackfriday.enabled", true);
+        config.addDefault("features.afk.enabled", true);
+        config.addDefault("features.afk.timeout-minutes", 30);
+        config.addDefault("features.afk.auto-vote-sleep", true);
+        config.addDefault("features.remote-trade.enabled", true);
+        config.addDefault("features.remote-trade.request-timeout-seconds", 60);
+        config.addDefault("features.remote-trade.session-timeout-seconds", 60);
+        config.addDefault("features.trails.enabled", true);
+        config.addDefault("features.bounties.enabled", true);
+        config.addDefault("features.container-locks.enabled", true);
 
         // Daily Rewards
         config.addDefault("features.daily-rewards.cooldown-hours", 22);
@@ -65,8 +91,36 @@ public final class ConfigDefaults {
         // Chunk Loaders
         applyChunkLoadersDefaults(config);
 
+        // Storage settings
+        applyStorageDefaults(config);
+
         config.options().copyDefaults(true);
         plugin.saveConfig();
+    }
+
+    private static void applyStorageDefaults(FileConfiguration config) {
+        config.addDefault("storage.type", "FLATFILE");
+        config.addDefault("storage.sqlite.file", "smptools.db");
+
+        config.addDefault("storage.mysql.host", "localhost");
+        config.addDefault("storage.mysql.port", 3306);
+        config.addDefault("storage.mysql.database", "smptools");
+        config.addDefault("storage.mysql.username", "root");
+        config.addDefault("storage.mysql.password", "");
+        config.addDefault("storage.mysql.pool-size", 10);
+        config.addDefault("storage.mysql.use-ssl", false);
+
+        config.addDefault("storage.mariadb.host", "localhost");
+        config.addDefault("storage.mariadb.port", 3306);
+        config.addDefault("storage.mariadb.database", "smptools");
+        config.addDefault("storage.mariadb.username", "root");
+        config.addDefault("storage.mariadb.password", "");
+        config.addDefault("storage.mariadb.pool-size", 10);
+        config.addDefault("storage.mariadb.use-ssl", false);
+
+        config.addDefault("storage.mongodb.uri", "mongodb://localhost:27017");
+        config.addDefault("storage.mongodb.database", "smptools");
+        config.addDefault("storage.mongodb.collection-prefix", "smptools_");
     }
 
     private static void applyMMOSkillsDefaults(FileConfiguration config) {

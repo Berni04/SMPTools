@@ -37,8 +37,18 @@ public class ClearStatsCommand extends AbstractPlayerCommand {
             return true;
         }
 
+        String activeTrail = plugin.getStatsConfig().getString("stats." + target.getUniqueId().toString() + ".active_trail");
         plugin.getStatsConfig().set("stats." + target.getUniqueId().toString(), null);
+        if (activeTrail != null) {
+            plugin.getStatsConfig().set("stats." + target.getUniqueId().toString() + ".active_trail", activeTrail);
+        }
         plugin.saveStatsConfig();
+        if (plugin.getStorageManager() != null && plugin.getStorageManager().getProvider() != null) {
+            plugin.getStorageManager().getProvider().clearPlayerStats(target.getUniqueId());
+        }
+        if (plugin.getTagManager() != null) {
+            plugin.getTagManager().clearCachedStats(target.getUniqueId());
+        }
 
         sender.sendMessage(plugin.getMessageManager().getMessage("clearstats.cleared",
                 sender instanceof Player p ? p : null,

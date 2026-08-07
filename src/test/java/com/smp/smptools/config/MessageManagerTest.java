@@ -66,6 +66,18 @@ class MessageManagerTest {
     }
 
     @Test
+    void tradeKeys_present() throws IOException {
+        FileConfiguration cfg = loadShippedMessages();
+        assertNotNull(cfg.getString("trade.already-trading"), "trade.already-trading template missing");
+        String cancelledReason = cfg.getString("trade.cancelled-reason");
+        assertNotNull(cancelledReason, "trade.cancelled-reason template missing");
+        assertTrue(cancelledReason.contains("{reason}"), "trade.cancelled-reason must contain {reason} placeholder");
+        assertNotNull(cfg.getString("trade.server-shutdown"), "trade.server-shutdown template missing");
+        assertNotNull(cfg.getString("trade.timed-out"), "trade.timed-out template missing");
+        assertNull(cfg.getString("trade.timeout"), "trade.timeout duplicate template should be removed");
+    }
+
+    @Test
     void blackFridayStatusEnabled_hasStatusPlaceholder() throws IOException {
         FileConfiguration cfg = loadShippedMessages();
         String template = cfg.getString("blackfriday.status-enabled");
