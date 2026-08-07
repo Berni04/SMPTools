@@ -85,7 +85,7 @@ public final class CommandRegistry {
         }
 
         // Tags
-        if (plugin.getConfig().getBoolean("features.tags.enabled", true)) {
+        if (plugin.getConfig().getBoolean("features.tags.enabled", true) && plugin.getTagManager() != null) {
             plugin.getCommand("tags").setExecutor(new TagsCommand(plugin));
         }
 
@@ -133,7 +133,9 @@ public final class CommandRegistry {
         }
 
         Objects.requireNonNull(plugin.getCommand("customitem")).setExecutor(new CustomItemCommand(plugin));
-        Objects.requireNonNull(plugin.getCommand("advent")).setExecutor(new AdventCommand(plugin, adventGUIListener));
+        if (plugin.getConfig().getBoolean("features.christmas.enabled", true) && adventGUIListener != null) {
+            Objects.requireNonNull(plugin.getCommand("advent")).setExecutor(new AdventCommand(plugin, adventGUIListener));
+        }
 
         // Utility commands
         plugin.getCommand("uptime").setExecutor(new UptimeCommand(plugin));

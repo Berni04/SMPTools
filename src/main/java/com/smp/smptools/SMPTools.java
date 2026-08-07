@@ -184,7 +184,8 @@ public class SMPTools extends JavaPlugin {
 
         StatsCommand statsCommand = new StatsCommand(this);
 
-        AdventGUIListener adventGUIListener = new AdventGUIListener(this, adventManager);
+        AdventGUIListener adventGUIListener = getConfig().getBoolean("features.christmas.enabled", true)
+                ? new AdventGUIListener(this, adventManager) : null;
 
         ListenerRegistry.registerCoreListeners(this, statsCommand, adventGUIListener);
 

@@ -119,9 +119,7 @@ public class LeaderboardGUIListener implements Listener {
             try {
                 UUID uuid = UUID.fromString(key);
                 offlinePlayer = Bukkit.getOfflinePlayer(uuid);
-                if (offlinePlayer.getName() != null) {
-                    playerName = offlinePlayer.getName();
-                }
+                playerName = offlinePlayer.getName() != null ? offlinePlayer.getName() : "Unknown Player";
             } catch (IllegalArgumentException ignored) {}
 
             ItemStack playerHead = new ItemStack(Material.PLAYER_HEAD);

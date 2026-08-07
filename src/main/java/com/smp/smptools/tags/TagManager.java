@@ -91,33 +91,29 @@ public class TagManager implements Listener {
     }
 
     /**
-     * Loads player titles from the configuration file or storage provider.
-     * Also merges/migrates legacy tags.yml titles into the selected provider.
+     * Loads player titles from the storage provider.
+     * Also migrates legacy tags.yml titles into the selected provider ONLY when title storage is empty.
      */
     public void loadPlayerTitles() {
         if (plugin != null && plugin.getStorageManager() != null && plugin.getStorageManager().getProvider() != null) {
             try {
-                // Migrate legacy tags.yml titles if present
-                if (plugin.getTagsConfig() != null) {
-                    ConfigurationSection legacySection = plugin.getTagsConfig().getConfigurationSection("player-titles");
-                    if (legacySection == null) {
-                        legacySection = plugin.getTagsConfig().getConfigurationSection("tags");
-                    }
-                    if (legacySection != null) {
-                        for (String key : legacySection.getKeys(false)) {
-                            String legacyTitle = legacySection.getString(key);
-                            if (legacyTitle != null && !legacyTitle.isEmpty()) {
-                                try {
-                                    UUID uuid = UUID.fromString(key);
-                                    plugin.getStorageManager().getProvider().savePlayerTitle(uuid, legacyTitle);
-                                    playerTitles.put(key, legacyTitle);
-                                } catch (IllegalArgumentException ignored) {}
-                            }
+                Map<String, String> titles = plugin.getStorageManager().getProvider().getAllPlayerTitles();
+
+                // Perform legacy title migration ONLY when title storage is empty
+                if (titles == null || titles.isEmpty()) {
+                    Map<String, String> legacySnapshot = snapshotLegacyTitlesSync();
+                    if (!legacySnapshot.isEmpty()) {
+                        for (Map.Entry<String, String> entry : legacySnapshot.entrySet()) {
+                            try {
+                                UUID uuid = UUID.fromString(entry.getKey());
+                                plugin.getStorageManager().getProvider().savePlayerTitle(uuid, entry.getValue());
+                                playerTitles.put(entry.getKey(), entry.getValue());
+                            } catch (IllegalArgumentException ignored) {}
                         }
                     }
+                    titles = plugin.getStorageManager().getProvider().getAllPlayerTitles();
                 }
 
-                Map<String, String> titles = plugin.getStorageManager().getProvider().getAllPlayerTitles();
                 if (titles != null) {
                     playerTitles.putAll(titles);
                 }
@@ -125,6 +121,41 @@ public class TagManager implements Listener {
                 plugin.getLogger().warning("Could not load player titles from storage provider: " + e.getMessage());
             }
         }
+    }
+
+    private Map<String, String> snapshotLegacyTitlesSync() {
+        if (plugin == null) {
+            return java.util.Collections.emptyMap();
+        }
+        if (Bukkit.getServer() == null || Bukkit.isPrimaryThread()) {
+            return readLegacyTitlesFromConfig();
+        }
+        try {
+            return Bukkit.getScheduler().callSyncMethod(plugin, this::readLegacyTitlesFromConfig).get();
+        } catch (Exception e) {
+            return java.util.Collections.emptyMap();
+        }
+    }
+
+    private Map<String, String> readLegacyTitlesFromConfig() {
+        if (plugin == null || plugin.getTagsConfig() == null) {
+            return java.util.Collections.emptyMap();
+        }
+        ConfigurationSection legacySection = plugin.getTagsConfig().getConfigurationSection("player-titles");
+        if (legacySection == null) {
+            legacySection = plugin.getTagsConfig().getConfigurationSection("tags");
+        }
+        if (legacySection == null) {
+            return java.util.Collections.emptyMap();
+        }
+        Map<String, String> legacyMap = new java.util.HashMap<>();
+        for (String key : legacySection.getKeys(false)) {
+            String legacyTitle = legacySection.getString(key);
+            if (legacyTitle != null && !legacyTitle.isEmpty()) {
+                legacyMap.put(key, legacyTitle);
+            }
+        }
+        return legacyMap;
     }
 
     /**
@@ -142,12 +173,24 @@ public class TagManager implements Listener {
         boolean isFlatFile = plugin.getStorageManager().getProvider() instanceof com.smp.smptools.storage.FlatFileStorageProvider;
         Map<String, Object> flatFileSnapshotTemp = null;
         if (isFlatFile) {
-            try {
-                flatFileSnapshotTemp = plugin.getStorageManager().getProvider().getAllPlayerStats(uuid);
-            } catch (Exception e) {
-                plugin.getLogger().warning("Could not load stats for " + uuid + ": " + e.getMessage());
-                loadingPlayers.remove(uuid);
-                return;
+            if (Bukkit.getServer() == null || Bukkit.isPrimaryThread()) {
+                try {
+                    flatFileSnapshotTemp = plugin.getStorageManager().getProvider().getAllPlayerStats(uuid);
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Could not load stats for " + uuid + ": " + e.getMessage());
+                    loadingPlayers.remove(uuid);
+                    return;
+                }
+            } else {
+                try {
+                    flatFileSnapshotTemp = Bukkit.getScheduler().callSyncMethod(plugin, () ->
+                            plugin.getStorageManager().getProvider().getAllPlayerStats(uuid)
+                    ).get();
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Could not load stats for " + uuid + ": " + e.getMessage());
+                    loadingPlayers.remove(uuid);
+                    return;
+                }
             }
         }
         final Map<String, Object> flatFileSnapshot = flatFileSnapshotTemp;
@@ -179,6 +222,9 @@ public class TagManager implements Listener {
 
             Runnable mainThreadPublishTask = () -> {
                 try {
+                    if (plugin == null || !plugin.isEnabled()) {
+                        return; // Plugin disabled; perform thread-safe cleanup without running Bukkit/milestone logic
+                    }
                     if (!finalReadFailed && finalParsedStats != null) {
                         int currentGlobalVer = globalCacheVersion.get();
                         int currentPlayerVer = playerCacheVersions.computeIfAbsent(uuid, k -> new java.util.concurrent.atomic.AtomicInteger(0)).get();
@@ -193,7 +239,9 @@ public class TagManager implements Listener {
                     }
                 } finally {
                     loadingPlayers.remove(uuid);
-                    if (Bukkit.getServer() != null && Bukkit.getPlayer(uuid) == null) {
+                    if (plugin == null || !plugin.isEnabled()) {
+                        playerCacheVersions.remove(uuid);
+                    } else if (Bukkit.getServer() != null && Bukkit.getPlayer(uuid) == null) {
                         playerCacheVersions.remove(uuid);
                     }
                 }

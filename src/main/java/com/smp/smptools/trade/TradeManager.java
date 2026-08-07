@@ -13,9 +13,41 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class TradeManager {
 
+    public static final class TradeRequest {
+        private final UUID senderUUID;
+        private final long requestId;
+
+        public TradeRequest(UUID senderUUID, long requestId) {
+            this.senderUUID = senderUUID;
+            this.requestId = requestId;
+        }
+
+        public UUID getSenderUUID() {
+            return senderUUID;
+        }
+
+        public long getRequestId() {
+            return requestId;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            TradeRequest that = (TradeRequest) o;
+            return requestId == that.requestId && java.util.Objects.equals(senderUUID, that.senderUUID);
+        }
+
+        @Override
+        public int hashCode() {
+            return java.util.Objects.hash(senderUUID, requestId);
+        }
+    }
+
     private final SMPTools plugin;
-    // Map of target UUID -> requester UUID
-    private final Map<UUID, UUID> pendingRequests = new ConcurrentHashMap<>();
+    // Map of target UUID -> TradeRequest
+    final Map<UUID, TradeRequest> pendingRequests = new ConcurrentHashMap<>();
+    private final java.util.concurrent.atomic.AtomicLong requestIdGenerator = new java.util.concurrent.atomic.AtomicLong();
     // Map of active trade sessions (player UUID -> TradeSession)
     private final Map<UUID, TradeSession> activeSessions = new ConcurrentHashMap<>();
 
@@ -39,7 +71,9 @@ public class TradeManager {
             return;
         }
 
-        pendingRequests.put(target.getUniqueId(), sender.getUniqueId());
+        long requestId = requestIdGenerator.incrementAndGet();
+        TradeRequest request = new TradeRequest(sender.getUniqueId(), requestId);
+        pendingRequests.put(target.getUniqueId(), request);
 
         Component acceptBtn = Component.text("[Accept]", NamedTextColor.GREEN)
                 .clickEvent(ClickEvent.runCommand("/trade accept"));
@@ -57,19 +91,20 @@ public class TradeManager {
 
         int timeout = plugin.getConfig().getInt("features.remote-trade.request-timeout-seconds", 60);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (pendingRequests.remove(target.getUniqueId(), sender.getUniqueId())) {
+            if (pendingRequests.remove(target.getUniqueId(), request)) {
                 sender.sendMessage(plugin.getMessageManager().getMessage("trade.expired", sender, java.util.Map.of("target", target.getName())));
             }
         }, timeout * 20L);
     }
 
     public void acceptRequest(Player target) {
-        UUID senderUUID = pendingRequests.remove(target.getUniqueId());
-        if (senderUUID == null) {
+        TradeRequest request = pendingRequests.remove(target.getUniqueId());
+        if (request == null) {
             target.sendMessage(plugin.getMessageManager().getMessage("trade.no-request"));
             return;
         }
 
+        UUID senderUUID = request.getSenderUUID();
         Player sender = Bukkit.getPlayer(senderUUID);
         if (sender == null || !sender.isOnline()) {
             target.sendMessage(plugin.getMessageManager().getMessage("common.player-not-found"));
@@ -89,8 +124,9 @@ public class TradeManager {
     }
 
     public void denyRequest(Player target) {
-        UUID senderUUID = pendingRequests.remove(target.getUniqueId());
-        if (senderUUID != null) {
+        TradeRequest request = pendingRequests.remove(target.getUniqueId());
+        if (request != null) {
+            UUID senderUUID = request.getSenderUUID();
             Player sender = Bukkit.getPlayer(senderUUID);
             if (sender != null && sender.isOnline()) {
                 sender.sendMessage(plugin.getMessageManager().getMessage("trade.cancelled"));
@@ -117,7 +153,7 @@ public class TradeManager {
     public void cleanupPendingRequests(UUID playerUUID) {
         if (playerUUID == null) return;
         pendingRequests.remove(playerUUID);
-        pendingRequests.values().removeIf(senderUUID -> senderUUID.equals(playerUUID));
+        pendingRequests.values().removeIf(req -> req.getSenderUUID().equals(playerUUID));
     }
 
     public void cleanup() {

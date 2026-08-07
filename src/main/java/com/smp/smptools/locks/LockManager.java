@@ -122,6 +122,7 @@ public class LockManager {
                     String rightKey = getLocationKey(rightLoc);
 
                     // Check single-half lock migration when chest is paired into a double chest
+                    boolean modified = false;
                     if (!containerOwners.containsKey(doubleKey)) {
                         if (containerOwners.containsKey(leftKey)) {
                             UUID owner = containerOwners.remove(leftKey);
@@ -130,7 +131,7 @@ public class LockManager {
                             if (trusted != null && !trusted.isEmpty()) {
                                 containerTrusted.put(doubleKey, trusted);
                             }
-                            saveLocks();
+                            modified = true;
                         } else if (containerOwners.containsKey(rightKey)) {
                             UUID owner = containerOwners.remove(rightKey);
                             Set<UUID> trusted = containerTrusted.remove(rightKey);
@@ -138,8 +139,20 @@ public class LockManager {
                             if (trusted != null && !trusted.isEmpty()) {
                                 containerTrusted.put(doubleKey, trusted);
                             }
-                            saveLocks();
+                            modified = true;
                         }
+                    }
+
+                    // Clean up non-canonical single-half key if orphaned
+                    String otherKey = doubleKey.equals(leftKey) ? rightKey : leftKey;
+                    if (containerOwners.containsKey(otherKey)) {
+                        containerOwners.remove(otherKey);
+                        containerTrusted.remove(otherKey);
+                        modified = true;
+                    }
+
+                    if (modified) {
+                        saveLocks();
                     }
 
                     return doubleKey;

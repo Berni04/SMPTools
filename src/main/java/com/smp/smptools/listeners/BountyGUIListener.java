@@ -39,6 +39,8 @@ public class BountyGUIListener implements Listener {
     private final Map<UUID, Map<Integer, Bounty>> claimMap = new ConcurrentHashMap<>();
     // Track player's current page in list GUI: viewer UUID -> page
     private final Map<UUID, Integer> listPageMap = new ConcurrentHashMap<>();
+    // Track players transitioning between GUIs to preserve page map state
+    private final Set<UUID> transitioningPlayers = ConcurrentHashMap.newKeySet();
 
     public BountyGUIListener(SMPTools plugin) {
         this.plugin = plugin;
@@ -85,6 +87,7 @@ public class BountyGUIListener implements Listener {
         }
         inv.setItem(26, cancel);
 
+        transitioningPlayers.add(placer.getUniqueId());
         placer.openInventory(inv);
     }
 
@@ -175,6 +178,7 @@ public class BountyGUIListener implements Listener {
             inv.setItem(53, next);
         }
 
+        transitioningPlayers.add(player.getUniqueId());
         player.openInventory(inv);
     }
 
@@ -212,6 +216,7 @@ public class BountyGUIListener implements Listener {
         }
         inv.setItem(49, back);
 
+        transitioningPlayers.add(player.getUniqueId());
         player.openInventory(inv);
         detailsViewMap.put(player.getUniqueId(), targetUuid);
     }
@@ -411,6 +416,10 @@ public class BountyGUIListener implements Listener {
     public void onInventoryClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player player)) return;
 
+        if (transitioningPlayers.remove(player.getUniqueId())) {
+            return;
+        }
+
         String title = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
         if (title.startsWith("Deposit Bounty: ")) {
             DepositSession session = activePlaceSessions.get(player.getUniqueId());
@@ -422,6 +431,7 @@ public class BountyGUIListener implements Listener {
 
         if (title.startsWith("Bounty on ")) {
             detailsViewMap.remove(player.getUniqueId());
+            listPageMap.remove(player.getUniqueId());
         }
 
         if (title.equals("Claim Bounties & Refunds")) {

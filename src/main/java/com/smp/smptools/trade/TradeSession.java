@@ -188,14 +188,26 @@ public class TradeSession {
     }
 
     private void scheduleCloseInventories() {
+        Runnable closeAction = () -> {
+            safeCloseInventory(player1);
+            safeCloseInventory(player2);
+        };
         if (plugin != null && plugin.isEnabled()) {
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                player1.closeInventory();
-                player2.closeInventory();
-            });
+            Bukkit.getScheduler().runTask(plugin, closeAction);
         } else {
-            player1.closeInventory();
-            player2.closeInventory();
+            closeAction.run();
+        }
+    }
+
+    private void safeCloseInventory(Player player) {
+        if (player == null || !player.isOnline()) return;
+        try {
+            if (player.getOpenInventory() != null && player.getOpenInventory().getTopInventory() != null) {
+                if (player.getOpenInventory().getTopInventory().equals(inventory)) {
+                    player.closeInventory();
+                }
+            }
+        } catch (Exception ignored) {
         }
     }
 

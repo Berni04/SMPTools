@@ -58,7 +58,7 @@ public final class ListenerRegistry {
         if (plugin.getConfig().getBoolean("features.leaderboard.enabled", true)) {
             Bukkit.getPluginManager().registerEvents(new LeaderboardGUIListener(plugin), plugin);
         }
-        if (plugin.getConfig().getBoolean("features.tags.enabled", true)) {
+        if (plugin.getConfig().getBoolean("features.tags.enabled", true) && plugin.getTagManager() != null) {
             Bukkit.getPluginManager().registerEvents(new TagsGUIListener(plugin), plugin);
         }
         if (plugin.getConfig().getBoolean("features.tab-health.enabled", true)) {
@@ -106,7 +106,9 @@ public final class ListenerRegistry {
         // Christmas features
         if (plugin.getConfig().getBoolean("features.christmas.enabled", true)) {
             Bukkit.getPluginManager().registerEvents(new ChristmasWorldListener(plugin), plugin);
-            Bukkit.getPluginManager().registerEvents(adventGUIListener, plugin);
+            if (adventGUIListener != null) {
+                Bukkit.getPluginManager().registerEvents(adventGUIListener, plugin);
+            }
             Bukkit.getPluginManager().registerEvents(new PortalListener(plugin), plugin);
         }
 

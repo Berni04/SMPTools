@@ -13,6 +13,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Utility class for saving configuration files asynchronously.
@@ -24,6 +25,7 @@ import java.util.logging.Level;
  */
 public final class AsyncConfigHelper {
 
+    private static final Logger LOGGER = Logger.getLogger(AsyncConfigHelper.class.getName());
     private static ExecutorService saveExecutor;
     private static ExecutorService drainingExecutor;
     private static boolean shuttingDown = false;
@@ -62,21 +64,20 @@ public final class AsyncConfigHelper {
 
     private static void awaitExecutorTermination(ExecutorService executor) {
         if (executor != null && !executor.isTerminated()) {
+            if (!executor.isShutdown()) {
+                executor.shutdown();
+            }
             try {
                 if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
                     List<Runnable> pending = executor.shutdownNow();
-                    for (Runnable task : pending) {
-                        try {
-                            task.run();
-                        } catch (Exception ignored) {}
+                    if (!pending.isEmpty()) {
+                        LOGGER.warning("Discarded " + pending.size() + " pending async config save task(s) during forced shutdown.");
                     }
                 }
             } catch (InterruptedException e) {
                 List<Runnable> pending = executor.shutdownNow();
-                for (Runnable task : pending) {
-                    try {
-                        task.run();
-                    } catch (Exception ignored) {}
+                if (!pending.isEmpty()) {
+                    LOGGER.warning("Discarded " + pending.size() + " pending async config save task(s) during forced shutdown.");
                 }
                 Thread.currentThread().interrupt();
             }

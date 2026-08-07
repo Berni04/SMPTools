@@ -132,63 +132,78 @@ public class JdbcStorageProvider implements StorageProvider {
 
     private void migrateFromFlatFileIfEmpty() {
         if (dataSource == null) return;
-        try (Connection conn = dataSource.getConnection();
-             Statement stmt = conn.createStatement()) {
-
-            boolean statsEmpty = true;
-            try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM smptools_player_stats")) {
-                if (rs.next() && rs.getInt(1) > 0) {
-                    statsEmpty = false;
-                }
-            }
-
-            boolean tagsEmpty = true;
-            try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM smptools_player_tags")) {
-                if (rs.next() && rs.getInt(1) > 0) {
-                    tagsEmpty = false;
-                }
-            }
-
-            if (statsEmpty && tagsEmpty) {
-                FlatFileStorageProvider flatfile = new FlatFileStorageProvider(plugin);
-                Map<String, String> titles = flatfile.getAllPlayerTitles();
-                Map<UUID, Map<String, Object>> stats = flatfile.loadAllPlayerStats();
-
-                if (!titles.isEmpty() || !stats.isEmpty()) {
-                    plugin.getLogger().info("Performing initial migration of titles, trails, and stats from FLATFILE to JDBC...");
-
-                    String titleSql = type == StorageType.SQLITE
-                            ? "INSERT OR REPLACE INTO smptools_player_tags (uuid, title) VALUES (?, ?)"
-                            : "INSERT INTO smptools_player_tags (uuid, title) VALUES (?, ?) ON DUPLICATE KEY UPDATE title = VALUES(title)";
-                    try (PreparedStatement ps = conn.prepareStatement(titleSql)) {
-                        for (Map.Entry<String, String> entry : titles.entrySet()) {
-                            ps.setString(1, entry.getKey());
-                            ps.setString(2, entry.getValue());
-                            ps.addBatch();
+        try (Connection conn = dataSource.getConnection()) {
+            boolean originalAutoCommit = conn.getAutoCommit();
+            try {
+                conn.setAutoCommit(false);
+                try (Statement stmt = conn.createStatement()) {
+                    boolean statsEmpty = true;
+                    try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM smptools_player_stats")) {
+                        if (rs.next() && rs.getInt(1) > 0) {
+                            statsEmpty = false;
                         }
-                        ps.executeBatch();
                     }
 
-                    String statSql = type == StorageType.SQLITE
-                            ? "INSERT OR REPLACE INTO smptools_player_stats (uuid, stat_key, stat_value) VALUES (?, ?, ?)"
-                            : "INSERT INTO smptools_player_stats (uuid, stat_key, stat_value) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE stat_value = VALUES(stat_value)";
-                    try (PreparedStatement ps = conn.prepareStatement(statSql)) {
-                        for (Map.Entry<UUID, Map<String, Object>> playerEntry : stats.entrySet()) {
-                            String uuidStr = playerEntry.getKey().toString();
-                            for (Map.Entry<String, Object> statEntry : playerEntry.getValue().entrySet()) {
-                                ps.setString(1, uuidStr);
-                                ps.setString(2, statEntry.getKey());
-                                ps.setString(3, statEntry.getValue() != null ? statEntry.getValue().toString() : null);
-                                ps.addBatch();
+                    boolean tagsEmpty = true;
+                    try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM smptools_player_tags")) {
+                        if (rs.next() && rs.getInt(1) > 0) {
+                            tagsEmpty = false;
+                        }
+                    }
+
+                    if (statsEmpty && tagsEmpty) {
+                        FlatFileStorageProvider flatfile = new FlatFileStorageProvider(plugin);
+                        Map<String, String> titles = flatfile.getAllPlayerTitles();
+                        Map<UUID, Map<String, Object>> stats = flatfile.loadAllPlayerStats();
+
+                        if (!titles.isEmpty() || !stats.isEmpty()) {
+                            plugin.getLogger().info("Performing initial migration of titles, trails, and stats from FLATFILE to JDBC...");
+
+                            String titleSql = type == StorageType.SQLITE
+                                    ? "INSERT OR REPLACE INTO smptools_player_tags (uuid, title) VALUES (?, ?)"
+                                    : "INSERT INTO smptools_player_tags (uuid, title) VALUES (?, ?) ON DUPLICATE KEY UPDATE title = VALUES(title)";
+                            try (PreparedStatement ps = conn.prepareStatement(titleSql)) {
+                                for (Map.Entry<String, String> entry : titles.entrySet()) {
+                                    ps.setString(1, entry.getKey());
+                                    ps.setString(2, entry.getValue());
+                                    ps.addBatch();
+                                }
+                                ps.executeBatch();
                             }
+
+                            String statSql = type == StorageType.SQLITE
+                                    ? "INSERT OR REPLACE INTO smptools_player_stats (uuid, stat_key, stat_value) VALUES (?, ?, ?)"
+                                    : "INSERT INTO smptools_player_stats (uuid, stat_key, stat_value) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE stat_value = VALUES(stat_value)";
+                            try (PreparedStatement ps = conn.prepareStatement(statSql)) {
+                                for (Map.Entry<UUID, Map<String, Object>> playerEntry : stats.entrySet()) {
+                                    String uuidStr = playerEntry.getKey().toString();
+                                    for (Map.Entry<String, Object> statEntry : playerEntry.getValue().entrySet()) {
+                                        ps.setString(1, uuidStr);
+                                        ps.setString(2, statEntry.getKey());
+                                        ps.setString(3, statEntry.getValue() != null ? statEntry.getValue().toString() : null);
+                                        ps.addBatch();
+                                    }
+                                }
+                                ps.executeBatch();
+                            }
+
+                            plugin.getLogger().info("Successfully migrated FLATFILE data to JDBC storage.");
                         }
-                        ps.executeBatch();
                     }
-
-                    plugin.getLogger().info("Successfully migrated FLATFILE data to JDBC storage.");
                 }
+                conn.commit();
+            } catch (Exception e) {
+                try {
+                    conn.rollback();
+                } catch (SQLException rollbackEx) {
+                    plugin.getLogger().severe("Failed to rollback JDBC migration transaction: " + rollbackEx.getMessage());
+                }
+                throw e;
+            } finally {
+                try {
+                    conn.setAutoCommit(originalAutoCommit);
+                } catch (SQLException ignored) {}
             }
-
         } catch (SQLException e) {
             plugin.getLogger().severe("Failed flatfile data migration to JDBC: " + e.getMessage());
         }
@@ -202,23 +217,15 @@ public class JdbcStorageProvider implements StorageProvider {
                 if (!writeExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
                     plugin.getLogger().severe("JDBC write executor did not terminate within timeout; forcing shutdown.");
                     List<Runnable> pending = writeExecutor.shutdownNow();
-                    for (Runnable task : pending) {
-                        try {
-                            task.run();
-                        } catch (Exception e) {
-                            plugin.getLogger().severe("Failed to execute pending JDBC write during shutdown: " + e.getMessage());
-                        }
+                    if (!pending.isEmpty()) {
+                        plugin.getLogger().warning("Discarded " + pending.size() + " pending JDBC write task(s) during forced shutdown.");
                     }
                 }
             } catch (InterruptedException e) {
                 plugin.getLogger().severe("Interrupted while awaiting JDBC write executor termination: " + e.getMessage());
                 List<Runnable> pending = writeExecutor.shutdownNow();
-                for (Runnable task : pending) {
-                    try {
-                        task.run();
-                    } catch (Exception ex) {
-                        plugin.getLogger().severe("Failed to execute pending JDBC write during interruption: " + ex.getMessage());
-                    }
+                if (!pending.isEmpty()) {
+                    plugin.getLogger().warning("Discarded " + pending.size() + " pending JDBC write task(s) during forced shutdown.");
                 }
                 Thread.currentThread().interrupt();
             }

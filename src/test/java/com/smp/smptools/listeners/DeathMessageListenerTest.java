@@ -63,9 +63,7 @@ public class DeathMessageListenerTest {
         Component originalMessage = Component.text("Alexis was slain by Alex");
         Component formattedPlayerName = Component.text("[VIP] Alex");
 
-        Component result = originalMessage.replaceText(builder ->
-                builder.match("\\b" + java.util.regex.Pattern.quote("Alex") + "\\b")
-                        .replacement(formattedPlayerName));
+        Component result = DeathMessageListener.replaceNameWithBoundary(originalMessage, "Alex", formattedPlayerName);
 
         String plainText = PlainTextComponentSerializer.plainText().serialize(result);
         assertEquals("Alexis was slain by [VIP] Alex", plainText);

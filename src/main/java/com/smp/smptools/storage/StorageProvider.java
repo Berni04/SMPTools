@@ -114,7 +114,11 @@ public interface StorageProvider {
                 return Long.parseLong(str);
             } catch (NumberFormatException e) {
                 try {
-                    return (long) Double.parseDouble(str);
+                    double d = Double.parseDouble(str);
+                    if (Double.isFinite(d)) {
+                        return (long) d;
+                    }
+                    return defaultValue;
                 } catch (NumberFormatException ignored) {
                     return defaultValue;
                 }

@@ -71,7 +71,7 @@ public class AFKListener implements Listener {
         afkManager.updateActivity(event.getPlayer());
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onInventoryClick(InventoryClickEvent event) {
         if (event.getWhoClicked() instanceof Player player) {
             afkManager.updateActivity(player);

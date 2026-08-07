@@ -68,6 +68,8 @@ public class LockListener implements Listener {
 
         if (lockManager.isLocked(block)) {
             Player player = event.getPlayer();
+            if (!lockManager.canAccess(block, player)) return;
+
             Block survivingHalf = lockManager.getSurvivingDoubleChestHalf(block);
             if (survivingHalf != null) {
                 lockManager.removeOrMigrateLock(block, survivingHalf);

@@ -25,9 +25,24 @@ public class TradeManagerTest {
         TradeManager manager = new TradeManager(null);
         java.util.UUID sender = java.util.UUID.randomUUID();
         java.util.UUID target = java.util.UUID.randomUUID();
+        java.util.UUID sender2 = java.util.UUID.randomUUID();
+        java.util.UUID target2 = java.util.UUID.randomUUID();
 
-        manager.cleanupPendingRequests(sender);
+        manager.pendingRequests.put(target, new TradeManager.TradeRequest(sender, 1L));
+        manager.pendingRequests.put(target2, new TradeManager.TradeRequest(sender2, 2L));
+
+        assertEquals(2, manager.pendingRequests.size());
+
+        // Target key cleanup removes request by key
         manager.cleanupPendingRequests(target);
+        assertFalse(manager.pendingRequests.containsKey(target));
+        assertEquals(1, manager.pendingRequests.size());
+
+        // Sender key cleanup removes request where player is sender
+        manager.cleanupPendingRequests(sender2);
+        assertFalse(manager.pendingRequests.containsKey(target2));
+        assertTrue(manager.pendingRequests.isEmpty());
+
         // Verify no exceptions on null or empty
         manager.cleanupPendingRequests(null);
     }

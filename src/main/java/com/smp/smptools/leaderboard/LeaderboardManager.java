@@ -70,11 +70,17 @@ public class LeaderboardManager {
                                 Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
                                 Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> doSortAndPublish(rawSnapshots));
                             } catch (Exception e) {
+                                if (plugin != null && plugin.getLogger() != null) {
+                                    plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to recalculate leaderboards in sync task", e);
+                                }
                                 isRefreshing.set(false);
                             }
                             return null;
                         });
                     } catch (Exception e) {
+                        if (plugin != null && plugin.getLogger() != null) {
+                            plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to hand off sync method for leaderboard recalculation", e);
+                        }
                         // Abort gracefully for flatfile sync handoff failure; do NOT run unsafe off-thread YAML read
                         isRefreshing.set(false);
                     }
@@ -85,6 +91,9 @@ public class LeaderboardManager {
                         Map<String, Map<String, Long>> rawSnapshots = snapshotRawStats();
                         doSortAndPublish(rawSnapshots);
                     } catch (Exception e) {
+                        if (plugin != null && plugin.getLogger() != null) {
+                            plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to recalculate leaderboards asynchronously", e);
+                        }
                         isRefreshing.set(false);
                     }
                 });
@@ -93,6 +102,9 @@ public class LeaderboardManager {
                 doSortAndPublish(rawSnapshots);
             }
         } catch (Exception e) {
+            if (plugin != null && plugin.getLogger() != null) {
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to recalculate leaderboards", e);
+            }
             isRefreshing.set(false);
         }
     }

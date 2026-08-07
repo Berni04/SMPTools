@@ -128,6 +128,11 @@ public class FlatFileStorageProvider implements StorageProvider {
 
         Map<String, Long> rawMap = new HashMap<>();
         for (String uuidStr : statsSection.getKeys(false)) {
+            try {
+                UUID.fromString(uuidStr);
+            } catch (IllegalArgumentException e) {
+                continue;
+            }
             ConfigurationSection playerSection = statsSection.getConfigurationSection(uuidStr);
             if (playerSection != null && playerSection.contains(statPath)) {
                 try {

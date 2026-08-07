@@ -90,26 +90,49 @@ public class MongoStorageProvider implements StorageProvider {
     private void migrateFromFlatFileIfEmpty() {
         if (statsCollection == null || tagsCollection == null) return;
         try {
-            if (statsCollection.countDocuments() == 0 && tagsCollection.countDocuments() == 0) {
+            boolean tagsEmpty = tagsCollection.countDocuments() == 0;
+            boolean statsEmpty = statsCollection.countDocuments() == 0;
+
+            if (tagsEmpty || statsEmpty) {
                 FlatFileStorageProvider flatfile = new FlatFileStorageProvider(plugin);
-                Map<String, String> titles = flatfile.getAllPlayerTitles();
-                Map<UUID, Map<String, Object>> stats = flatfile.loadAllPlayerStats();
 
-                if (!titles.isEmpty() || !stats.isEmpty()) {
-                    plugin.getLogger().info("Performing initial migration of titles, trails, and stats from FLATFILE to MONGODB...");
-
-                    for (Map.Entry<String, String> entry : titles.entrySet()) {
-                        savePlayerTitle(UUID.fromString(entry.getKey()), entry.getValue());
-                    }
-
-                    for (Map.Entry<UUID, Map<String, Object>> playerEntry : stats.entrySet()) {
-                        UUID uuid = playerEntry.getKey();
-                        for (Map.Entry<String, Object> statEntry : playerEntry.getValue().entrySet()) {
-                            saveStat(uuid, statEntry.getKey(), statEntry.getValue());
+                if (tagsEmpty) {
+                    Map<String, String> titles = flatfile.getAllPlayerTitles();
+                    if (!titles.isEmpty()) {
+                        plugin.getLogger().info("Performing initial migration of titles from FLATFILE to MONGODB...");
+                        for (Map.Entry<String, String> entry : titles.entrySet()) {
+                            try {
+                                UUID uuid = UUID.fromString(entry.getKey());
+                                Document filter = new Document("uuid", uuid.toString());
+                                Document update = new Document("$set", new Document("title", entry.getValue()));
+                                tagsCollection.updateOne(filter, update, new UpdateOptions().upsert(true));
+                            } catch (Exception e) {
+                                plugin.getLogger().warning("Failed to migrate title for " + entry.getKey() + ": " + e.getMessage());
+                            }
                         }
+                        plugin.getLogger().info("Successfully migrated titles to MONGODB.");
                     }
+                }
 
-                    plugin.getLogger().info("Successfully migrated FLATFILE data to MONGODB storage.");
+                if (statsEmpty) {
+                    Map<UUID, Map<String, Object>> stats = flatfile.loadAllPlayerStats();
+                    if (!stats.isEmpty()) {
+                        plugin.getLogger().info("Performing initial migration of stats from FLATFILE to MONGODB...");
+                        for (Map.Entry<UUID, Map<String, Object>> playerEntry : stats.entrySet()) {
+                            UUID uuid = playerEntry.getKey();
+                            for (Map.Entry<String, Object> statEntry : playerEntry.getValue().entrySet()) {
+                                try {
+                                    Document filter = new Document("uuid", uuid.toString());
+                                    String fieldPath = "stats." + encodeKey(statEntry.getKey());
+                                    Document update = new Document("$set", new Document(fieldPath, statEntry.getValue()));
+                                    statsCollection.updateOne(filter, update, new UpdateOptions().upsert(true));
+                                } catch (Exception e) {
+                                    plugin.getLogger().warning("Failed to migrate stat " + statEntry.getKey() + " for " + uuid + ": " + e.getMessage());
+                                }
+                            }
+                        }
+                        plugin.getLogger().info("Successfully migrated stats to MONGODB.");
+                    }
                 }
             }
         } catch (Exception e) {
@@ -146,23 +169,15 @@ public class MongoStorageProvider implements StorageProvider {
                 if (!writeExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
                     plugin.getLogger().warning("Mongo write executor did not terminate within timeout; forcing shutdown.");
                     List<Runnable> pending = writeExecutor.shutdownNow();
-                    for (Runnable task : pending) {
-                        try {
-                            task.run();
-                        } catch (Exception e) {
-                            plugin.getLogger().warning("Failed to execute pending Mongo write during shutdown: " + e.getMessage());
-                        }
+                    if (!pending.isEmpty()) {
+                        plugin.getLogger().warning("Discarded " + pending.size() + " pending Mongo write task(s) during forced shutdown.");
                     }
                 }
             } catch (InterruptedException e) {
                 plugin.getLogger().warning("Interrupted while awaiting Mongo write executor termination: " + e.getMessage());
                 List<Runnable> pending = writeExecutor.shutdownNow();
-                for (Runnable task : pending) {
-                    try {
-                        task.run();
-                    } catch (Exception ex) {
-                        plugin.getLogger().warning("Failed to execute pending Mongo write during interruption: " + ex.getMessage());
-                    }
+                if (!pending.isEmpty()) {
+                    plugin.getLogger().warning("Discarded " + pending.size() + " pending Mongo write task(s) during forced shutdown.");
                 }
                 Thread.currentThread().interrupt();
             }

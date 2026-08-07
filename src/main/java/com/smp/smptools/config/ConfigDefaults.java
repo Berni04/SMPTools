@@ -44,6 +44,7 @@ public final class ConfigDefaults {
         config.addDefault("features.afk.auto-vote-sleep", true);
         config.addDefault("features.remote-trade.enabled", true);
         config.addDefault("features.remote-trade.request-timeout-seconds", 60);
+        config.addDefault("features.remote-trade.session-timeout-seconds", 60);
         config.addDefault("features.trails.enabled", true);
         config.addDefault("features.bounties.enabled", true);
         config.addDefault("features.container-locks.enabled", true);

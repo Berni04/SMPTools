@@ -39,22 +39,27 @@ public class DeathMessageListener implements Listener {
             Component originalDeathMessage = event.deathMessage();
 
             if (originalDeathMessage != null) {
-                // Use replaceText with word boundary matching to replace the player's raw name with the formatted component
-                Component finalMessage = originalDeathMessage
-                        .replaceText(builder -> builder.match("\\b" + java.util.regex.Pattern.quote(player.getName()) + "\\b")
-                                .replacement(formattedPlayerName));
+                // Use replaceNameWithBoundary to replace the player's raw name with the formatted component
+                Component finalMessage = replaceNameWithBoundary(originalDeathMessage, player.getName(), formattedPlayerName);
 
                 if (player.getKiller() != null) {
                     Component formattedKillerName = plugin.getChatManager().getFormattedDisplayName(player.getKiller());
                     String killerName = player.getKiller().getName();
-                    finalMessage = finalMessage
-                            .replaceText(builder -> builder.match("\\b" + java.util.regex.Pattern.quote(killerName) + "\\b")
-                                    .replacement(formattedKillerName));
+                    finalMessage = replaceNameWithBoundary(finalMessage, killerName, formattedKillerName);
                 }
 
                 event.deathMessage(finalMessage);
             }
         }
+    }
+
+    static Component replaceNameWithBoundary(Component message, String name, Component replacement) {
+        if (message == null || name == null || replacement == null) {
+            return message;
+        }
+        return message.replaceText(builder -> builder
+                .match("(?U)\\b" + java.util.regex.Pattern.quote(name) + "\\b")
+                .replacement(replacement));
     }
 
     private void handleFunnyDeathMessage(PlayerDeathEvent event) {

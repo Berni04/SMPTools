@@ -35,5 +35,8 @@ public class StorageProviderTest {
         assertEquals(1L, StorageProvider.parseCanonicalValue(Double.valueOf(1.0), 0L));
         assertEquals(1L, StorageProvider.parseCanonicalValue(Float.valueOf(1.0f), 0L));
         assertEquals(42L, StorageProvider.parseCanonicalValue(Double.valueOf(42.5), 0L));
+        assertEquals(0L, StorageProvider.parseCanonicalValue("Infinity", 0L));
+        assertEquals(0L, StorageProvider.parseCanonicalValue("-Infinity", 0L));
+        assertEquals(0L, StorageProvider.parseCanonicalValue("NaN", 0L));
     }
 }

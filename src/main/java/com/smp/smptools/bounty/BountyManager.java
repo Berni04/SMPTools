@@ -261,7 +261,10 @@ public class BountyManager {
         );
 
         bounties.add(bounty);
-        saveBounties();
+        if (!saveBountiesSync()) {
+            bounties.remove(bounty);
+            return false;
+        }
         return true;
     }
 

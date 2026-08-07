@@ -74,9 +74,13 @@ public class StatsListener implements Listener {
             Player killer = player.getKiller();
             plugin.getStatsConfig().set("stats." + killer.getUniqueId() + ".player_kills",
                     plugin.getStatsConfig().getInt("stats." + killer.getUniqueId() + ".player_kills", 0) + 1);
-            plugin.getTagManager().checkMilestones(killer);
+            if (plugin.getTagManager() != null) {
+                plugin.getTagManager().checkMilestones(killer);
+            }
         }
-        plugin.getTagManager().checkMilestones(player);
+        if (plugin.getTagManager() != null) {
+            plugin.getTagManager().checkMilestones(player);
+        }
     }
 
     @EventHandler
@@ -111,7 +115,9 @@ public class StatsListener implements Listener {
                                 + 1);
             }
             // plugin.saveStatsConfig(); // Removed to use periodic saver
-            plugin.getTagManager().checkMilestones(killer);
+            if (plugin.getTagManager() != null) {
+                plugin.getTagManager().checkMilestones(killer);
+            }
         }
     }
 
@@ -155,7 +161,9 @@ public class StatsListener implements Listener {
             plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".ores_mined." + oreName,
                     plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".ores_mined." + oreName, 0) + 1);
         }
-        plugin.getTagManager().checkMilestones(player);
+        if (plugin.getTagManager() != null) {
+            plugin.getTagManager().checkMilestones(player);
+        }
     }
 
     @EventHandler
@@ -163,7 +171,9 @@ public class StatsListener implements Listener {
         Player player = event.getPlayer();
         plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".blocks_placed",
                 plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".blocks_placed", 0) + 1);
-        plugin.getTagManager().checkMilestones(player);
+        if (plugin.getTagManager() != null) {
+            plugin.getTagManager().checkMilestones(player);
+        }
     }
 
     @EventHandler
@@ -173,7 +183,9 @@ public class StatsListener implements Listener {
             long totalTicks = player.getStatistic(Statistic.PLAY_ONE_MINUTE);
             long totalMinutes = totalTicks / (20 * 60);
             plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".playtime_minutes", totalMinutes);
-            plugin.getTagManager().checkMilestones(player);
+            if (plugin.getTagManager() != null) {
+                plugin.getTagManager().checkMilestones(player);
+            }
         }
     }
 
@@ -182,7 +194,9 @@ public class StatsListener implements Listener {
         Player player = event.getPlayer();
         if (player.getWorld().getName().equals("world_nether")) {
             plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".enter_nether", 1);
-            plugin.getTagManager().checkMilestones(player);
+            if (plugin.getTagManager() != null) {
+                plugin.getTagManager().checkMilestones(player);
+            }
         }
     }
 
@@ -199,7 +213,9 @@ public class StatsListener implements Listener {
             } else {
                 return; // Don't check milestones if the item is not relevant
             }
-            plugin.getTagManager().checkMilestones(player);
+            if (plugin.getTagManager() != null) {
+                plugin.getTagManager().checkMilestones(player);
+            }
         }
     }
 
@@ -209,7 +225,9 @@ public class StatsListener implements Listener {
             Player player = (Player) event.getEntity();
             plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".use_totem",
                     plugin.getStatsConfig().getInt("stats." + player.getUniqueId() + ".use_totem", 0) + 1);
-            plugin.getTagManager().checkMilestones(player);
+            if (plugin.getTagManager() != null) {
+                plugin.getTagManager().checkMilestones(player);
+            }
         }
     }
 }

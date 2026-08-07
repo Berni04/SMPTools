@@ -65,6 +65,7 @@ features:
   remote-trade:
     enabled: true
     request-timeout-seconds: 60
+    session-timeout-seconds: 60
   trails:
     enabled: true
   bounties:
