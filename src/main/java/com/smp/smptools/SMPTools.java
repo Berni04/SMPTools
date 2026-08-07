@@ -47,7 +47,6 @@ import com.smp.smptools.storage.StorageManager;
 import com.smp.smptools.managers.DialogueManager;
 import com.smp.smptools.managers.BlackFridayManager;
 import org.bukkit.Bukkit;
-import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -101,13 +100,7 @@ public class SMPTools extends JavaPlugin {
     private com.smp.smptools.locks.LockManager lockManager;
     private com.smp.smptools.listeners.InvseeGUIListener invseeGUIListener;
     private com.smp.smptools.listeners.BountyGUIListener bountyGUIListener;
-    public SMPTools() {
-        super();
-    }
 
-    protected SMPTools(org.bukkit.plugin.java.JavaPluginLoader loader, org.bukkit.plugin.PluginDescriptionFile description, File dataFolder, File file) {
-        super(loader, description, dataFolder, file);
-    }
 
     @Override
     public void onEnable() {
