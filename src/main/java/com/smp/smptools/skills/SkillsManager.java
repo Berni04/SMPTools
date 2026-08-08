@@ -51,6 +51,13 @@ public class SkillsManager {
             return;
         }
 
+        if (plugin.getEventManager() != null && plugin.getEventManager().getActiveSession() != null) {
+            if (plugin.getEventManager().getActiveSession().isActive() && 
+                plugin.getEventManager().getActiveSession().getType() == com.smp.smptools.events.minievents.MiniEventType.DOUBLE_XP) {
+                amount = amount * 2;
+            }
+        }
+
         String uuid = player.getUniqueId().toString();
         String path = "stats." + uuid + ".skills." + skill.name().toLowerCase();
 
