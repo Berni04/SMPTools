@@ -48,6 +48,8 @@ public final class ConfigDefaults {
         config.addDefault("features.trails.enabled", true);
         config.addDefault("features.bounties.enabled", true);
         config.addDefault("features.container-locks.enabled", true);
+        config.addDefault("features.events.enabled", true);
+        config.addDefault("features.artifacts.enabled", true);
 
         // Daily Rewards
         config.addDefault("features.daily-rewards.cooldown-hours", 22);

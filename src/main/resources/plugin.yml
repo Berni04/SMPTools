@@ -167,7 +167,21 @@ commands:
   untrust:
     description: Untrust a player on a locked container.
     usage: /untrust <player>
+  event:
+    description: Opens the server events GUI or manage events.
+    usage: /event [start|stop]
+    aliases: [events]
+  artifacts:
+    description: Opens the artifact equipment pouch or give custom artifacts.
+    usage: /artifacts [give <player> <type>]
+    aliases: [artifact, pouch]
 permissions:
+  smptools.events.admin:
+    description: Allows managing automated mini-events.
+    default: op
+  smptools.artifacts.admin:
+    description: Allows giving custom artifacts.
+    default: op
   smptools.missions.admin:
     description: Allows spawning the mission NPC.
     default: op

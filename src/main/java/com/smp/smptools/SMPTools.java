@@ -100,6 +100,12 @@ public class SMPTools extends JavaPlugin {
     private com.smp.smptools.locks.LockManager lockManager;
     private com.smp.smptools.listeners.InvseeGUIListener invseeGUIListener;
     private com.smp.smptools.listeners.BountyGUIListener bountyGUIListener;
+    private File eventsFile;
+    private FileConfiguration eventsConfig;
+    private EventManager eventManager;
+    private EventGUI eventGUI;
+    private com.smp.smptools.artifacts.ArtifactManager artifactManager;
+    private com.smp.smptools.artifacts.gui.ArtifactEquipmentGUI artifactEquipmentGUI;
 
 
     @Override
@@ -115,6 +121,7 @@ public class SMPTools extends JavaPlugin {
         setupTagsConfig();
         setupRewardsConfig();
         setupImageMapsConfig();
+        setupEventsConfig();
 
         // Initialize Storage Manager
         this.storageManager = new StorageManager(this);
@@ -265,6 +272,26 @@ public class SMPTools extends JavaPlugin {
                     .setExecutor(new com.smp.smptools.commands.BlackFridayCommand(blackFridayManager));
         }
 
+        // Mini-Events Subsystem
+        if (getConfig().getBoolean("features.events.enabled", true)) {
+            this.eventManager = new EventManager(this);
+            this.eventManager.initialize();
+            this.eventGUI = new EventGUI(this, eventManager);
+            if (getCommand("event") != null) {
+                getCommand("event").setExecutor(new com.smp.smptools.events.commands.EventCommand(this, eventManager, eventGUI));
+            }
+        }
+
+        // Custom Artifacts Subsystem
+        if (getConfig().getBoolean("features.artifacts.enabled", true)) {
+            this.artifactManager = new com.smp.smptools.artifacts.ArtifactManager(this);
+            this.artifactEquipmentGUI = new com.smp.smptools.artifacts.gui.ArtifactEquipmentGUI(this, artifactManager);
+            Bukkit.getPluginManager().registerEvents(new com.smp.smptools.artifacts.ArtifactListener(this, artifactManager), this);
+            if (getCommand("artifacts") != null) {
+                getCommand("artifacts").setExecutor(new com.smp.smptools.artifacts.commands.ArtifactCommand(this, artifactManager, artifactEquipmentGUI));
+            }
+        }
+
         startStatsSaverTask();
     }
 
@@ -300,6 +327,12 @@ public class SMPTools extends JavaPlugin {
         }
         if (npcManager != null) {
             npcManager.removeAllNPCs();
+        }
+        if (eventManager != null) {
+            eventManager.shutdown();
+        }
+        if (artifactManager != null) {
+            artifactManager.savePouchData();
         }
         if (storageManager != null) {
             storageManager.shutdown();
@@ -590,5 +623,29 @@ public class SMPTools extends JavaPlugin {
 
     public void setBountyGUIListener(com.smp.smptools.listeners.BountyGUIListener listener) {
         this.bountyGUIListener = listener;
+    }
+
+    private void setupEventsConfig() {
+        eventsFile = new File(getDataFolder(), "events.yml");
+        if (!eventsFile.exists()) {
+            eventsFile.getParentFile().mkdirs();
+            saveResource("events.yml", false);
+        }
+        eventsConfig = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(eventsFile);
+    }
+
+    public FileConfiguration getEventsConfig() {
+        if (eventsConfig == null) {
+            setupEventsConfig();
+        }
+        return eventsConfig;
+    }
+
+    public EventManager getEventManager() {
+        return eventManager;
+    }
+
+    public com.smp.smptools.artifacts.ArtifactManager getArtifactManager() {
+        return artifactManager;
     }
 }
