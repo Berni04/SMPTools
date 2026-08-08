@@ -46,6 +46,8 @@ import com.smp.smptools.managers.NPCManager;
 import com.smp.smptools.storage.StorageManager;
 import com.smp.smptools.managers.DialogueManager;
 import com.smp.smptools.managers.BlackFridayManager;
+import com.smp.smptools.events.EventManager;
+import com.smp.smptools.events.gui.EventGUI;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;

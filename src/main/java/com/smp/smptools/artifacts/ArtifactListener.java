@@ -133,7 +133,7 @@ public class ArtifactListener implements Listener {
                         return;
                     }
                     cooldowns.put(player.getUniqueId(), now);
-                    DragonFireball fireball = player.launchProjectiles(DragonFireball.class);
+                    DragonFireball fireball = player.launchProjectile(DragonFireball.class);
                     fireball.setVelocity(player.getLocation().getDirection().multiply(1.5));
                     player.getWorld().playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_SHOOT, 1.0f, 1.0f);
                     event.setCancelled(true);
