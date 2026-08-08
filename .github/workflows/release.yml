@@ -7,6 +7,12 @@ on:
       - main
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: 'Version tag for release (e.g. v1.2.0). Leave empty to use pom.xml version.'
+        required: false
+        default: ''
 
 jobs:
   build:
@@ -28,11 +34,23 @@ jobs:
       - name: Build with Maven
         run: mvn clean package --file pom.xml
 
-      - name: Extract Project Version
+      - name: Determine Release Version Tag
         id: get_version
         run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          echo "VERSION=v$VERSION" >> $GITHUB_ENV
+          if [ -n "${{ github.event.inputs.version_tag }}" ]; then
+            TAG="${{ github.event.inputs.version_tag }}"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG="${github.ref_name}"
+          else
+            POM_VER=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+            if [[ "$POM_VER" == v* ]]; then
+              TAG="$POM_VER"
+            else
+              TAG="v$POM_VER"
+            fi
+          fi
+          echo "RELEASE_TAG=$TAG" >> $GITHUB_ENV
+          echo "Resolved Release Tag: $TAG"
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
@@ -40,11 +58,26 @@ jobs:
           name: SMPTools-Jar
           path: target/smptools-*.jar
 
+      - name: Check if Tag Already Exists
+        id: check_tag
+        run: |
+          git fetch --tags
+          if git rev-parse "${{ env.RELEASE_TAG }}" >/dev/null 2>&1; then
+            echo "EXISTS=true" >> $GITHUB_OUTPUT
+            echo "Tag ${{ env.RELEASE_TAG }} already exists. Will skip release creation unless triggered manually."
+          else
+            echo "EXISTS=false" >> $GITHUB_OUTPUT
+            echo "Tag ${{ env.RELEASE_TAG }} is NEW! Release will be created."
+          fi
+
       - name: Create GitHub Release
+        if: steps.check_tag.outputs.EXISTS == 'false' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || env.VERSION }}
+          tag_name: ${{ env.RELEASE_TAG }}
           files: target/smptools-*.jar
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
