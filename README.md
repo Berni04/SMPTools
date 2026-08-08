@@ -97,6 +97,28 @@ SMPTools is a comprehensive Minecraft Paper plugin designed to enhance the survi
 *   **Combat Skill**: Earn experience from killing mobs with critical strike chance.
 *   **Configurable**: All skill formulas and chances can be customized in `config.yml`.
 
+### Dynamic Mini-Events Engine
+*   **/event** (alias **/events**): Opens the server events dashboard GUI displaying live event status, time remaining, and Top 5 leaderboards.
+*   **/event start <type> [duration]**: Admin command to manually trigger an automated mini-event session.
+*   **/event stop**: Admin command to conclude an active mini-event.
+*   **6 Automated Event Types**:
+    *   🎣 **Fishing Derby** (15m): Point values based on fish rarity (Cod, Salmon, Tropical, Pufferfish, Treasure) with Angler Streak combo multipliers.
+    *   ⛏️ **Ore Rush** (10m): Ore point scoring with passive 2.0x Ore drops and 2.0x Mining Skill XP.
+    *   ⚔️ **Mob Frenzy** (15m): Mob kill scoring with passive 2.0x Mob drops and Slayer killstreaks.
+    *   ⚡ **Double XP Hour** (60m): Applies global 2.0x Skill XP across all MMO skills.
+    *   🌾 **Harvest Sprint** (10m): Crop harvest scoring with Speed II passive boost.
+    *   🗺️ **Treasure Dig** (10m): Excavation scoring with buried treasure pouch drops.
+*   **Dual HUD Display**: Real-time event leaderboards render on both the sidebar **Scoreboard** and top **BossBar** simultaneously (individually toggleable in `events.yml`).
+
+### Custom Utility Artifacts & Equipment Pouch
+*   **/artifacts** (alias **/artifact**, **/pouch**): Opens the 27-slot Artifact Equipment Pouch GUI to equip passive artifacts without occupying hotbar or offhand slots.
+*   **/artifacts give <player> <type>**: Admin command to grant custom artifacts to players.
+*   **21 Custom Artifacts**:
+    *   *Mobility*: Grappling Hook, Wind Dash Feather, Leap Frog Boots, Shadow Step Dagger, Feather Glider Ring.
+    *   *Utility & QoL*: Portable Workbench, Homing Compass, Magnet Totem, Abyssal Lantern, Void Saver Charm, Alchemist's Satchel, Auto-Feeder Satchel.
+    *   *Combat*: Vampiric Scythe, Phoenix Feather, Sonic Wave Horn, Dragon Breath Cannon.
+    *   *Gathering & Farming*: Nature's Touch Hoe, Timber Axe, Ore Radar Scanner, Chlorophyll Band, Master Angler's Lure.
+
 ### Custom Enchantments
 *   **/cenchant**: Apply custom enchantments to items.
 *   **Telekinesis**: Automatically sends block drops to your inventory.
@@ -256,6 +278,8 @@ Common placeholders:
 | `/untrust <player>` | Revoke trust on container | Default |
 | `/afk` | Toggle AFK status | Default |
 | `/trade <player\|accept\|deny\|cancel>` | Remote item trade request | Default |
+| `/event` (alias `/events`) | Server events dashboard & admin controls | Default |
+| `/artifacts` (alias `/pouch`) | Artifact equipment pouch & admin give | Default |
 
 ## Permissions
 
@@ -284,12 +308,15 @@ Common placeholders:
 | `smptools.trails.<trail_id>` | Access specific particle trail | default |
 | `smptools.bounty.admin` | Admin bounty bypass and removal | op |
 | `smptools.lock.bypass` | Admin container lock bypass | op |
+| `smptools.events.admin` | Manage automated mini-events (`/event start/stop`) | op |
+| `smptools.artifacts.admin` | Admin custom artifacts give (`/artifacts give`) | op |
 | `smptools.admin` | Admin commands (presents, krampus, black friday) | op |
 
 ## Configuration
 
 ### Main Configuration Files
 *   **`config.yml`**: General plugin configuration including feature toggles, skill formulas, daily rewards, custom enchantments, storage provider backend (`flatfile`, `sqlite`, `mongodb`), music player settings, accelerated growth multiplier, and meme sound resource pack URL.
+*   **`events.yml`**: Mini-events scheduler configuration, event durations, point values, and Scoreboard/BossBar HUD toggles.
 *   **`stats.yml`**: Player statistics storage. Managed by the plugin - avoid manual editing.
 *   **`tags.yml`**: Defines milestone tags and their unlock requirements.
 *   **`messages.yml`**: Customizable player-facing messages with MiniMessage support and dynamic player tags.
@@ -306,6 +333,7 @@ Common placeholders:
 *   **`blackfriday.yml`**: Black Friday event settings including discount percentages.
 
 ### Storage & Data Files
+*   **`artifacts.yml`**: Stores player equipped passive artifact items in their `/artifacts` pouch.
 *   **`bounties.yml` / DB**: Stores active player bounties, reward items, and target data.
 *   **`locks.yml` / DB**: Stores container protection locks, owner UUIDs, and trusted player ACLs.
 *   **`trails.yml` / DB**: Stores player-selected cosmetic particle trail settings.
