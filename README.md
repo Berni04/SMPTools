@@ -32,6 +32,18 @@ SMPTools is a comprehensive Minecraft Paper plugin designed to enhance the survi
     *   **/tptoggle**: Toggles acceptance of teleport requests.
     *   **Timed Teleportation**: 3-second countdown that cancels on movement or damage.
     *   **Timeout System**: Requests expire after 60 seconds.
+*   **Item-Based Bounty System**:
+    *   **/bounty place <player>**: Places a bounty on a target player using held items as the reward.
+    *   **/bounty list**: Opens an interactive GUI displaying all active bounties.
+    *   **/bounty top**: Displays the highest-reward bounties on the server.
+    *   **Automated Claims**: Eliminating a wanted player automatically transfers reward items to the hunter.
+*   **Secure Remote Trading**:
+    *   **/trade <player>**: Sends a remote item trade request to another player.
+    *   **/trade <accept|deny|cancel>**: Accepts, denies, or cancels pending trade requests.
+    *   **Interactive GUI**: Dual-panel trade GUI with real-time item inspection, lock-in confirmation, and safety anti-scam countdowns.
+*   **AFK Management**:
+    *   **/afk**: Toggles your AFK (Away From Keyboard) status manually.
+    *   **Automatic Detection**: Automatically marks players as AFK after a configurable inactivity threshold.
 *   **Vote-Based Sleep**: Clickable Accept/Deny system for skipping the night.
 
 ### Customization
@@ -42,11 +54,20 @@ SMPTools is a comprehensive Minecraft Paper plugin designed to enhance the survi
     *   **Dynamic Display**: Equipped titles appear in chat, name tags, and join/leave messages (e.g., `[Title] PlayerName`).
     *   **Hover Descriptions**: Hovering over a player's title in chat displays its unlock description.
     *   **Configurable**: Milestones are defined in `tags.yml`.
+*   **Cosmetic Particle Trails**:
+    *   **/trails**: Opens an interactive GUI to choose ambient particle effects (Flame, Hearts, Ender, Rainbow, etc.) that follow your player movement.
+    *   **Permission-gated**: Individual trail access controlled via permissions and persistent across sessions.
 *   **Chat Formatting**: Customizable chat prefixes and colors with centralized ChatManager.
 *   **Item Renaming**: **/rename <name>**: Renames the item in your hand with MiniMessage formatting support.
 *   **Join/Leave Messages**: Custom messages for players joining and leaving.
 
-### Administration
+### Administration & Container Protection
+*   **Signless Container Locks**:
+    *   **/lock**: Locks the chest or container block you are looking at without requiring physical signs.
+    *   **/unlock**: Unlocks your owned container.
+    *   **/trust <player>**: Grants trusted access to a specified player on your locked container.
+    *   **/untrust <player>**: Revokes access for a trusted player.
+    *   **Smart Double-Chest Protection**: Automatically pairs and protects double-chests and preserves Access Control Lists (ACLs).
 *   **Player Graves**: Vanilla-style graves spawn at death location with holograms and looting.
 *   **Chunk Loaders**: **/givechunkloader <player>**: Gives a chunk loader item that force-loads chunks even when no players are online.
 *   **Inventory Viewer**: **/invsee <player>**: View another player's inventory with a death-screen-like layout showing armor and off-hand.
@@ -227,6 +248,14 @@ Common placeholders:
 | `/present <give\|remove>` | Manage presents | `smptools.admin` |
 | `/krampus <spawn>` | Spawn Krampus | `smptools.admin` |
 | `/blackfriday <cmd>` | Black Friday event | `smptools.admin` |
+| `/bounty <place\|list\|top>` | Item-based bounty system | Default |
+| `/trails` | Cosmetic particle trails GUI | Default |
+| `/lock` | Lock container block | Default |
+| `/unlock` | Unlock container block | Default |
+| `/trust <player>` | Trust player on locked container | Default |
+| `/untrust <player>` | Revoke trust on container | Default |
+| `/afk` | Toggle AFK status | Default |
+| `/trade <player\|accept\|deny\|cancel>` | Remote item trade request | Default |
 
 ## Permissions
 
@@ -252,12 +281,15 @@ Common placeholders:
 | `smptools.missions.admin` | Spawn mission NPCs | op |
 | `smptools.customenchant` | Apply custom enchants | - |
 | `smptools.customitem` | Give custom items (WIP) | op |
+| `smptools.trails.<trail_id>` | Access specific particle trail | default |
+| `smptools.bounty.admin` | Admin bounty bypass and removal | op |
+| `smptools.lock.bypass` | Admin container lock bypass | op |
 | `smptools.admin` | Admin commands (presents, krampus, black friday) | op |
 
 ## Configuration
 
 ### Main Configuration Files
-*   **`config.yml`**: General plugin configuration including feature toggles, skill formulas, daily rewards, custom enchantments, music player settings, accelerated growth multiplier, and meme sound resource pack URL.
+*   **`config.yml`**: General plugin configuration including feature toggles, skill formulas, daily rewards, custom enchantments, storage provider backend (`flatfile`, `sqlite`, `mongodb`), music player settings, accelerated growth multiplier, and meme sound resource pack URL.
 *   **`stats.yml`**: Player statistics storage. Managed by the plugin - avoid manual editing.
 *   **`tags.yml`**: Defines milestone tags and their unlock requirements.
 *   **`messages.yml`**: Customizable player-facing messages with MiniMessage support and dynamic player tags.
@@ -273,7 +305,10 @@ Common placeholders:
 *   **`presents.yml`**: Present hunt configuration and tier definitions.
 *   **`blackfriday.yml`**: Black Friday event settings including discount percentages.
 
-### Storage Files
+### Storage & Data Files
+*   **`bounties.yml` / DB**: Stores active player bounties, reward items, and target data.
+*   **`locks.yml` / DB**: Stores container protection locks, owner UUIDs, and trusted player ACLs.
+*   **`trails.yml` / DB**: Stores player-selected cosmetic particle trail settings.
 *   **`imagemaps.yml`**: Stores URLs for custom image maps to persist across restarts.
 *   **`chunkloaders.yml`**: Stores chunk loader locations for persistence.
 *   **`player_missions.yml`**: Stores player mission progress and completion status.
