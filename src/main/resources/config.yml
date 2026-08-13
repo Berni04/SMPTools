@@ -59,6 +59,8 @@ features:
     enabled: true
   artifacts:
     enabled: true
+  seasonal:
+    enabled: true
   accelerated-growth:
     enabled: true
     multiplier: 2.0 # Crops grow 2 times faster

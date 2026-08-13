@@ -113,11 +113,22 @@ SMPTools is a comprehensive Minecraft Paper plugin designed to enhance the survi
 ### Custom Utility Artifacts & Equipment Pouch
 *   **/artifacts** (alias **/artifact**, **/pouch**): Opens the 27-slot Artifact Equipment Pouch GUI to equip passive artifacts without occupying hotbar or offhand slots.
 *   **/artifacts give <player> <type>**: Admin command to grant custom artifacts to players.
-*   **21 Custom Artifacts**:
+*   **22 Custom Artifacts**:
     *   *Mobility*: Grappling Hook, Wind Dash Feather, Leap Frog Boots, Shadow Step Dagger, Feather Glider Ring.
-    *   *Utility & QoL*: Portable Workbench, Homing Compass, Magnet Totem, Abyssal Lantern, Void Saver Charm, Alchemist's Satchel, Auto-Feeder Satchel.
+    *   *Utility & QoL*: Portable Workbench, Homing Compass, Magnet Totem, Abyssal Lantern, Void Saver Charm, Alchemist's Satchel, Auto-Feeder Satchel, Jack's Pumpkin Helmet.
     *   *Combat*: Vampiric Scythe, Phoenix Feather, Sonic Wave Horn, Dragon Breath Cannon.
     *   *Gathering & Farming*: Nature's Touch Hoe, Timber Axe, Ore Radar Scanner, Chlorophyll Band, Master Angler's Lure.
+
+### Seasonal Events System
+*   **/seasonal** (alias **/seasons**, **/season**): Opens the central 27-slot Seasonal Events Hub GUI displaying the active season, calendar schedule, and quick-launch event shortcuts.
+*   **/seasonal start <season>**: Admin command to force-activate a season (e.g. `halloween`, `easter`, `christmas`, `black_friday`, `summer`).
+*   **/seasonal reset**: Admin command to return season detection to real-world calendar dates.
+*   **/halloween** (alias **/pumpkins**): Opens the 20-slot Spooky Pumpkin Hunt checklist GUI. Right-clicking hidden pumpkins in the world grants mini-rewards and tracks discovery progress. Completing the hunt unlocks **Jack's Pumpkin Helmet Artifact** and 16 Diamonds!
+*   **/halloween setpumpkin <id> [hint]**: Admin command to turn targeted block into a scavenger hunt pumpkin.
+*   **/easter** (alias **/eggs**): Opens the 15-slot Easter Egg Hunt checklist GUI. Finding all 15 hidden eggs awards the **Chlorophyll Band Artifact** + 12 Diamonds + 32 Golden Carrots!
+*   **/easter setegg <id> [hint]**: Admin command to set targeted block as an Easter egg.
+*   **/summer**: Displays Summer Heatwave & Solar Flare status (grants midday Haste II & Speed I buffs under open skies).
+*   **Trick-or-Treating**: Right-clicking villagers with a helmet during Halloween has a 70% chance for treats and a 30% chance for trick prank bats!
 
 ### Custom Enchantments
 *   **/cenchant**: Apply custom enchantments to items.
@@ -280,6 +291,10 @@ Common placeholders:
 | `/trade <player\|accept\|deny\|cancel>` | Remote item trade request | Default |
 | `/event` (alias `/events`) | Server events dashboard & admin controls | Default |
 | `/artifacts` (alias `/pouch`) | Artifact equipment pouch & admin give | Default |
+| `/seasonal` (alias `/seasons`) | Central seasonal events hub & admin controls | Default |
+| `/halloween` (alias `/pumpkins`) | Spooky Pumpkin Hunt checklist & admin placement | Default |
+| `/easter` (alias `/eggs`) | Easter Egg Hunt checklist & admin placement | Default |
+| `/summer` | Summer Heatwave & Solar Flare status | Default |
 
 ## Permissions
 
@@ -310,6 +325,7 @@ Common placeholders:
 | `smptools.lock.bypass` | Admin container lock bypass | op |
 | `smptools.events.admin` | Manage automated mini-events (`/event start/stop`) | op |
 | `smptools.artifacts.admin` | Admin custom artifacts give (`/artifacts give`) | op |
+| `smptools.seasonal.admin` | Manage seasonal events and set scavenger targets | op |
 | `smptools.admin` | Admin commands (presents, krampus, black friday) | op |
 
 ## Configuration
@@ -317,6 +333,7 @@ Common placeholders:
 ### Main Configuration Files
 *   **`config.yml`**: General plugin configuration including feature toggles, skill formulas, daily rewards, custom enchantments, storage provider backend (`flatfile`, `sqlite`, `mongodb`), music player settings, accelerated growth multiplier, and meme sound resource pack URL.
 *   **`events.yml`**: Mini-events scheduler configuration, event durations, point values, and Scoreboard/BossBar HUD toggles.
+*   **`seasonal.yml`**: Seasonal events calendar ranges, mini-rewards, and feature toggles.
 *   **`stats.yml`**: Player statistics storage. Managed by the plugin - avoid manual editing.
 *   **`tags.yml`**: Defines milestone tags and their unlock requirements.
 *   **`messages.yml`**: Customizable player-facing messages with MiniMessage support and dynamic player tags.
@@ -327,6 +344,9 @@ Common placeholders:
 *   **`npcs.yml`**: NPC spawn locations, types, skins, and associated dialogues.
 
 ### Seasonal Event Configuration
+*   **`seasonal.yml`**: General seasonal calendar and scavenger reward parameters.
+*   **`seasonal_locations.yml`**: Coordinates and hints for hidden Halloween pumpkins and Easter eggs.
+*   **`player_seasonal.yml`**: Per-player discovery progress and grand reward claim records.
 *   **`advent.yml`**: Advent calendar daily rewards for December.
 *   **`christmas.yml`**: Christmas event settings including world rules and portal configuration.
 *   **`presents.yml`**: Present hunt configuration and tier definitions.

@@ -21,6 +21,7 @@ public enum ArtifactType {
     VOID_SAVER_CHARM("Void Saver Charm", "🔮", Material.TOTEM_OF_UNDYING, ArtifactSlotType.PASSIVE, "Rescues you when falling into Void/Nether Lava, teleporting you to safety with Fire Res III."),
     ALCHEMISTS_SATCHEL("Alchemist's Satchel", "🧪", Material.BREWING_STAND, ArtifactSlotType.PASSIVE, "Automatically doubles the duration of all consumed potions."),
     AUTO_FEEDER_SATCHEL("Auto-Feeder Satchel", "🍞", Material.GOLDEN_CARROT, ArtifactSlotType.PASSIVE, "Auto-consumes food from inventory when hunger drops below 16."),
+    JACKS_PUMPKIN_HELMET("Jack's Pumpkin Helmet", "🎃", Material.CARVED_PUMPKIN, ArtifactSlotType.PASSIVE, "Halloween grand reward! Grants infinite Night Vision, Speed I, and fiery embers."),
 
     // Combat & Defense (4)
     VAMPIRIC_SCYTHE("Vampiric Scythe", "🩸", Material.NETHERITE_HOE, ArtifactSlotType.ACTIVE, "Drains 15% HP from enemies within 5 blocks and heals the user (20s cooldown)."),

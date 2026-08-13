@@ -50,6 +50,7 @@ public final class ConfigDefaults {
         config.addDefault("features.container-locks.enabled", true);
         config.addDefault("features.events.enabled", true);
         config.addDefault("features.artifacts.enabled", true);
+        config.addDefault("features.seasonal.enabled", true);
 
         // Daily Rewards
         config.addDefault("features.daily-rewards.cooldown-hours", 22);

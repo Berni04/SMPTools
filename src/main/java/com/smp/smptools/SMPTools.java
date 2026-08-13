@@ -48,6 +48,15 @@ import com.smp.smptools.managers.DialogueManager;
 import com.smp.smptools.managers.BlackFridayManager;
 import com.smp.smptools.events.EventManager;
 import com.smp.smptools.events.gui.EventGUI;
+import com.smp.smptools.events.seasonal.SeasonalManager;
+import com.smp.smptools.events.seasonal.SeasonalListener;
+import com.smp.smptools.events.seasonal.gui.SeasonalGUI;
+import com.smp.smptools.events.seasonal.gui.HalloweenGUI;
+import com.smp.smptools.events.seasonal.gui.EasterGUI;
+import com.smp.smptools.events.seasonal.commands.SeasonalCommand;
+import com.smp.smptools.events.seasonal.commands.HalloweenCommand;
+import com.smp.smptools.events.seasonal.commands.EasterCommand;
+import com.smp.smptools.events.seasonal.commands.SummerCommand;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -108,6 +117,12 @@ public class SMPTools extends JavaPlugin {
     private EventGUI eventGUI;
     private com.smp.smptools.artifacts.ArtifactManager artifactManager;
     private com.smp.smptools.artifacts.gui.ArtifactEquipmentGUI artifactEquipmentGUI;
+    private File seasonalFile;
+    private FileConfiguration seasonalConfig;
+    private SeasonalManager seasonalManager;
+    private SeasonalGUI seasonalGUI;
+    private HalloweenGUI halloweenGUI;
+    private EasterGUI easterGUI;
 
 
     @Override
@@ -124,6 +139,7 @@ public class SMPTools extends JavaPlugin {
         setupRewardsConfig();
         setupImageMapsConfig();
         setupEventsConfig();
+        setupSeasonalConfig();
 
         // Initialize Storage Manager
         this.storageManager = new StorageManager(this);
@@ -294,6 +310,29 @@ public class SMPTools extends JavaPlugin {
             }
         }
 
+        // Seasonal Events Subsystem
+        if (getConfig().getBoolean("features.seasonal.enabled", true)) {
+            this.seasonalManager = new SeasonalManager(this);
+            this.seasonalGUI = new SeasonalGUI(this, seasonalManager);
+            this.halloweenGUI = new HalloweenGUI(this, seasonalManager);
+            this.easterGUI = new EasterGUI(this, seasonalManager);
+
+            Bukkit.getPluginManager().registerEvents(new SeasonalListener(this, seasonalManager), this);
+
+            if (getCommand("seasonal") != null) {
+                getCommand("seasonal").setExecutor(new SeasonalCommand(this, seasonalManager, seasonalGUI));
+            }
+            if (getCommand("halloween") != null) {
+                getCommand("halloween").setExecutor(new HalloweenCommand(this, seasonalManager, halloweenGUI));
+            }
+            if (getCommand("easter") != null) {
+                getCommand("easter").setExecutor(new EasterCommand(this, seasonalManager, easterGUI));
+            }
+            if (getCommand("summer") != null) {
+                getCommand("summer").setExecutor(new SummerCommand(this, seasonalManager));
+            }
+        }
+
         startStatsSaverTask();
     }
 
@@ -335,6 +374,10 @@ public class SMPTools extends JavaPlugin {
         }
         if (artifactManager != null) {
             artifactManager.savePouchData();
+        }
+        if (seasonalManager != null) {
+            seasonalManager.saveLocations();
+            seasonalManager.savePlayerData();
         }
         if (storageManager != null) {
             storageManager.shutdown();
@@ -649,5 +692,25 @@ public class SMPTools extends JavaPlugin {
 
     public com.smp.smptools.artifacts.ArtifactManager getArtifactManager() {
         return artifactManager;
+    }
+
+    private void setupSeasonalConfig() {
+        seasonalFile = new File(getDataFolder(), "seasonal.yml");
+        if (!seasonalFile.exists()) {
+            seasonalFile.getParentFile().mkdirs();
+            saveResource("seasonal.yml", false);
+        }
+        seasonalConfig = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(seasonalFile);
+    }
+
+    public FileConfiguration getSeasonalConfig() {
+        if (seasonalConfig == null) {
+            setupSeasonalConfig();
+        }
+        return seasonalConfig;
+    }
+
+    public SeasonalManager getSeasonalManager() {
+        return seasonalManager;
     }
 }

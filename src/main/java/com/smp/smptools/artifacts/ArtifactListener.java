@@ -329,6 +329,13 @@ public class ArtifactListener implements Listener {
                             }
                         }
                     }
+
+                    // Jack's Pumpkin Helmet
+                    if (artifactManager.hasEquippedArtifact(player, ArtifactType.JACKS_PUMPKIN_HELMET)) {
+                        player.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, 300, 0, false, false));
+                        player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 300, 0, false, false));
+                        player.getWorld().spawnParticle(Particle.FLAME, player.getLocation().add(0, 1.0, 0), 2, 0.2, 0.2, 0.2, 0.01);
+                    }
                 }
             }
         }.runTaskTimer(plugin, 20L, 20L);

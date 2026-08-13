@@ -175,7 +175,25 @@ commands:
     description: Opens the artifact equipment pouch or give custom artifacts.
     usage: /artifacts [give <player> <type>]
     aliases: [artifact, pouch]
+  seasonal:
+    description: Opens the central seasonal events hub or manage active season.
+    usage: /seasonal [start <season>|stop|status]
+    aliases: [seasons, season]
+  halloween:
+    description: Opens the Spooky Pumpkin Hunt checklist or manage pumpkins.
+    usage: /halloween [setpumpkin <id> [hint]]
+    aliases: [pumpkins, pumpkin]
+  easter:
+    description: Opens the Easter Egg Hunt checklist or manage eggs.
+    usage: /easter [setegg <id> [hint]]
+    aliases: [eggs, egg]
+  summer:
+    description: View Summer Heatwave and Solar Flare status.
+    usage: /summer
 permissions:
+  smptools.seasonal.admin:
+    description: Allows managing seasonal events and placing scavenger hunt targets.
+    default: op
   smptools.events.admin:
     description: Allows managing automated mini-events.
     default: op
