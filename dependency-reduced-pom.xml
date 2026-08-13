@@ -4,7 +4,7 @@
   <groupId>com.smp</groupId>
   <artifactId>smptools</artifactId>
   <name>SMPTools</name>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.1</version>
   <build>
     <resources>
       <resource>
@@ -15,7 +15,7 @@
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.1</version>
+        <version>3.13.0</version>
         <configuration>
           <source>${java.version}</source>
           <target>${java.version}</target>
@@ -32,6 +32,16 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.5.2</version>
+        <configuration>
+          <useModulePath>false</useModulePath>
+          <includes>
+            <include>**/*Test.java</include>
+          </includes>
+        </configuration>
       </plugin>
     </plugins>
   </build>
