@@ -179,6 +179,11 @@ public class SeasonalListener implements Listener {
         }
     }
 
+    @EventHandler
+    public void onPlayerQuit(org.bukkit.event.player.PlayerQuitEvent event) {
+        trickOrTreatCooldown.remove(event.getPlayer().getUniqueId());
+    }
+
     private void startSummerPassiveTask() {
         new BukkitRunnable() {
             @Override
