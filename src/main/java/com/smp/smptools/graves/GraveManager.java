@@ -6,6 +6,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Skull;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -58,28 +59,40 @@ public class GraveManager implements Listener {
             return; // No need for a grave if no items dropped
         }
 
-        // Remove drops from the event so they don't spawn on the ground
-        event.getDrops().clear();
+        Location baseLoc = player.getLocation().getBlock().getLocation();
+        World world = baseLoc.getWorld();
+        if (world == null) return;
 
-        Location deathLocation = player.getLocation().getBlock().getLocation(); // Snap to block
+        Location validLocation = null;
+        int startY = Math.max(world.getMinHeight(), baseLoc.getBlockY());
+        int maxY = Math.min(world.getMaxHeight() - 1, startY + 5);
 
-        // Ensure we don't overwrite an existing block if possible, or find a safe spot?
-        // For simplicity, we'll just place it at the exact block location.
-        // If it's air/liquid, great. If not, we might overwrite.
-        // Let's try to find the nearest air block upwards if solid.
-        if (deathLocation.getBlock().getType().isSolid()) {
-            deathLocation.add(0, 1, 0);
+        for (int y = startY; y <= maxY; y++) {
+            Location checkLoc = new Location(world, baseLoc.getBlockX(), y, baseLoc.getBlockZ());
+            Block b = checkLoc.getBlock();
+            if ((b.getType().isAir() || b.isPassable()) && !b.isLiquid()) {
+                validLocation = checkLoc;
+                break;
+            }
         }
 
+        if (validLocation == null) {
+            // No safe spot found; leave drops untouched so vanilla drop behavior persists
+            return;
+        }
+
+        // Remove drops from the event only after safe location is confirmed
+        event.getDrops().clear();
+
         String cause = player.getLastDamageCause() != null ? player.getLastDamageCause().getCause().name() : "UNKNOWN";
-        Grave grave = new Grave(player.getUniqueId(), player.getName(), deathLocation, drops,
+        Grave grave = new Grave(player.getUniqueId(), player.getName(), validLocation, drops,
                 System.currentTimeMillis(), cause);
 
         createGraveBlock(grave);
-        graves.put(deathLocation, grave);
+        graves.put(validLocation, grave);
         saveGraves();
 
-        String graveLocation = deathLocation.getBlockX() + ", " + deathLocation.getBlockY() + ", " + deathLocation.getBlockZ();
+        String graveLocation = validLocation.getBlockX() + ", " + validLocation.getBlockY() + ", " + validLocation.getBlockZ();
         player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("grave.stored", player, Map.of("location", graveLocation)));
     }
 
