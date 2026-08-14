@@ -140,11 +140,10 @@ public class MissionManager {
         if (data.getPendingRewards().isEmpty()) return;
 
         List<String> pending = new ArrayList<>(data.getPendingRewards());
-        List<String> remaining = new ArrayList<>();
         boolean anyDelivered = false;
-        boolean modified = false;
 
         for (String reward : pending) {
+            List<String> snapshotBefore = new ArrayList<>(data.getPendingRewards());
             String baseReward = reward;
             int retryCount = 0;
             int retryIndex = reward.lastIndexOf("#retry:");
@@ -154,6 +153,30 @@ public class MissionManager {
                     baseReward = reward.substring(0, retryIndex);
                 } catch (NumberFormatException ignored) {
                 }
+            }
+
+            if (!RewardManager.isValidReward(baseReward)) {
+                if (plugin != null) {
+                    plugin.getLogger().warning("Discarding unparseable/malformed pending mission reward '" + reward + "' for " + player.getName());
+                }
+                data.getPendingRewards().remove(reward);
+                if (!saveSinglePlayerData(player.getUniqueId())) {
+                    data.getPendingRewards().clear();
+                    data.getPendingRewards().addAll(snapshotBefore);
+                    break;
+                }
+                continue;
+            }
+
+            // Persist removal from pending queue BEFORE delivering reward to prevent duplicates on crash or save failure
+            data.getPendingRewards().remove(reward);
+            if (!saveSinglePlayerData(player.getUniqueId())) {
+                if (plugin != null) {
+                    plugin.getLogger().severe("Failed to persist pending mission reward removal for " + player.getName() + ", aborting claim execution.");
+                }
+                data.getPendingRewards().clear();
+                data.getPendingRewards().addAll(snapshotBefore);
+                break;
             }
 
             boolean delivered = false;
@@ -167,27 +190,25 @@ public class MissionManager {
 
             if (delivered) {
                 anyDelivered = true;
-                modified = true;
             } else {
                 int nextRetry = retryCount + 1;
-                modified = true;
                 if (nextRetry >= 3) {
                     if (plugin != null) {
                         plugin.getLogger().severe("Permanently dropping unexecutable pending mission reward '" + baseReward + "' for " + player.getName() + " after 3 failed attempts.");
                     }
                 } else {
-                    remaining.add(baseReward + "#retry:" + nextRetry);
+                    data.getPendingRewards().add(baseReward + "#retry:" + nextRetry);
                     if (plugin != null) {
                         plugin.getLogger().warning("Transient delivery failure for pending mission reward '" + baseReward + "' for " + player.getName() + " (attempt " + nextRetry + "/3), retaining for retry.");
                     }
+                    if (!saveSinglePlayerData(player.getUniqueId())) {
+                        if (plugin != null) {
+                            plugin.getLogger().severe("Failed to persist retry state for pending mission reward for " + player.getName() + ", aborting remaining queue.");
+                        }
+                        break;
+                    }
                 }
             }
-        }
-
-        if (modified) {
-            data.getPendingRewards().clear();
-            data.getPendingRewards().addAll(remaining);
-            saveSinglePlayerData(player.getUniqueId());
         }
 
         if (anyDelivered) {
