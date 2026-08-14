@@ -46,30 +46,35 @@ public class CropAccelerator extends BukkitRunnable {
             return;
         }
 
+        int clampedMultiplier = Math.min(64, Math.max(0, (int) Math.round(multiplier)));
+        if (clampedMultiplier <= 0) return;
+
         for (World world : Bukkit.getWorlds()) {
+            int minHeight = world.getMinHeight();
+            int heightRange = Math.max(1, world.getMaxHeight() - minHeight);
+
             for (Chunk chunk : world.getLoadedChunks()) {
                 // Apply random ticks based on multiplier
-                for (int i = 0; i < multiplier; i++) { // Apply 'multiplier' number of random ticks
+                for (int i = 0; i < clampedMultiplier; i++) {
                     int x = random.nextInt(16);
-                    int y = random.nextInt(world.getMaxHeight()); // Max height can vary
+                    int y = minHeight + random.nextInt(heightRange);
                     int z = random.nextInt(16);
 
                     Block block = chunk.getBlock(x, y, z);
                     BlockData blockData = block.getBlockData();
 
-                    if (blockData instanceof Ageable) {
-                        Ageable ageable = (Ageable) blockData;
+                    if (blockData instanceof Ageable ageable) {
                         if (ageable.getAge() < ageable.getMaximumAge()) {
                             int newAge = Math.min(ageable.getMaximumAge(), ageable.getAge() + 1); // Increment age by 1 per "tick"
                             ageable.setAge(newAge);
                             block.setBlockData(ageable);
                         }
                     } else if (SAPLINGS.contains(block.getType())) {
-                        block.applyBoneMeal(BlockFace.UP); // Simulate bonemeal for sapling growth
+                        if (random.nextInt(10) == 0) { // Balanced growth rate for saplings
+                            block.applyBoneMeal(BlockFace.UP);
+                        }
                     } else if (AGEABLE_CROPS.contains(block.getType())) {
                         // For non-ageable crops that grow (like sugar cane, cactus, bamboo)
-                        // applyBoneMeal might not work directly, but a random tick can still trigger growth.
-                        // For now, applyBoneMeal is a good general approach.
                         block.applyBoneMeal(BlockFace.UP);
                     }
                 }
