@@ -89,6 +89,7 @@ public class ArtifactListener implements Listener {
                 player.setFlying(false);
             }
         }
+        cooldowns.remove(uuid);
         fallImmune.remove(uuid);
         homingCompassTargetMode.remove(uuid);
     }
@@ -649,15 +650,17 @@ public class ArtifactListener implements Listener {
         if (target instanceof org.bukkit.entity.Tameable tameable && tameable.isTamed()) return false;
         if (target instanceof org.bukkit.entity.Villager || target instanceof org.bukkit.entity.WanderingTrader) return false;
         if (target instanceof org.bukkit.entity.ArmorStand) return false;
-        if (target instanceof org.bukkit.entity.Animals || target instanceof org.bukkit.entity.WaterMob || 
-            target instanceof org.bukkit.entity.Golem || target instanceof org.bukkit.entity.Ambient) {
-            return false;
+
+        // Check hostile entities whitelist first (includes Hoglin/Zoglin which may implement Animals)
+        if (target instanceof org.bukkit.entity.Monster || target instanceof org.bukkit.entity.Boss || 
+            target instanceof org.bukkit.entity.Slime || target instanceof org.bukkit.entity.Phantom || 
+            target instanceof org.bukkit.entity.Hoglin || target instanceof org.bukkit.entity.Zoglin || 
+            target instanceof org.bukkit.entity.Shulker || target instanceof org.bukkit.entity.Ghast || 
+            target instanceof org.bukkit.entity.EnderDragon || target instanceof org.bukkit.entity.Wither || 
+            target instanceof org.bukkit.entity.Warden || target instanceof org.bukkit.entity.Enemy) {
+            return true;
         }
-        return target instanceof org.bukkit.entity.Monster || target instanceof org.bukkit.entity.Boss || 
-               target instanceof org.bukkit.entity.Slime || target instanceof org.bukkit.entity.Phantom || 
-               target instanceof org.bukkit.entity.Hoglin || target instanceof org.bukkit.entity.Zoglin || 
-               target instanceof org.bukkit.entity.Shulker || target instanceof org.bukkit.entity.Ghast || 
-               target instanceof org.bukkit.entity.EnderDragon || target instanceof org.bukkit.entity.Wither || 
-               target instanceof org.bukkit.entity.Warden || target instanceof org.bukkit.entity.Enemy;
+
+        return false;
     }
 }
