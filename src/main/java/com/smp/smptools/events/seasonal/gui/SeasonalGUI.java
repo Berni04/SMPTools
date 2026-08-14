@@ -56,7 +56,7 @@ public class SeasonalGUI implements Listener {
 
         // Slot 10: Halloween Card
         List<String> hwLore = List.of(
-                "<gray>Dates: Oct 15 - Nov 2</gray>",
+                "<gray>Dates: " + seasonalManager.getFormattedDateRange(SeasonType.HALLOWEEN) + "</gray>",
                 "<gray>Features: Spooky Pumpkin Hunt, Headless Horseman</gray>",
                 "",
                 "<yellow>Click to open Halloween Checklist (/halloween)</yellow>"
@@ -65,7 +65,7 @@ public class SeasonalGUI implements Listener {
 
         // Slot 12: Easter Card
         List<String> easterLore = List.of(
-                "<gray>Dates: Mar 25 - Apr 25</gray>",
+                "<gray>Dates: " + seasonalManager.getFormattedDateRange(SeasonType.EASTER) + "</gray>",
                 "<gray>Features: Hidden Egg Hunt, Golden Bunnies</gray>",
                 "",
                 "<yellow>Click to open Easter Checklist (/easter)</yellow>"
@@ -74,13 +74,14 @@ public class SeasonalGUI implements Listener {
 
         // Slot 14: Christmas Card
         boolean xmasEnabled = plugin.getConfig().getBoolean("features.christmas.enabled", true);
+        String xmasDates = seasonalManager.getFormattedDateRange(SeasonType.CHRISTMAS);
         List<String> xmasLore = xmasEnabled ? List.of(
-                "<gray>Dates: Dec 1 - Jan 6</gray>",
+                "<gray>Dates: " + xmasDates + "</gray>",
                 "<gray>Features: Advent Calendar, Secret Santa, Krampus</gray>",
                 "",
                 "<yellow>Click to open Advent Calendar (/advent)</yellow>"
         ) : List.of(
-                "<gray>Dates: Dec 1 - Jan 6</gray>",
+                "<gray>Dates: " + xmasDates + "</gray>",
                 "<red>Christmas features are currently disabled in config.</red>"
         );
         gui.setItem(14, createItem(xmasEnabled ? Material.SNOWBALL : Material.GRAY_DYE, "<aqua><b>🎄 Christmas & Winter Fest</b></aqua>", xmasLore));
@@ -89,14 +90,15 @@ public class SeasonalGUI implements Listener {
         boolean bfEnabled = plugin.getConfig().getBoolean("features.blackfriday.enabled", true);
         boolean isBfEnabledInManager = plugin.getBlackFridayManager() != null && plugin.getBlackFridayManager().isEnabled();
         boolean isBfActive = bfEnabled && isBfEnabledInManager && seasonalManager.isSeasonActive(SeasonType.BLACK_FRIDAY);
+        String bfDates = seasonalManager.getFormattedDateRange(SeasonType.BLACK_FRIDAY);
         List<String> bfLore = (bfEnabled && isBfEnabledInManager) ? List.of(
-                "<gray>Dates: Late November</gray>",
+                "<gray>Dates: " + bfDates + "</gray>",
                 "<gray>Features: 90% Villager Discounts</gray>",
                 "<gray>Status: " + (isBfActive ? "<green>ACTIVE</green>" : "<red>INACTIVE</red>") + "</gray>",
                 "",
                 "<yellow>Click to view event details in chat</yellow>"
         ) : List.of(
-                "<gray>Dates: Late November</gray>",
+                "<gray>Dates: " + bfDates + "</gray>",
                 "<red>Black Friday features are currently disabled in config.</red>"
         );
         gui.setItem(16, createItem((bfEnabled && isBfEnabledInManager) ? Material.EMERALD : Material.GRAY_DYE, "<green><b>🛍️ Black Friday Sale</b></green>", bfLore));
