@@ -155,6 +155,7 @@ public class SeasonalListener implements Listener {
         if (helmet == null || helmet.getType().isAir()) return;
 
         long now = System.currentTimeMillis();
+        trickOrTreatCooldown.entrySet().removeIf(e -> now - e.getValue() > 60000);
         long last = trickOrTreatCooldown.getOrDefault(player.getUniqueId(), 0L);
         if (now - last < 60000) { // 1 min cooldown per player
             return;
@@ -177,11 +178,6 @@ public class SeasonalListener implements Listener {
             player.sendMessage(MiniMessage.miniMessage().deserialize("<red>🦇 <b>Trick!</b> The villager was startled and a bat flew out!</red>"));
             event.getRightClicked().getWorld().spawnEntity(event.getRightClicked().getLocation().add(0, 1, 0), EntityType.BAT);
         }
-    }
-
-    @EventHandler
-    public void onPlayerQuit(org.bukkit.event.player.PlayerQuitEvent event) {
-        trickOrTreatCooldown.remove(event.getPlayer().getUniqueId());
     }
 
     private void startSummerPassiveTask() {
