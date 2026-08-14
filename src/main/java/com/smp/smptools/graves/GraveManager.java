@@ -97,9 +97,15 @@ public class GraveManager implements Listener {
             }
         }
 
+        // If no dry solid ground spot is found nearby (e.g. drowning in ocean/river or void),
+        // fallback to death location clamped within world height bounds so player items are always preserved
         if (validLocation == null) {
-            // No safe spot found; leave drops untouched so vanilla drop behavior persists
-            return;
+            validLocation = baseLoc.clone();
+            if (validLocation.getBlockY() <= world.getMinHeight()) {
+                validLocation.setY(world.getMinHeight() + 1);
+            } else if (validLocation.getBlockY() >= world.getMaxHeight()) {
+                validLocation.setY(world.getMaxHeight() - 1);
+            }
         }
 
         // Remove drops from the event only after safe location is confirmed
