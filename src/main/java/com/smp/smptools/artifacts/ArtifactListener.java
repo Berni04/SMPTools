@@ -672,15 +672,15 @@ public class ArtifactListener implements Listener {
         Vector dir = eyeLoc.getDirection().normalize();
         Location target = player.getLocation().add(dir.clone().multiply(maxDist));
 
-        // 1. If target endpoint is safe, verify intervening wall thickness does not exceed 2 solid blocks
-        if (isSafePlayerStand(target) && countSolidBlocksOnPath(player.getLocation(), target) <= 2) {
+        // 1. If target endpoint is safe, verify contiguous wall thickness does not exceed 2 solid blocks
+        if (isSafePlayerStand(target) && getMaxContiguousSolidObstacleThickness(player.getLocation(), target) <= 2) {
             return target;
         }
 
-        // 2. Check vertical adjustments at maxDist if wall thickness <= 2
+        // 2. Check vertical adjustments at maxDist if contiguous wall thickness <= 2
         for (int dy : new int[]{1, 2, 3, -1, -2}) {
             Location candidate = target.clone().add(0, dy, 0);
-            if (isSafePlayerStand(candidate) && countSolidBlocksOnPath(player.getLocation(), candidate) <= 2) {
+            if (isSafePlayerStand(candidate) && getMaxContiguousSolidObstacleThickness(player.getLocation(), candidate) <= 2) {
                 return candidate;
             }
         }
@@ -689,7 +689,7 @@ public class ArtifactListener implements Listener {
         // to find the nearest safe spot before the obstacle
         for (double d = maxDist - 0.5; d >= 1.0; d -= 0.5) {
             Location fallback = player.getLocation().add(dir.clone().multiply(d));
-            if (isSafePlayerStand(fallback) && countSolidBlocksOnPath(player.getLocation(), fallback) == 0) {
+            if (isSafePlayerStand(fallback) && getMaxContiguousSolidObstacleThickness(player.getLocation(), fallback) == 0) {
                 return fallback;
             }
         }
@@ -697,22 +697,40 @@ public class ArtifactListener implements Listener {
         return null;
     }
 
-    private int countSolidBlocksOnPath(Location from, Location to) {
+    private int getMaxContiguousSolidObstacleThickness(Location from, Location to) {
         if (from == null || to == null || from.getWorld() == null) return Integer.MAX_VALUE;
         double dist = from.distance(to);
         if (dist <= 0.0) return 0;
-        Vector step = to.toVector().subtract(from.toVector()).normalize().multiply(0.4);
-        int solidCount = 0;
-        Set<Block> countedBlocks = new HashSet<>();
+        Vector step = to.toVector().subtract(from.toVector()).normalize().multiply(0.2);
+        int maxContiguous = 0;
+        int currentContiguous = 0;
+        Block lastFeet = null;
+        Block lastHead = null;
 
-        for (double d = 0.4; d < dist - 0.2; d += 0.4) {
-            Location sample = from.clone().add(step.clone().multiply(d / 0.4));
-            Block b = sample.getBlock();
-            if (b.getType().isSolid() && countedBlocks.add(b)) {
-                solidCount++;
+        for (double d = 0.2; d < dist - 0.1; d += 0.2) {
+            Location sample = from.clone().add(step.clone().multiply(d / 0.2));
+            Block feet = sample.getBlock();
+            Block head = sample.clone().add(0, 1, 0).getBlock();
+
+            boolean solidFeet = feet.getType().isSolid();
+            boolean solidHead = head.getType().isSolid();
+
+            if (solidFeet || solidHead) {
+                if (!feet.equals(lastFeet) || !head.equals(lastHead)) {
+                    currentContiguous++;
+                    lastFeet = feet;
+                    lastHead = head;
+                    if (currentContiguous > maxContiguous) {
+                        maxContiguous = currentContiguous;
+                    }
+                }
+            } else {
+                currentContiguous = 0;
+                lastFeet = null;
+                lastHead = null;
             }
         }
-        return solidCount;
+        return maxContiguous;
     }
 
     private boolean isSafePlayerStand(Location loc) {
