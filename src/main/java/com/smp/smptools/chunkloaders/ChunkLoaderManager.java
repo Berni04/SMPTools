@@ -185,9 +185,9 @@ public class ChunkLoaderManager {
         if (Bukkit.getServer() == null) return null;
         World world = Bukkit.getWorld(parsed.worldName);
         if (world == null) return null;
-        if (parsed.y < world.getMinHeight() || parsed.y > world.getMaxHeight()) {
+        if (parsed.y < world.getMinHeight() || parsed.y >= world.getMaxHeight()) {
             if (plugin != null) {
-                plugin.getLogger().warning("Chunk loader Y coordinate out of world bounds (" + parsed.y + " not in [" + world.getMinHeight() + ".." + world.getMaxHeight() + "]) in line '" + s + "'");
+                plugin.getLogger().warning("Chunk loader Y coordinate out of world bounds (" + parsed.y + " not in [" + world.getMinHeight() + ".." + (world.getMaxHeight() - 1) + "]) in line '" + s + "'");
             }
             return null;
         }
