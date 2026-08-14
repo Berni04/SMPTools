@@ -208,19 +208,6 @@ public class KrampusManager {
             for (org.bukkit.block.BlockState state : original.values()) {
                 state.update(true, false);
             }
-            return;
-        }
-
-        if (center == null || center.getWorld() == null) return;
-        for (int x = -4; x <= 4; x++) {
-            for (int y = 0; y <= 5; y++) {
-                for (int z = -4; z <= 4; z++) {
-                    org.bukkit.block.Block block = center.clone().add(x, y, z).getBlock();
-                    if (block.getType() == Material.IRON_BARS || block.getType() == Material.BEDROCK) {
-                        block.setType(Material.AIR);
-                    }
-                }
-            }
         }
     }
 
