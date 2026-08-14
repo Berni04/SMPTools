@@ -166,6 +166,10 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
     @EventHandler
     public void onInventoryClick(org.bukkit.event.inventory.InventoryClickEvent event) {
         if (event.getInventory().getHolder() instanceof com.smp.smptools.christmas.SecretSantaHolder holder) {
+            if (event.getAction() == org.bukkit.event.inventory.InventoryAction.COLLECT_TO_CURSOR || event.getClick() == org.bukkit.event.inventory.ClickType.DOUBLE_CLICK) {
+                event.setCancelled(true);
+                return;
+            }
             if (event.getRawSlot() == 26) {
                 event.setCancelled(true);
                 if (event.getWhoClicked() instanceof Player player) {
