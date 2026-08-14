@@ -168,6 +168,7 @@ sleep:
   already-voted: "<red>You have already voted.</red>"
   voted-yes: "<player_name_color> has voted to skip the night."
   voted-no: "<player_name_color> has voted against skipping the night."
+  vote-cancelled-initiator-left: "<red>The sleep vote was cancelled because the initiator left the game.</red>"
   combat-blocked: "<red>You can't sleep in this world!</red>"
 
 # Music

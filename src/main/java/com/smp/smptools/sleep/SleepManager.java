@@ -5,6 +5,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 import java.util.Set;
@@ -89,14 +90,20 @@ public class SleepManager {
     }
 
     private void checkVoteStatus() {
-        int onlinePlayers = voteInitiator.getWorld().getPlayers().size();
+        if (voteInitiator == null || !voteInitiator.isOnline() || voteInitiator.getWorld() == null) {
+            endVote();
+            return;
+        }
+
+        World world = voteInitiator.getWorld();
+        int onlinePlayers = world.getPlayers().size();
         int requiredVotes = (int) Math.ceil(onlinePlayers / 2.0);
 
         if (yesVotes.size() >= requiredVotes) {
             Bukkit.broadcast(plugin.getMessageManager().getMessage("sleep.vote-accepted"));
-            voteInitiator.getWorld().setTime(0);
-            voteInitiator.getWorld().setThundering(false);
-            voteInitiator.getWorld().setStorm(false);
+            world.setTime(0);
+            world.setThundering(false);
+            world.setStorm(false);
             endVote();
         } else if (noVotes.size() >= (onlinePlayers - requiredVotes + 1)) {
             Bukkit.broadcast(plugin.getMessageManager().getMessage("sleep.vote-failed"));
