@@ -159,23 +159,25 @@ public class GraveManager implements Listener {
     }
 
     private void spawnHologram(Grave grave) {
-        Location loc = grave.getLocation().clone().add(0.5, -0.5, 0.5); // Center above block
+        Location baseLoc = grave.getLocation();
+        String graveTag = "grave_" + baseLoc.getBlockX() + "_" + baseLoc.getBlockY() + "_" + baseLoc.getBlockZ();
+        Location loc = baseLoc.clone().add(0.5, -0.5, 0.5); // Center above block
         double lineSpacing = 0.25;
 
         spawnArmorStand(loc.clone().add(0, lineSpacing * 3, 0),
-                Component.text("R.I.P " + grave.getOwnerName(), NamedTextColor.RED));
+                Component.text("R.I.P " + grave.getOwnerName(), NamedTextColor.RED), graveTag);
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault());
         spawnArmorStand(loc.clone().add(0, lineSpacing * 2, 0), Component.text(
-                "Died on " + formatter.format(Instant.ofEpochMilli(grave.getTimeOfDeath())), NamedTextColor.GRAY));
+                "Died on " + formatter.format(Instant.ofEpochMilli(grave.getTimeOfDeath())), NamedTextColor.GRAY), graveTag);
 
         spawnArmorStand(loc.clone().add(0, lineSpacing * 1, 0),
-                Component.text("Cause: " + grave.getCauseOfDeath(), NamedTextColor.GRAY));
+                Component.text("Cause: " + grave.getCauseOfDeath(), NamedTextColor.GRAY), graveTag);
 
-        spawnArmorStand(loc, Component.text("Items: " + grave.getItems().size(), NamedTextColor.YELLOW));
+        spawnArmorStand(loc, Component.text("Items: " + grave.getItems().size(), NamedTextColor.YELLOW), graveTag);
     }
 
-    private void spawnArmorStand(Location loc, Component text) {
+    private void spawnArmorStand(Location loc, Component text, String graveTag) {
         ArmorStand as = (ArmorStand) loc.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
         as.setVisible(false);
         as.setGravity(false);
@@ -186,7 +188,7 @@ public class GraveManager implements Listener {
         as.setInvulnerable(true);
         // Tag it so we can remove it later
         as.addScoreboardTag("grave_hologram");
-        as.addScoreboardTag("grave_" + loc.getBlockX() + "_" + loc.getBlockY() + "_" + loc.getBlockZ());
+        as.addScoreboardTag(graveTag);
     }
 
     private void lootGrave(Grave grave, Player looter) {
