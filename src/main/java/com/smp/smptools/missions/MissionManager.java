@@ -93,6 +93,7 @@ public class MissionManager {
         playerMissionsConfig.set(path + ".completed", data.getCompletedMissions());
         playerMissionsConfig.set(path + ".active", data.getActiveMissions());
         playerMissionsConfig.set(path + ".claimed", data.getClaimedMissions());
+        playerMissionsConfig.set(path + ".pendingRewards", data.getPendingRewards().isEmpty() ? null : data.getPendingRewards());
 
         // Save progress map
         ConfigurationSection progressSection = playerMissionsConfig.createSection(path + ".progress");
@@ -133,6 +134,37 @@ public class MissionManager {
         }
     }
 
+    public synchronized void claimPendingMissionRewards(Player player) {
+        if (player == null || !player.isOnline()) return;
+        PlayerMissionData data = getPlayerData(player);
+        if (data.getPendingRewards().isEmpty()) return;
+
+        List<String> pending = new ArrayList<>(data.getPendingRewards());
+        List<String> remaining = new ArrayList<>(pending);
+        boolean anyDelivered = false;
+
+        for (String reward : pending) {
+            try {
+                if (RewardManager.giveReward(player, reward)) {
+                    remaining.remove(reward);
+                    anyDelivered = true;
+                }
+            } catch (Exception e) {
+                if (plugin != null) {
+                    plugin.getLogger().warning("Failed to deliver pending mission reward '" + reward + "' to " + player.getName() + ": " + e.getMessage());
+                }
+            }
+        }
+
+        if (anyDelivered) {
+            data.getPendingRewards().clear();
+            data.getPendingRewards().addAll(remaining);
+            saveSinglePlayerData(player.getUniqueId());
+            player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                    .deserialize("<gold><b>[MISSIONS]</b></gold> <green>You received pending mission rewards!</green>"));
+        }
+    }
+
     public PlayerMissionData getPlayerData(Player player) {
         return playerData.computeIfAbsent(player.getUniqueId(), uuid -> {
             PlayerMissionData data = new PlayerMissionData(uuid);
@@ -143,6 +175,7 @@ public class MissionManager {
                 data.getCompletedMissions().addAll(playerMissionsConfig.getStringList(path + ".completed"));
                 data.getActiveMissions().addAll(playerMissionsConfig.getStringList(path + ".active"));
                 data.getClaimedMissions().addAll(playerMissionsConfig.getStringList(path + ".claimed"));
+                data.getPendingRewards().addAll(playerMissionsConfig.getStringList(path + ".pendingRewards"));
 
                 ConfigurationSection progressSection = playerMissionsConfig.getConfigurationSection(path + ".progress");
                 if (progressSection != null) {
@@ -192,6 +225,7 @@ public class MissionManager {
         private final List<String> completedMissions = new ArrayList<>();
         private final List<String> activeMissions = new ArrayList<>();
         private final List<String> claimedMissions = new ArrayList<>(); // New list for claimed missions
+        private final List<String> pendingRewards = new ArrayList<>();
         private String selectedQuestline = null;
 
         public PlayerMissionData(UUID playerUUID) {
@@ -213,6 +247,10 @@ public class MissionManager {
         public List<String> getClaimedMissions() {
             return claimedMissions;
         } // Getter for claimed missions
+
+        public List<String> getPendingRewards() {
+            return pendingRewards;
+        }
 
         public String getSelectedQuestline() {
             return selectedQuestline;

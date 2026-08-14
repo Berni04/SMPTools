@@ -19,6 +19,9 @@ public class JoinLeaveListener implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         event.joinMessage(SMPTools.getInstance().getMessageManager().getMessage("join-leave.joined", player));
+        if (plugin.getMissionManager() != null) {
+            plugin.getMissionManager().claimPendingMissionRewards(player);
+        }
     }
 
     @EventHandler
