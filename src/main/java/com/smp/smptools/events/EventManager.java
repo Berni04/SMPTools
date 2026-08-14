@@ -71,6 +71,27 @@ public class EventManager {
         saveData();
     }
 
+    public boolean isMalformedReward(String rewardStr) {
+        if (rewardStr == null || rewardStr.isBlank()) return true;
+        if (rewardStr.startsWith("cmd:")) {
+            return rewardStr.length() <= 4 || rewardStr.substring(4).isBlank();
+        } else if (rewardStr.startsWith("item:")) {
+            String[] parts = rewardStr.substring(5).trim().split("\\s+");
+            if (parts.length == 0 || parts[0].isBlank()) return true;
+            Material mat = Material.matchMaterial(parts[0].toUpperCase());
+            if (mat == null) return true;
+            if (parts.length > 1) {
+                try {
+                    Integer.parseInt(parts[1]);
+                } catch (NumberFormatException e) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return true;
+    }
+
     public synchronized void claimOfflineRewards(Player player) {
         String path = "pending_rewards." + player.getUniqueId().toString();
         List<String> pending = new ArrayList<>(dataConfig.getStringList(path));
@@ -80,22 +101,24 @@ public class EventManager {
         List<String> remaining = new ArrayList<>(pending);
 
         for (String reward : pending) {
+            if (isMalformedReward(reward)) {
+                plugin.getLogger().warning("Discarding unparseable/malformed offline reward '" + reward + "' for " + player.getName());
+                remaining.remove(reward);
+                dataConfig.set(path, remaining.isEmpty() ? null : remaining);
+                saveData();
+                continue;
+            }
+
             boolean ok = executeReward(player, reward);
             if (ok) {
                 anyDelivered = true;
                 remaining.remove(reward);
+                dataConfig.set(path, remaining.isEmpty() ? null : remaining);
+                saveData();
             } else {
-                plugin.getLogger().warning("Dropped unexecutable offline reward '" + reward + "' for " + player.getName());
-                remaining.remove(reward);
+                plugin.getLogger().warning("Transient delivery failure for offline reward '" + reward + "' for " + player.getName() + ", retaining for retry.");
             }
         }
-
-        if (remaining.isEmpty()) {
-            dataConfig.set(path, null);
-        } else {
-            dataConfig.set(path, remaining);
-        }
-        saveData();
 
         if (anyDelivered) {
             player.sendMessage(MiniMessage.miniMessage().deserialize("<gold><b>[EVENT]</b></gold> <yellow>You received event rewards earned while offline!</yellow>"));
