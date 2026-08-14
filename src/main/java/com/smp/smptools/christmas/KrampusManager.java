@@ -74,7 +74,7 @@ public class KrampusManager {
     }
 
     public void kidnapPlayer(Player player, WitherSkeleton krampus) {
-        if (kidnappedPlayers.containsKey(player.getUniqueId()))
+        if (player == null || kidnappedPlayers.containsKey(player.getUniqueId()))
             return;
 
         // Despawn Krampus
@@ -82,11 +82,17 @@ public class KrampusManager {
             krampus.remove();
         }
 
+        // Find non-overlapping Cage Location (clamped to world bounds)
+        Location cageLoc = findNonOverlappingCageLocation(player.getLocation());
+        if (cageLoc == null) {
+            if (plugin != null) {
+                plugin.getLogger().warning("Could not find a non-overlapping cage location to kidnap " + player.getName());
+            }
+            return;
+        }
+
         // Save location
         kidnappedPlayers.put(player.getUniqueId(), player.getLocation());
-
-        // Find non-overlapping Cage Location (High up)
-        Location cageLoc = findNonOverlappingCageLocation(player.getLocation());
         playerCages.put(player.getUniqueId(), cageLoc);
 
         // Build Cage with original block state snapshot
@@ -109,17 +115,32 @@ public class KrampusManager {
     }
 
     private Location findNonOverlappingCageLocation(Location baseLoc) {
-        Location cageLoc = baseLoc.clone().add(0, 50, 0);
-        int maxAttempts = 10;
-        while (isCageOverlapping(cageLoc) && maxAttempts-- > 0) {
-            cageLoc.add(0, 15, 0);
+        if (baseLoc == null || baseLoc.getWorld() == null) return null;
+        org.bukkit.World world = baseLoc.getWorld();
+        int minY = world.getMinHeight() + 1;
+        int maxY = world.getMaxHeight() - 6;
+
+        int[] yOffsets = {50, 30, 70, 20, 85, 10, 100};
+        int[] horizontalOffsets = {0, 20, -20, 40, -40};
+
+        for (int dx : horizontalOffsets) {
+            for (int dz : horizontalOffsets) {
+                for (int dy : yOffsets) {
+                    int targetY = Math.max(minY, Math.min(maxY, baseLoc.getBlockY() + dy));
+                    Location candidate = new Location(world, baseLoc.getBlockX() + dx, targetY, baseLoc.getBlockZ() + dz);
+                    if (!isCageOverlapping(candidate)) {
+                        return candidate;
+                    }
+                }
+            }
         }
-        return cageLoc;
+        return null;
     }
 
     private boolean isCageOverlapping(Location candidate) {
+        if (candidate == null || candidate.getWorld() == null) return true;
         for (Location existing : playerCages.values()) {
-            if (candidate.getWorld() != null && candidate.getWorld().equals(existing.getWorld())) {
+            if (candidate.getWorld().equals(existing.getWorld())) {
                 if (Math.abs(candidate.getBlockX() - existing.getBlockX()) <= 8 &&
                     Math.abs(candidate.getBlockZ() - existing.getBlockZ()) <= 8 &&
                     Math.abs(candidate.getBlockY() - existing.getBlockY()) <= 8) {
