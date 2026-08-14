@@ -138,6 +138,7 @@ public class MissionManager {
         ALL_DELIVERED,
         PARTIALLY_PENDING,
         DROPPED_UNEXECUTABLE,
+        PARTIALLY_PENDING_AND_DROPPED,
         NOTHING_TO_CLAIM
     }
 
@@ -148,8 +149,6 @@ public class MissionManager {
 
         List<String> pending = new ArrayList<>(data.getPendingRewards());
         boolean anyDelivered = false;
-        int deliveredCount = 0;
-        int retainedForRetryCount = 0;
         int droppedCount = 0;
 
         for (String reward : pending) {
@@ -208,7 +207,6 @@ public class MissionManager {
 
             if (delivered) {
                 anyDelivered = true;
-                deliveredCount++;
             } else {
                 int nextRetry = retryCount + 1;
                 if (nextRetry >= 3) {
@@ -217,7 +215,6 @@ public class MissionManager {
                         plugin.getLogger().severe("Permanently dropping unexecutable pending mission reward '" + baseReward + "' for " + player.getName() + " after 3 failed attempts.");
                     }
                 } else {
-                    retainedForRetryCount++;
                     data.getPendingRewards().add(baseReward + "#retry:" + nextRetry);
                     if (plugin != null) {
                         plugin.getLogger().warning("Transient delivery failure for pending mission reward '" + baseReward + "' for " + player.getName() + " (attempt " + nextRetry + "/3), retaining for retry.");
@@ -240,7 +237,10 @@ public class MissionManager {
                     .deserialize("<gold><b>[MISSIONS]</b></gold> <green>You received pending mission rewards!</green>"));
         }
 
-        if (retainedForRetryCount > 0) {
+        boolean queueHasPending = !data.getPendingRewards().isEmpty();
+        if (queueHasPending && droppedCount > 0) {
+            return ClaimResult.PARTIALLY_PENDING_AND_DROPPED;
+        } else if (queueHasPending) {
             return ClaimResult.PARTIALLY_PENDING;
         } else if (droppedCount > 0) {
             return ClaimResult.DROPPED_UNEXECUTABLE;
