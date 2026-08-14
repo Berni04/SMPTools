@@ -24,8 +24,6 @@ public class ChatListener implements Listener {
         Component rawMessage = event.message();
 
         plugin.getServer().getScheduler().runTask(plugin, () -> {
-            if (!player.isOnline()) return;
-
             Component displayName = plugin.getChatManager().getFormattedDisplayName(player);
             Component messageContent = rawMessage.color(NamedTextColor.WHITE);
 
