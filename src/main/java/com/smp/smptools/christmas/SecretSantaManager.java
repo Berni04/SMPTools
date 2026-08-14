@@ -211,8 +211,10 @@ public class SecretSantaManager {
             config.set(path, null);
             if (!saveConfig()) {
                 config.set(path, rawBackup);
-            }
-            if (plugin != null) {
+                if (plugin != null) {
+                    plugin.getLogger().severe("Failed to persist cleanup of corrupted empty gift entry for recipient " + recipient);
+                }
+            } else if (plugin != null) {
                 plugin.getLogger().warning("Cleared corrupted empty gift entry for recipient " + recipient);
             }
             return null;
