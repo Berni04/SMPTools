@@ -21,8 +21,7 @@ import java.util.Map;
 
 public class RewardManager {
 
-    public static final NamespacedKey ELYTRA_TRAIL_KEY = new NamespacedKey(SMPTools.getInstance(),
-            "elytra_trail_color");
+    public static final NamespacedKey ELYTRA_TRAIL_KEY = new NamespacedKey("smptools", "elytra_trail_color");
 
     public static void giveChromaticElytra(Player player, String color) {
         ItemStack elytra = new ItemStack(Material.ELYTRA);
@@ -85,43 +84,82 @@ public class RewardManager {
     }
 
     public static void giveReward(Player player, String reward) {
-        if (reward.startsWith("item:")) {
-            String[] parts = reward.substring(5).split(" ");
-            Material material = Material.matchMaterial(parts[0]);
-            int amount = parts.length > 1 ? Integer.parseInt(parts[1]) : 1;
-
-            if (material != null) {
-                ItemStack item = new ItemStack(material, amount);
-                if (player.getInventory().firstEmpty() != -1) {
-                    player.getInventory().addItem(item);
-                } else {
-                    player.getWorld().dropItem(player.getLocation(), item);
+        if (player == null || reward == null || reward.isBlank()) {
+            return;
+        }
+        try {
+            if (reward.startsWith("item:")) {
+                String[] parts = reward.substring(5).trim().split("\\s+");
+                if (parts.length == 0 || parts[0].isBlank()) {
+                    if (SMPTools.getInstance() != null) {
+                        SMPTools.getInstance().getLogger().warning("Empty item specification in mission reward: '" + reward + "'");
+                    }
+                    return;
                 }
-                Map<String, String> placeholders = new HashMap<>();
-                placeholders.put("amount", String.valueOf(amount));
-                placeholders.put("material", material.name());
-                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-received", player, placeholders));
+                Material material = Material.matchMaterial(parts[0]);
+                int amount = 1;
+                if (parts.length > 1) {
+                    try {
+                        amount = Math.max(1, Integer.parseInt(parts[1]));
+                    } catch (NumberFormatException e) {
+                        if (SMPTools.getInstance() != null) {
+                            SMPTools.getInstance().getLogger().warning("Invalid item amount in mission reward '" + reward + "', defaulting to 1");
+                        }
+                        amount = 1;
+                    }
+                }
+
+                if (material != null) {
+                    ItemStack item = new ItemStack(material, amount);
+                    if (player.getInventory().firstEmpty() != -1) {
+                        player.getInventory().addItem(item);
+                    } else {
+                        player.getWorld().dropItem(player.getLocation(), item);
+                    }
+                    if (SMPTools.getInstance() != null && SMPTools.getInstance().getMessageManager() != null) {
+                        Map<String, String> placeholders = new HashMap<>();
+                        placeholders.put("amount", String.valueOf(amount));
+                        placeholders.put("material", material.name());
+                        player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-received", player, placeholders));
+                    }
+                } else {
+                    if (SMPTools.getInstance() != null) {
+                        SMPTools.getInstance().getLogger().warning("Unknown material in mission reward: '" + parts[0] + "'");
+                    }
+                }
+            } else if (reward.startsWith("custom_item:")) {
+                String customItem = reward.substring(12);
+                if (customItem.equalsIgnoreCase("chromatic_elytra")) {
+                    // Handled by GUI for color selection, but if called directly (fallback)
+                    giveChromaticElytra(player, "WHITE");
+                }
+            } else if (reward.startsWith("command:")) {
+                String command = reward.substring(8).replace("%player%", player.getName());
+                if (CommandBlacklist.isBlocked(command)) {
+                    if (SMPTools.getInstance() != null) {
+                        SMPTools.getInstance().getLogger().warning("Blocked dangerous command in mission reward: " + command);
+                    }
+                    return;
+                }
+                if (org.bukkit.Bukkit.getServer() != null) {
+                    org.bukkit.Bukkit.dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), command);
+                }
+            } else {
+                String command = reward.replace("%player%", player.getName());
+                if (CommandBlacklist.isBlocked(command)) {
+                    if (SMPTools.getInstance() != null) {
+                        SMPTools.getInstance().getLogger().warning("Blocked dangerous command in mission reward: " + command);
+                    }
+                    return;
+                }
+                if (org.bukkit.Bukkit.getServer() != null) {
+                    org.bukkit.Bukkit.dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), command);
+                }
             }
-        } else if (reward.startsWith("custom_item:")) {
-            String customItem = reward.substring(12);
-            if (customItem.equalsIgnoreCase("chromatic_elytra")) {
-                // Handled by GUI for color selection, but if called directly (fallback)
-                giveChromaticElytra(player, "WHITE");
+        } catch (Exception e) {
+            if (SMPTools.getInstance() != null) {
+                SMPTools.getInstance().getLogger().warning("Failed to give mission reward '" + reward + "' to " + player.getName() + ": " + e.getMessage());
             }
-        } else if (reward.startsWith("command:")) {
-            String command = reward.substring(8).replace("%player%", player.getName());
-            if (CommandBlacklist.isBlocked(command)) {
-                SMPTools.getInstance().getLogger().warning("Blocked dangerous command in mission reward: " + command);
-                return;
-            }
-            org.bukkit.Bukkit.dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), command);
-        } else {
-            String command = reward.replace("%player%", player.getName());
-            if (CommandBlacklist.isBlocked(command)) {
-                SMPTools.getInstance().getLogger().warning("Blocked dangerous command in mission reward: " + command);
-                return;
-            }
-            org.bukkit.Bukkit.dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), command);
         }
     }
 }

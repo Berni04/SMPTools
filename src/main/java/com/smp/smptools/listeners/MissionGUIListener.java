@@ -193,11 +193,16 @@ public class MissionGUIListener implements Listener {
             if (hasChromaticElytra) {
                 openColorSelectionGUI(player, clickedMission.getId());
             } else {
+                playerData.getClaimedMissions().add(clickedMission.getId());
+                missionManager.savePlayerData();
                 for (String reward : clickedMission.getRewards()) {
-                    RewardManager.giveReward(player, reward);
+                    try {
+                        RewardManager.giveReward(player, reward);
+                    } catch (Exception e) {
+                        SMPTools.getInstance().getLogger().warning("Failed to give mission reward '" + reward + "' to " + player.getName() + ": " + e.getMessage());
+                    }
                 }
                 player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-claimed", player));
-                playerData.getClaimedMissions().add(clickedMission.getId());
                 // Re-open the GUI to update the item state
                 openCompletedMissionsGUI(player, isNpc);
             }
@@ -269,9 +274,16 @@ public class MissionGUIListener implements Listener {
         if (missionId == null)
             return;
 
-        RewardManager.giveChromaticElytra(player, color);
         MissionManager.PlayerMissionData playerData = missionManager.getPlayerData(player);
+        if (playerData.getClaimedMissions().contains(missionId)) {
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-already-claimed"));
+            player.closeInventory();
+            return;
+        }
+
         playerData.getClaimedMissions().add(missionId);
+        missionManager.savePlayerData();
+        RewardManager.giveChromaticElytra(player, color);
         player.closeInventory();
         player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.chromatic-elytra-received"));
     }
