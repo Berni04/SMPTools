@@ -64,15 +64,34 @@ public class GraveManager implements Listener {
         if (world == null) return;
 
         Location validLocation = null;
-        int startY = Math.max(world.getMinHeight(), baseLoc.getBlockY());
-        int maxY = Math.min(world.getMaxHeight() - 1, startY + 5);
+        int baseX = baseLoc.getBlockX();
+        int baseZ = baseLoc.getBlockZ();
+        int startY = Math.min(world.getMaxHeight() - 1, Math.max(world.getMinHeight(), baseLoc.getBlockY()));
 
-        for (int y = startY; y <= maxY; y++) {
-            Location checkLoc = new Location(world, baseLoc.getBlockX(), y, baseLoc.getBlockZ());
-            Block b = checkLoc.getBlock();
-            if ((b.getType().isAir() || b.isPassable()) && !b.isLiquid()) {
-                validLocation = checkLoc;
-                break;
+        // Scan nearby vertical offsets (0, +1, -1, +2, -2, ..., +10, -10)
+        for (int dy = 0; dy <= 10; dy++) {
+            int[] candidates = dy == 0 ? new int[]{startY} : new int[]{startY + dy, startY - dy};
+            for (int y : candidates) {
+                if (y < world.getMinHeight() || y >= world.getMaxHeight()) continue;
+                Location checkLoc = new Location(world, baseX, y, baseZ);
+                Block b = checkLoc.getBlock();
+                if ((b.getType().isAir() || b.isReplaceable()) && !b.isLiquid()) {
+                    validLocation = checkLoc;
+                    break;
+                }
+            }
+            if (validLocation != null) break;
+        }
+
+        // If not found near death location (e.g. deep ocean or void), find highest safe block above water/ground
+        if (validLocation == null) {
+            int topY = world.getHighestBlockYAt(baseX, baseZ);
+            if (topY >= world.getMinHeight() && topY < world.getMaxHeight() - 1) {
+                Location topLoc = new Location(world, baseX, topY + 1, baseZ);
+                Block topBlock = topLoc.getBlock();
+                if ((topBlock.getType().isAir() || topBlock.isReplaceable()) && !topBlock.isLiquid()) {
+                    validLocation = topLoc;
+                }
             }
         }
 
