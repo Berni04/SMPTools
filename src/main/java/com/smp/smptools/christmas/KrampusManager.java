@@ -77,18 +77,18 @@ public class KrampusManager {
         if (player == null || kidnappedPlayers.containsKey(player.getUniqueId()))
             return;
 
-        // Despawn Krampus
-        if (krampus != null) {
-            krampus.remove();
-        }
-
-        // Find non-overlapping Cage Location (clamped to world bounds)
+        // Find non-overlapping Cage Location (clamped to world bounds) before removing Krampus
         Location cageLoc = findNonOverlappingCageLocation(player.getLocation());
         if (cageLoc == null) {
             if (plugin != null) {
-                plugin.getLogger().warning("Could not find a non-overlapping cage location to kidnap " + player.getName());
+                plugin.getLogger().warning("Could not find a non-overlapping cage location to kidnap " + player.getName() + "; preserving Krampus encounter.");
             }
             return;
+        }
+
+        // Despawn Krampus only after confirming valid cage placement
+        if (krampus != null) {
+            krampus.remove();
         }
 
         // Save location
