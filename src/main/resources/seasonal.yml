@@ -1,0 +1,47 @@
+# ======================================================
+# SMPTools Seasonal Events Configuration
+# ======================================================
+
+seasonal:
+  # Enable or disable the seasonal events system
+  enabled: true
+
+  # Timezone for calendar date detection
+  timezone: "Europe/Paris"
+
+  # Season Date Ranges (MM-DD)
+  dates:
+    halloween:
+      start: "10-15"
+      end: "11-02"
+    easter:
+      start: "03-25"
+      end: "04-25"
+    christmas:
+      start: "12-01"
+      end: "01-06"
+    black_friday:
+      start: "11-20"
+      end: "11-30"
+    summer:
+      start: "07-01"
+      end: "08-31"
+
+  # Halloween Spooky Settings
+  halloween:
+    total_pumpkins: 20
+    mini_reward_diamonds: 2
+    mini_reward_xp: 50
+    trick_or_treat_enabled: true
+
+  # Easter Spring Settings
+  easter:
+    total_eggs: 15
+    mini_reward_diamonds: 1
+    mini_reward_golden_carrots: 8
+    golden_bunny_spawns: true
+
+  # Summer Heatwave Settings
+  summer:
+    solar_flares_enabled: true
+    solar_flare_buffs: true

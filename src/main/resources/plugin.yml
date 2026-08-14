@@ -1,5 +1,5 @@
 name: SMPTools
-version: 1.0-SNAPSHOT
+version: 1.1
 main: com.smp.smptools.SMPTools
 api-version: '1.21'
 author: berni
@@ -167,7 +167,39 @@ commands:
   untrust:
     description: Untrust a player on a locked container.
     usage: /untrust <player>
+  event:
+    description: Opens the server events GUI or manage events.
+    usage: /event [start|stop]
+    aliases: [events]
+  artifacts:
+    description: Opens the artifact equipment pouch or give custom artifacts.
+    usage: /artifacts [give <player> <type>]
+    aliases: [artifact, pouch]
+  seasonal:
+    description: Opens the central seasonal events hub or manage active season.
+    usage: /seasonal [start <season>|stop|status]
+    aliases: [seasons, season]
+  halloween:
+    description: Opens the Spooky Pumpkin Hunt checklist or manage pumpkins.
+    usage: /halloween [setpumpkin <id> [hint]]
+    aliases: [pumpkins, pumpkin]
+  easter:
+    description: Opens the Easter Egg Hunt checklist or manage eggs.
+    usage: /easter [setegg <id> [hint]]
+    aliases: [eggs, egg]
+  summer:
+    description: View Summer Heatwave and Solar Flare status.
+    usage: /summer
 permissions:
+  smptools.seasonal.admin:
+    description: Allows managing seasonal events and placing scavenger hunt targets.
+    default: op
+  smptools.events.admin:
+    description: Allows managing automated mini-events.
+    default: op
+  smptools.artifacts.admin:
+    description: Allows giving custom artifacts.
+    default: op
   smptools.missions.admin:
     description: Allows spawning the mission NPC.
     default: op

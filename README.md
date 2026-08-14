@@ -32,6 +32,18 @@ SMPTools is a comprehensive Minecraft Paper plugin designed to enhance the survi
     *   **/tptoggle**: Toggles acceptance of teleport requests.
     *   **Timed Teleportation**: 3-second countdown that cancels on movement or damage.
     *   **Timeout System**: Requests expire after 60 seconds.
+*   **Item-Based Bounty System**:
+    *   **/bounty place <player>**: Places a bounty on a target player using held items as the reward.
+    *   **/bounty list**: Opens an interactive GUI displaying all active bounties.
+    *   **/bounty top**: Displays the highest-reward bounties on the server.
+    *   **Automated Claims**: Eliminating a wanted player automatically transfers reward items to the hunter.
+*   **Secure Remote Trading**:
+    *   **/trade <player>**: Sends a remote item trade request to another player.
+    *   **/trade <accept|deny|cancel>**: Accepts, denies, or cancels pending trade requests.
+    *   **Interactive GUI**: Dual-panel trade GUI with real-time item inspection, lock-in confirmation, and safety anti-scam countdowns.
+*   **AFK Management**:
+    *   **/afk**: Toggles your AFK (Away From Keyboard) status manually.
+    *   **Automatic Detection**: Automatically marks players as AFK after a configurable inactivity threshold.
 *   **Vote-Based Sleep**: Clickable Accept/Deny system for skipping the night.
 
 ### Customization
@@ -42,11 +54,20 @@ SMPTools is a comprehensive Minecraft Paper plugin designed to enhance the survi
     *   **Dynamic Display**: Equipped titles appear in chat, name tags, and join/leave messages (e.g., `[Title] PlayerName`).
     *   **Hover Descriptions**: Hovering over a player's title in chat displays its unlock description.
     *   **Configurable**: Milestones are defined in `tags.yml`.
+*   **Cosmetic Particle Trails**:
+    *   **/trails**: Opens an interactive GUI to choose ambient particle effects (Flame, Hearts, Ender, Rainbow, etc.) that follow your player movement.
+    *   **Permission-gated**: Individual trail access controlled via permissions and persistent across sessions.
 *   **Chat Formatting**: Customizable chat prefixes and colors with centralized ChatManager.
 *   **Item Renaming**: **/rename <name>**: Renames the item in your hand with MiniMessage formatting support.
 *   **Join/Leave Messages**: Custom messages for players joining and leaving.
 
-### Administration
+### Administration & Container Protection
+*   **Signless Container Locks**:
+    *   **/lock**: Locks the chest or container block you are looking at without requiring physical signs.
+    *   **/unlock**: Unlocks your owned container.
+    *   **/trust <player>**: Grants trusted access to a specified player on your locked container.
+    *   **/untrust <player>**: Revokes access for a trusted player.
+    *   **Smart Double-Chest Protection**: Automatically pairs and protects double-chests and preserves Access Control Lists (ACLs).
 *   **Player Graves**: Vanilla-style graves spawn at death location with holograms and looting.
 *   **Chunk Loaders**: **/givechunkloader <player>**: Gives a chunk loader item that force-loads chunks even when no players are online.
 *   **Inventory Viewer**: **/invsee <player>**: View another player's inventory with a death-screen-like layout showing armor and off-hand.
@@ -75,6 +96,39 @@ SMPTools is a comprehensive Minecraft Paper plugin designed to enhance the survi
 *   **Excavation Skill**: Earn experience from digging with treasure hunter perk.
 *   **Combat Skill**: Earn experience from killing mobs with critical strike chance.
 *   **Configurable**: All skill formulas and chances can be customized in `config.yml`.
+
+### Dynamic Mini-Events Engine
+*   **/event** (alias **/events**): Opens the server events dashboard GUI displaying live event status, time remaining, and Top 5 leaderboards.
+*   **/event start <type> [duration]**: Admin command to manually trigger an automated mini-event session.
+*   **/event stop**: Admin command to conclude an active mini-event.
+*   **6 Automated Event Types**:
+    *   🎣 **Fishing Derby** (15m): Point values based on fish rarity (Cod, Salmon, Tropical, Pufferfish, Treasure) with Angler Streak combo multipliers.
+    *   ⛏️ **Ore Rush** (10m): Ore point scoring with passive 2.0x Ore drops and 2.0x Mining Skill XP.
+    *   ⚔️ **Mob Frenzy** (15m): Mob kill scoring with passive 2.0x Mob drops and Slayer killstreaks.
+    *   ⚡ **Double XP Hour** (60m): Applies global 2.0x Skill XP across all MMO skills.
+    *   🌾 **Harvest Sprint** (10m): Crop harvest scoring with Speed II passive boost.
+    *   🗺️ **Treasure Dig** (10m): Excavation scoring with buried treasure pouch drops.
+*   **Dual HUD Display**: Real-time event leaderboards render on both the sidebar **Scoreboard** and top **BossBar** simultaneously (individually toggleable in `events.yml`).
+
+### Custom Utility Artifacts & Equipment Pouch
+*   **/artifacts** (alias **/artifact**, **/pouch**): Opens the 27-slot Artifact Equipment Pouch GUI to equip passive artifacts without occupying hotbar or offhand slots.
+*   **/artifacts give <player> <type>**: Admin command to grant custom artifacts to players.
+*   **22 Custom Artifacts**:
+    *   *Mobility*: Grappling Hook, Wind Dash Feather, Leap Frog Boots, Shadow Step Dagger, Feather Glider Ring.
+    *   *Utility & QoL*: Portable Workbench, Homing Compass, Magnet Totem, Abyssal Lantern, Void Saver Charm, Alchemist's Satchel, Auto-Feeder Satchel, Jack's Pumpkin Helmet.
+    *   *Combat*: Vampiric Scythe, Phoenix Feather, Sonic Wave Horn, Dragon Breath Cannon.
+    *   *Gathering & Farming*: Nature's Touch Hoe, Timber Axe, Ore Radar Scanner, Chlorophyll Band, Master Angler's Lure.
+
+### Seasonal Events System
+*   **/seasonal** (alias **/seasons**, **/season**): Opens the central 27-slot Seasonal Events Hub GUI displaying the active season, calendar schedule, and quick-launch event shortcuts.
+*   **/seasonal start <season>**: Admin command to force-activate a season (e.g. `halloween`, `easter`, `christmas`, `black_friday`, `summer`).
+*   **/seasonal reset**: Admin command to return season detection to real-world calendar dates.
+*   **/halloween** (alias **/pumpkins**): Opens the 20-slot Spooky Pumpkin Hunt checklist GUI. Right-clicking hidden pumpkins in the world grants mini-rewards and tracks discovery progress. Completing the hunt unlocks **Jack's Pumpkin Helmet Artifact** and 16 Diamonds!
+*   **/halloween setpumpkin <id> [hint]**: Admin command to turn targeted block into a scavenger hunt pumpkin.
+*   **/easter** (alias **/eggs**): Opens the 15-slot Easter Egg Hunt checklist GUI. Finding all 15 hidden eggs awards the **Chlorophyll Band Artifact** + 12 Diamonds + 32 Golden Carrots!
+*   **/easter setegg <id> [hint]**: Admin command to set targeted block as an Easter egg.
+*   **/summer**: Displays Summer Heatwave & Solar Flare status (grants midday Haste II & Speed I buffs under open skies).
+*   **Trick-or-Treating**: Right-clicking villagers with a helmet during Halloween has a 70% chance for treats and a 30% chance for trick prank bats!
 
 ### Custom Enchantments
 *   **/cenchant**: Apply custom enchantments to items.
@@ -227,6 +281,20 @@ Common placeholders:
 | `/present <give\|remove>` | Manage presents | `smptools.admin` |
 | `/krampus <spawn>` | Spawn Krampus | `smptools.admin` |
 | `/blackfriday <cmd>` | Black Friday event | `smptools.admin` |
+| `/bounty <place\|list\|top>` | Item-based bounty system | Default |
+| `/trails` | Cosmetic particle trails GUI | Default |
+| `/lock` | Lock container block | Default |
+| `/unlock` | Unlock container block | Default |
+| `/trust <player>` | Trust player on locked container | Default |
+| `/untrust <player>` | Revoke trust on container | Default |
+| `/afk` | Toggle AFK status | Default |
+| `/trade <player\|accept\|deny\|cancel>` | Remote item trade request | Default |
+| `/event` (alias `/events`) | Server events dashboard & admin controls | Default |
+| `/artifacts` (alias `/pouch`) | Artifact equipment pouch & admin give | Default |
+| `/seasonal` (alias `/seasons`) | Central seasonal events hub & admin controls | Default |
+| `/halloween` (alias `/pumpkins`) | Spooky Pumpkin Hunt checklist & admin placement | Default |
+| `/easter` (alias `/eggs`) | Easter Egg Hunt checklist & admin placement | Default |
+| `/summer` | Summer Heatwave & Solar Flare status | Default |
 
 ## Permissions
 
@@ -252,12 +320,20 @@ Common placeholders:
 | `smptools.missions.admin` | Spawn mission NPCs | op |
 | `smptools.customenchant` | Apply custom enchants | - |
 | `smptools.customitem` | Give custom items (WIP) | op |
+| `smptools.trails.<trail_id>` | Access specific particle trail | default |
+| `smptools.bounty.admin` | Admin bounty bypass and removal | op |
+| `smptools.lock.bypass` | Admin container lock bypass | op |
+| `smptools.events.admin` | Manage automated mini-events (`/event start/stop`) | op |
+| `smptools.artifacts.admin` | Admin custom artifacts give (`/artifacts give`) | op |
+| `smptools.seasonal.admin` | Manage seasonal events and set scavenger targets | op |
 | `smptools.admin` | Admin commands (presents, krampus, black friday) | op |
 
 ## Configuration
 
 ### Main Configuration Files
-*   **`config.yml`**: General plugin configuration including feature toggles, skill formulas, daily rewards, custom enchantments, music player settings, accelerated growth multiplier, and meme sound resource pack URL.
+*   **`config.yml`**: General plugin configuration including feature toggles, skill formulas, daily rewards, custom enchantments, storage provider backend (`flatfile`, `sqlite`, `mongodb`), music player settings, accelerated growth multiplier, and meme sound resource pack URL.
+*   **`events.yml`**: Mini-events scheduler configuration, event durations, point values, and Scoreboard/BossBar HUD toggles.
+*   **`seasonal.yml`**: Seasonal events calendar ranges, mini-rewards, and feature toggles.
 *   **`stats.yml`**: Player statistics storage. Managed by the plugin - avoid manual editing.
 *   **`tags.yml`**: Defines milestone tags and their unlock requirements.
 *   **`messages.yml`**: Customizable player-facing messages with MiniMessage support and dynamic player tags.
@@ -268,12 +344,19 @@ Common placeholders:
 *   **`npcs.yml`**: NPC spawn locations, types, skins, and associated dialogues.
 
 ### Seasonal Event Configuration
+*   **`seasonal.yml`**: General seasonal calendar and scavenger reward parameters.
+*   **`seasonal_locations.yml`**: Coordinates and hints for hidden Halloween pumpkins and Easter eggs.
+*   **`player_seasonal.yml`**: Per-player discovery progress and grand reward claim records.
 *   **`advent.yml`**: Advent calendar daily rewards for December.
 *   **`christmas.yml`**: Christmas event settings including world rules and portal configuration.
 *   **`presents.yml`**: Present hunt configuration and tier definitions.
 *   **`blackfriday.yml`**: Black Friday event settings including discount percentages.
 
-### Storage Files
+### Storage & Data Files
+*   **`artifacts.yml`**: Stores player equipped passive artifact items in their `/artifacts` pouch.
+*   **`bounties.yml` / DB**: Stores active player bounties, reward items, and target data.
+*   **`locks.yml` / DB**: Stores container protection locks, owner UUIDs, and trusted player ACLs.
+*   **`trails.yml` / DB**: Stores player-selected cosmetic particle trail settings.
 *   **`imagemaps.yml`**: Stores URLs for custom image maps to persist across restarts.
 *   **`chunkloaders.yml`**: Stores chunk loader locations for persistence.
 *   **`player_missions.yml`**: Stores player mission progress and completion status.

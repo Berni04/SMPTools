@@ -1,0 +1,96 @@
+# ======================================================
+# SMPTools Dynamic Mini-Events Configuration
+# ======================================================
+
+events:
+  # Enable or disable the automated mini-events scheduler
+  enabled: true
+
+  # Interval between automated events in minutes (e.g. 120 = every 2 hours)
+  interval-minutes: 120
+
+  # HUD Display Toggles
+  hud:
+    # Display top 5 live leaderboard on sidebar Scoreboard during active events
+    scoreboard: true
+    # Display event timer & rank on top BossBar during active events
+    bossbar: true
+    # Color of the top BossBar (BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW)
+    bossbar-color: "YELLOW"
+
+  # Event Types & Settings
+  types:
+    fishing_derby:
+      enabled: true
+      duration-minutes: 15
+      points:
+        cod: 1
+        salmon: 2
+        tropical: 3
+        pufferfish: 5
+        treasure: 10
+      combo:
+        enabled: true
+        max-multiplier: 2.0
+
+    ore_rush:
+      enabled: true
+      duration-minutes: 10
+      points:
+        coal: 1
+        copper: 1
+        iron: 2
+        lapis: 2
+        gold: 3
+        redstone: 3
+        diamond: 5
+        ancient_debris: 10
+      buffs:
+        double-ore-drops: true
+        double-mining-xp: true
+
+    mob_frenzy:
+      enabled: true
+      duration-minutes: 15
+      points:
+        weak_mobs: 1      # Zombie, Skeleton, Spider
+        medium_mobs: 2    # Creeper, Cave Spider, Slime
+        strong_mobs: 5    # Enderman, Witch, Ghast, Blaze
+        elite_mobs: 10    # Wither Skeleton, Elder Guardian
+        boss_mobs: 50     # Warden, Wither, Ender Dragon
+      buffs:
+        double-mob-drops: true
+
+    double_xp:
+      enabled: true
+      duration-minutes: 60
+      multiplier: 2.0
+
+    harvest_sprint:
+      enabled: true
+      duration-minutes: 10
+      points:
+        wheat: 1
+        carrot: 1
+        potato: 1
+        beetroot: 2
+        nether_wart: 3
+        golden_apple_crop: 10
+      buffs:
+        speed-boost: true
+
+    treasure_dig:
+      enabled: true
+      duration-minutes: 10
+      points:
+        dirt: 1
+        sand: 2
+        gravel: 3
+      treasure-pouch-chance: 0.05
+
+  # Rewards (Configurable placeholders; ready to populate with custom artifacts)
+  rewards:
+    1st_place: []
+    2nd_place: []
+    3rd_place: []
+    participation: []
