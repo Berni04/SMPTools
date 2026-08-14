@@ -170,7 +170,7 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
                     holder.setConfirmed(true);
                     manager.depositGift(holder.getTargetUUID(), items.toArray(new ItemStack[0]));
                     inv.clear();
-                    Bukkit.getScheduler().runTask(plugin, player::closeInventory);
+                    Bukkit.getScheduler().runTask(plugin, (Runnable) player::closeInventory);
                     player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.gift-deposited", player));
                 }
             }
