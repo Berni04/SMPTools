@@ -476,9 +476,13 @@ public class ArtifactListener implements Listener {
 
                     // Magnet Totem
                     if (artifactManager.hasEquippedArtifact(player, ArtifactType.MAGNET_TOTEM)) {
+                        Vector pVec = player.getLocation().toVector();
                         for (Entity entity : player.getNearbyEntities(12, 12, 12)) {
                             if (entity instanceof Item || entity instanceof ExperienceOrb) {
-                                entity.setVelocity(player.getLocation().toVector().subtract(entity.getLocation().toVector()).normalize().multiply(0.4));
+                                Vector diff = pVec.clone().subtract(entity.getLocation().toVector());
+                                if (diff.lengthSquared() > 0.001) {
+                                    entity.setVelocity(diff.normalize().multiply(0.4));
+                                }
                             }
                         }
                     }
