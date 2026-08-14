@@ -52,9 +52,11 @@ public class SkillsManager {
         }
 
         if (plugin.getEventManager() != null && plugin.getEventManager().getActiveSession() != null) {
-            if (plugin.getEventManager().getActiveSession().isActive() && 
-                plugin.getEventManager().getActiveSession().getType() == com.smp.smptools.events.minievents.MiniEventType.DOUBLE_XP) {
-                amount = amount * 2;
+            com.smp.smptools.events.minievents.MiniEventSession session = plugin.getEventManager().getActiveSession();
+            if (session.isActive() && session.getType() == com.smp.smptools.events.minievents.MiniEventType.DOUBLE_XP) {
+                double multiplier = plugin.getEventsConfig().getDouble("events.types.double_xp.multiplier", 2.0);
+                amount = (int) Math.round(amount * multiplier);
+                session.addPoints(player, amount, skill.getDisplayName());
             }
         }
 
