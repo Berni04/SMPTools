@@ -207,11 +207,13 @@ public class MissionGUIListener implements Listener {
                 }
 
                 // 1. Atomically persist claim AND pending rewards to disk BEFORE delivery to prevent lost or duplicate rewards
+                List<String> pendingSnapshot = new ArrayList<>(playerData.getPendingRewards());
                 playerData.getClaimedMissions().add(clickedMission.getId());
                 playerData.getPendingRewards().addAll(clickedMission.getRewards());
                 if (!missionManager.saveSinglePlayerData(player.getUniqueId())) {
                     playerData.getClaimedMissions().remove(clickedMission.getId());
-                    playerData.getPendingRewards().removeAll(clickedMission.getRewards());
+                    playerData.getPendingRewards().clear();
+                    playerData.getPendingRewards().addAll(pendingSnapshot);
                     SMPTools.getInstance().getLogger().severe("Failed to persist mission claim for " + clickedMission.getId() + " to " + player.getName() + "; aborting reward delivery.");
                     player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Failed to save mission progress. Please try again.</red>"));
                     return;
@@ -219,7 +221,11 @@ public class MissionGUIListener implements Listener {
 
                 // 2. Deliver queued rewards via the transactional pending rewards processor
                 missionManager.claimPendingMissionRewards(player);
-                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-claimed", player));
+                if (playerData.getPendingRewards().isEmpty()) {
+                    player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-claimed", player));
+                } else {
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<yellow>Some rewards could not be delivered immediately and have been saved to your pending rewards queue for retry.</yellow>"));
+                }
 
                 // Re-open the GUI to update the item state
                 openCompletedMissionsGUI(player, isNpc);
@@ -300,12 +306,14 @@ public class MissionGUIListener implements Listener {
         }
 
         // 1. Atomically persist claim AND chosen chromatic elytra to disk BEFORE delivery
+        List<String> pendingSnapshot = new ArrayList<>(playerData.getPendingRewards());
         String rewardStr = "custom_item:chromatic_elytra:" + color;
         playerData.getClaimedMissions().add(missionId);
         playerData.getPendingRewards().add(rewardStr);
         if (!missionManager.saveSinglePlayerData(player.getUniqueId())) {
             playerData.getClaimedMissions().remove(missionId);
-            playerData.getPendingRewards().remove(rewardStr);
+            playerData.getPendingRewards().clear();
+            playerData.getPendingRewards().addAll(pendingSnapshot);
             SMPTools.getInstance().getLogger().severe("Failed to persist Chromatic Elytra claim " + missionId + " for " + player.getName() + "; aborting reward delivery.");
             player.closeInventory();
             player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Failed to save mission progress. Please try again.</red>"));
@@ -314,6 +322,11 @@ public class MissionGUIListener implements Listener {
 
         player.closeInventory();
         missionManager.claimPendingMissionRewards(player);
+        if (playerData.getPendingRewards().isEmpty()) {
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-claimed", player));
+        } else {
+            player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<yellow>Some rewards could not be delivered immediately and have been saved to your pending rewards queue for retry.</yellow>"));
+        }
     }
 
     private void handleQuestlineSelectionClick(InventoryClickEvent event, Player player) {
