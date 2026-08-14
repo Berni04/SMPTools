@@ -15,6 +15,7 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -29,6 +30,7 @@ public class ArtifactListener implements Listener {
 
     private final SMPTools plugin;
     private final ArtifactManager artifactManager;
+    private final NamespacedKey bootsFlightKey;
     private final Map<UUID, Map<ArtifactType, Long>> cooldowns = new HashMap<>();
     private final Set<UUID> fallImmune = new HashSet<>();
     private final Set<UUID> bootsFlightGranted = new HashSet<>();
@@ -39,6 +41,7 @@ public class ArtifactListener implements Listener {
     public ArtifactListener(SMPTools plugin, ArtifactManager artifactManager) {
         this.plugin = plugin;
         this.artifactManager = artifactManager;
+        this.bootsFlightKey = new NamespacedKey(plugin, "boots_flight_granted");
         startPassiveTasks();
     }
 
@@ -55,9 +58,16 @@ public class ArtifactListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        if (player.getGameMode() != GameMode.CREATIVE && player.getGameMode() != GameMode.SPECTATOR) {
-            if (!artifactManager.hasEquippedArtifact(player, ArtifactType.LEAP_FROG_BOOTS)) {
-                bootsFlightGranted.remove(player.getUniqueId());
+        if (player.getPersistentDataContainer().has(bootsFlightKey, PersistentDataType.BYTE)) {
+            if (player.getGameMode() != GameMode.CREATIVE && player.getGameMode() != GameMode.SPECTATOR) {
+                if (!artifactManager.hasEquippedArtifact(player, ArtifactType.LEAP_FROG_BOOTS)) {
+                    player.setAllowFlight(false);
+                    player.setFlying(false);
+                    player.getPersistentDataContainer().remove(bootsFlightKey);
+                    bootsFlightGranted.remove(player.getUniqueId());
+                } else {
+                    bootsFlightGranted.add(player.getUniqueId());
+                }
             }
         }
     }
@@ -66,7 +76,8 @@ public class ArtifactListener implements Listener {
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
-        if (bootsFlightGranted.remove(uuid)) {
+        if (bootsFlightGranted.remove(uuid) || player.getPersistentDataContainer().has(bootsFlightKey, PersistentDataType.BYTE)) {
+            player.getPersistentDataContainer().remove(bootsFlightKey);
             if (player.getGameMode() != GameMode.CREATIVE && player.getGameMode() != GameMode.SPECTATOR) {
                 player.setAllowFlight(false);
                 player.setFlying(false);
@@ -392,6 +403,7 @@ public class ArtifactListener implements Listener {
             player.setAllowFlight(false);
             player.setFlying(false);
             bootsFlightGranted.remove(player.getUniqueId());
+            player.getPersistentDataContainer().remove(bootsFlightKey);
 
             Vector dir = player.getLocation().getDirection().normalize().multiply(0.8).setY(0.9);
             player.setVelocity(dir);
@@ -412,10 +424,13 @@ public class ArtifactListener implements Listener {
                     if (player.getLocation().subtract(0, 0.1, 0).getBlock().getType().isSolid()) {
                         player.setAllowFlight(true);
                         bootsFlightGranted.add(player.getUniqueId());
+                        player.getPersistentDataContainer().set(bootsFlightKey, PersistentDataType.BYTE, (byte) 1);
                     }
                 }
             }
-        } else if (bootsFlightGranted.remove(player.getUniqueId())) {
+        } else if (bootsFlightGranted.remove(player.getUniqueId()) || player.getPersistentDataContainer().has(bootsFlightKey, PersistentDataType.BYTE)) {
+            player.getPersistentDataContainer().remove(bootsFlightKey);
+            bootsFlightGranted.remove(player.getUniqueId());
             if (player.getGameMode() != GameMode.CREATIVE && player.getGameMode() != GameMode.SPECTATOR) {
                 player.setAllowFlight(false);
                 player.setFlying(false);

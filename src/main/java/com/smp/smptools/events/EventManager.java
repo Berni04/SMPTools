@@ -73,28 +73,28 @@ public class EventManager {
 
     public synchronized void claimOfflineRewards(Player player) {
         String path = "pending_rewards." + player.getUniqueId().toString();
-        List<String> pending = dataConfig.getStringList(path);
+        List<String> pending = new ArrayList<>(dataConfig.getStringList(path));
         if (pending.isEmpty()) return;
 
-        // Clear and save first to prevent double claiming on unexpected crash
-        dataConfig.set(path, null);
-        saveData();
+        boolean anyDelivered = false;
+        List<String> remaining = new ArrayList<>(pending);
 
-        player.sendMessage(MiniMessage.miniMessage().deserialize("<gold><b>[EVENT]</b></gold> <yellow>You received event rewards earned while offline!</yellow>"));
-        List<String> failed = new ArrayList<>();
         for (String reward : pending) {
             boolean ok = executeReward(player, reward);
-            if (!ok) {
-                failed.add(reward);
+            if (ok) {
+                anyDelivered = true;
+                remaining.remove(reward);
+                if (remaining.isEmpty()) {
+                    dataConfig.set(path, null);
+                } else {
+                    dataConfig.set(path, remaining);
+                }
+                saveData();
             }
         }
 
-        // Retain unprocessable rewards if any failed
-        if (!failed.isEmpty()) {
-            List<String> current = new ArrayList<>(dataConfig.getStringList(path));
-            current.addAll(failed);
-            dataConfig.set(path, current);
-            saveData();
+        if (anyDelivered) {
+            player.sendMessage(MiniMessage.miniMessage().deserialize("<gold><b>[EVENT]</b></gold> <yellow>You received event rewards earned while offline!</yellow>"));
         }
     }
 
