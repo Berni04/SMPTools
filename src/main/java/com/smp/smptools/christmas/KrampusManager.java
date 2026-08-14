@@ -29,8 +29,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.world.WorldLoadEvent;
 
-public class KrampusManager {
+public class KrampusManager implements Listener {
 
     private final SMPTools plugin;
     private FileConfiguration christmasConfig;
@@ -43,7 +46,13 @@ public class KrampusManager {
     public KrampusManager(SMPTools plugin) {
         this.plugin = plugin;
         this.krampusKey = new NamespacedKey(plugin, "krampus_entity");
+        Bukkit.getPluginManager().registerEvents(this, plugin);
         loadConfig();
+    }
+
+    @EventHandler
+    public void onWorldLoad(WorldLoadEvent event) {
+        cleanupStaleCages();
     }
 
     private void loadConfig() {
