@@ -285,15 +285,20 @@ public class ArtifactListener implements Listener {
             }
 
             // Phoenix Feather Check
-            if (player.getHealth() - event.getFinalDamage() <= 0) {
+            if (player.getHealth() - event.getFinalDamage() <= 0 && event.getCause() != EntityDamageEvent.DamageCause.VOID) {
                 if (artifactManager.hasEquippedArtifact(player, ArtifactType.PHOENIX_FEATHER)) {
-                    event.setCancelled(true);
-                    player.setHealth(player.getMaxHealth() * 0.5);
-                    player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 4));
-                    player.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 200, 0));
-                    player.getWorld().spawnParticle(Particle.FLAME, player.getLocation(), 50, 0.5, 1.0, 0.5, 0.2);
-                    player.getWorld().playSound(player.getLocation(), Sound.ITEM_TOTEM_USE, 1.0f, 1.0f);
-                    player.sendActionBar(MiniMessage.miniMessage().deserialize("<gold><b>🔥 Phoenix Feather Resurrected You!</b></gold>"));
+                    long now = System.currentTimeMillis();
+                    long last = getCooldown(player.getUniqueId(), ArtifactType.PHOENIX_FEATHER);
+                    if (now - last >= 60000L) {
+                        setCooldown(player.getUniqueId(), ArtifactType.PHOENIX_FEATHER, now);
+                        event.setCancelled(true);
+                        player.setHealth(player.getMaxHealth() * 0.5);
+                        player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 4));
+                        player.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 200, 0));
+                        player.getWorld().spawnParticle(Particle.FLAME, player.getLocation(), 50, 0.5, 1.0, 0.5, 0.2);
+                        player.getWorld().playSound(player.getLocation(), Sound.ITEM_TOTEM_USE, 1.0f, 1.0f);
+                        player.sendActionBar(MiniMessage.miniMessage().deserialize("<gold><b>🔥 Phoenix Feather Resurrected You!</b></gold>"));
+                    }
                 }
             }
         }
