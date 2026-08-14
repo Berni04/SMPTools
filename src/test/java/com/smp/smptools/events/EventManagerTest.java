@@ -59,6 +59,8 @@ public class EventManagerTest {
         assertNull(EventManager.parseRewardString("item:DIAMOND -5"));
         assertNull(EventManager.parseRewardString("item:DIAMOND 0"));
         assertNull(EventManager.parseRewardString("unknown:DIAMOND 5"));
+        assertNull(EventManager.parseRewardString("cmd:eco give %player% 100#retry:"));
+        assertNull(EventManager.parseRewardString("cmd:eco give %player% 100#retry:   "));
         assertNull(EventManager.parseRewardString("cmd:eco give %player% 100#retry:notanumber"));
         assertNull(EventManager.parseRewardString("cmd:eco give %player% 100#retry:-1"));
     }

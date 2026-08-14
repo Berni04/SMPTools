@@ -98,7 +98,7 @@ public class EventManager {
         public int getRetryCount() { return retryCount; }
     }
 
-    private static final java.util.regex.Pattern RETRY_PATTERN = java.util.regex.Pattern.compile("^(.*)#retry:(.+)$");
+    private static final java.util.regex.Pattern RETRY_PATTERN = java.util.regex.Pattern.compile("^(.*)#retry:(.*)$");
 
     public static ParsedEventReward parseRewardString(String rewardStr) {
         if (rewardStr == null || rewardStr.isBlank()) return null;
@@ -106,8 +106,12 @@ public class EventManager {
         String raw = rewardStr.trim();
         java.util.regex.Matcher matcher = RETRY_PATTERN.matcher(raw);
         if (matcher.matches()) {
+            String suffix = matcher.group(2).trim();
+            if (suffix.isEmpty()) {
+                return null;
+            }
             try {
-                retryCount = Integer.parseInt(matcher.group(2).trim());
+                retryCount = Integer.parseInt(suffix);
                 if (retryCount < 0) {
                     return null;
                 }
