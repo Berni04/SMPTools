@@ -56,8 +56,9 @@ public class RewardManager {
         if (reward.startsWith("item:")) {
             return parseItemReward(reward) != null;
         } else if (reward.startsWith("custom_item:")) {
-            String customItem = reward.substring(12);
-            return customItem.equalsIgnoreCase("chromatic_elytra");
+            String customItem = reward.substring(12).trim();
+            if (customItem.equalsIgnoreCase("chromatic_elytra")) return true;
+            return customItem.toLowerCase().startsWith("chromatic_elytra:");
         } else if (reward.startsWith("command:")) {
             String cmd = reward.substring(8);
             return !cmd.isBlank() && !CommandBlacklist.isBlocked(cmd);
@@ -172,9 +173,12 @@ public class RewardManager {
                 }
                 return true;
             } else if (reward.startsWith("custom_item:")) {
-                String customItem = reward.substring(12);
+                String customItem = reward.substring(12).trim();
                 if (customItem.equalsIgnoreCase("chromatic_elytra")) {
                     return giveChromaticElytra(player, "WHITE");
+                } else if (customItem.toLowerCase().startsWith("chromatic_elytra:")) {
+                    String color = customItem.substring(17).trim();
+                    return giveChromaticElytra(player, color.isEmpty() ? "WHITE" : color);
                 }
                 return false;
             } else if (reward.startsWith("command:")) {
