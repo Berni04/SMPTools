@@ -159,7 +159,7 @@ public class ArtifactListener implements Listener {
                     setCooldown(player.getUniqueId(), type, now);
                     double drained = 0;
                     for (Entity entity : player.getNearbyEntities(5, 5, 5)) {
-                        if (entity instanceof LivingEntity target && target != player && isHostileTarget(target, player)) {
+                        if (entity instanceof LivingEntity target && target != player && isHostileTarget(target)) {
                             if (player.hasLineOfSight(target)) {
                                 double damage = target.getHealth() * 0.15;
                                 target.damage(damage, player);
@@ -183,7 +183,7 @@ public class ArtifactListener implements Listener {
                     setCooldown(player.getUniqueId(), type, now);
                     Vector dir = player.getLocation().getDirection().normalize();
                     for (Entity entity : player.getNearbyEntities(8, 8, 8)) {
-                        if (entity instanceof LivingEntity target && target != player && isHostileTarget(target, player)) {
+                        if (entity instanceof LivingEntity target && target != player && isHostileTarget(target)) {
                             if (player.hasLineOfSight(target)) {
                                 target.setVelocity(dir.clone().multiply(2.5).setY(0.5));
                                 target.damage(6.0, player);
@@ -295,7 +295,7 @@ public class ArtifactListener implements Listener {
             }
 
             // Phoenix Feather Check
-            if (player.getHealth() - event.getFinalDamage() <= 0 && event.getCause() != EntityDamageEvent.DamageCause.VOID) {
+            if (player.getHealth() - event.getFinalDamage() <= 0) {
                 if (artifactManager.hasEquippedArtifact(player, ArtifactType.PHOENIX_FEATHER)) {
                     long now = System.currentTimeMillis();
                     long last = getCooldown(player.getUniqueId(), ArtifactType.PHOENIX_FEATHER);
@@ -644,23 +644,13 @@ public class ArtifactListener implements Listener {
         }.runTaskTimer(plugin, 20L, 20L);
     }
 
-    private boolean isHostileTarget(LivingEntity target, Player player) {
+    private boolean isHostileTarget(LivingEntity target) {
         if (target == null || target.isDead()) return false;
         if (target instanceof Player) return false;
         if (target instanceof org.bukkit.entity.Tameable tameable && tameable.isTamed()) return false;
         if (target instanceof org.bukkit.entity.Villager || target instanceof org.bukkit.entity.WanderingTrader) return false;
         if (target instanceof org.bukkit.entity.ArmorStand) return false;
 
-        // Check hostile entities whitelist first (includes Hoglin/Zoglin which may implement Animals)
-        if (target instanceof org.bukkit.entity.Monster || target instanceof org.bukkit.entity.Boss || 
-            target instanceof org.bukkit.entity.Slime || target instanceof org.bukkit.entity.Phantom || 
-            target instanceof org.bukkit.entity.Hoglin || target instanceof org.bukkit.entity.Zoglin || 
-            target instanceof org.bukkit.entity.Shulker || target instanceof org.bukkit.entity.Ghast || 
-            target instanceof org.bukkit.entity.EnderDragon || target instanceof org.bukkit.entity.Wither || 
-            target instanceof org.bukkit.entity.Warden || target instanceof org.bukkit.entity.Enemy) {
-            return true;
-        }
-
-        return false;
+        return target instanceof org.bukkit.entity.Enemy;
     }
 }
