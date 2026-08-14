@@ -41,7 +41,7 @@ public class EasterGUI implements Listener {
         Inventory gui = Bukkit.createInventory(null, 27, TITLE);
         UUID uuid = player.getUniqueId();
         List<Integer> foundList = seasonalManager.getFoundEggs(uuid);
-        int total = plugin.getSeasonalConfig().getInt("seasonal.easter.total_eggs", 15);
+        int total = Math.max(1, plugin.getSeasonalConfig().getInt("seasonal.easter.total_eggs", 15));
 
         // Fill background with black glass panes
         ItemStack filler = createItem(Material.BLACK_STAINED_GLASS_PANE, " ", null, false);
