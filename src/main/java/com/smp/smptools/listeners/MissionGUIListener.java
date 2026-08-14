@@ -206,36 +206,20 @@ public class MissionGUIListener implements Listener {
                     return;
                 }
 
-                // 1. Persist claim to disk BEFORE delivering rewards to prevent duplicate claims on disk save failure / server restart
+                // 1. Atomically persist claim AND pending rewards to disk BEFORE delivery to prevent lost or duplicate rewards
                 playerData.getClaimedMissions().add(clickedMission.getId());
+                playerData.getPendingRewards().addAll(clickedMission.getRewards());
                 if (!missionManager.saveSinglePlayerData(player.getUniqueId())) {
                     playerData.getClaimedMissions().remove(clickedMission.getId());
+                    playerData.getPendingRewards().removeAll(clickedMission.getRewards());
                     SMPTools.getInstance().getLogger().severe("Failed to persist mission claim for " + clickedMission.getId() + " to " + player.getName() + "; aborting reward delivery.");
                     player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Failed to save mission progress. Please try again.</red>"));
                     return;
                 }
 
-                // 2. Deliver rewards; failed deliveries are queued to pendingRewards
-                List<String> failedRewards = new ArrayList<>();
-                for (String reward : clickedMission.getRewards()) {
-                    try {
-                        if (!RewardManager.giveReward(player, reward)) {
-                            failedRewards.add(reward);
-                            SMPTools.getInstance().getLogger().warning("Failed to give mission reward '" + reward + "' to " + player.getName());
-                        }
-                    } catch (Exception e) {
-                        failedRewards.add(reward);
-                        SMPTools.getInstance().getLogger().warning("Exception giving mission reward '" + reward + "' to " + player.getName() + ": " + e.getMessage());
-                    }
-                }
-
-                if (!failedRewards.isEmpty()) {
-                    playerData.getPendingRewards().addAll(failedRewards);
-                    missionManager.saveSinglePlayerData(player.getUniqueId());
-                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<yellow>Some rewards could not be delivered immediately and have been saved to your pending rewards queue for retry.</yellow>"));
-                } else {
-                    player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-claimed", player));
-                }
+                // 2. Deliver queued rewards via the transactional pending rewards processor
+                missionManager.claimPendingMissionRewards(player);
+                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-claimed", player));
 
                 // Re-open the GUI to update the item state
                 openCompletedMissionsGUI(player, isNpc);
@@ -315,26 +299,21 @@ public class MissionGUIListener implements Listener {
             return;
         }
 
-        // 1. Persist claim to disk BEFORE delivering reward to prevent duplicate claims
+        // 1. Atomically persist claim AND chosen chromatic elytra to disk BEFORE delivery
+        String rewardStr = "custom_item:chromatic_elytra:" + color;
         playerData.getClaimedMissions().add(missionId);
+        playerData.getPendingRewards().add(rewardStr);
         if (!missionManager.saveSinglePlayerData(player.getUniqueId())) {
             playerData.getClaimedMissions().remove(missionId);
+            playerData.getPendingRewards().remove(rewardStr);
             SMPTools.getInstance().getLogger().severe("Failed to persist Chromatic Elytra claim " + missionId + " for " + player.getName() + "; aborting reward delivery.");
             player.closeInventory();
             player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Failed to save mission progress. Please try again.</red>"));
             return;
         }
 
-        boolean given = RewardManager.giveChromaticElytra(player, color);
-        if (given) {
-            player.closeInventory();
-        } else {
-            // Elytra delivery failed - queue to pendingRewards
-            playerData.getPendingRewards().add("custom_item:chromatic_elytra");
-            missionManager.saveSinglePlayerData(player.getUniqueId());
-            player.closeInventory();
-            player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<yellow>Chromatic Elytra could not be delivered immediately and has been saved to your pending rewards queue for retry.</yellow>"));
-        }
+        player.closeInventory();
+        missionManager.claimPendingMissionRewards(player);
     }
 
     private void handleQuestlineSelectionClick(InventoryClickEvent event, Player player) {
