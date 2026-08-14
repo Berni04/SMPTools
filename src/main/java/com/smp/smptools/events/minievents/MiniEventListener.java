@@ -128,6 +128,11 @@ public class MiniEventListener implements Listener {
         FileConfiguration cfg = plugin.getEventsConfig();
 
         if (activeType == MiniEventType.ORE_RUSH) {
+            ItemStack tool = player.getInventory().getItemInMainHand();
+            if (tool != null && tool.containsEnchantment(org.bukkit.enchantments.Enchantment.SILK_TOUCH)) {
+                return;
+            }
+
             int pts = 0;
             String name = "";
 
