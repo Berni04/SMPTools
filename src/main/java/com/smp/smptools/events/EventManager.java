@@ -169,29 +169,28 @@ public class EventManager {
                 continue;
             }
 
+            // Persist removal from queue BEFORE executing reward to prevent duplication on crash or disk save failure
+            remaining.remove(reward);
+            dataConfig.set(path, remaining.isEmpty() ? null : remaining);
+            if (!saveData()) {
+                plugin.getLogger().severe("Failed to persist offline reward removal for " + player.getName() + ", aborting claim execution.");
+                dataConfig.set(path, pending);
+                break;
+            }
+
             boolean ok = executeReward(player, parsed);
             if (ok) {
                 anyDelivered = true;
-                remaining.remove(reward);
-                dataConfig.set(path, remaining.isEmpty() ? null : remaining);
-                if (!saveData()) {
-                    plugin.getLogger().severe("Failed to persist claimed offline reward removal for " + player.getName() + ", aborting remaining queue.");
-                    break;
-                }
             } else {
                 int nextRetry = parsed.getRetryCount() + 1;
-                remaining.remove(reward);
                 if (nextRetry >= 3) {
                     plugin.getLogger().severe("Permanently dropping unexecutable offline reward '" + reward + "' for " + player.getName() + " after 3 failed attempts.");
                 } else {
                     String baseCommandOrItem = parsed.getType() == RewardType.COMMAND ? "cmd:" + parsed.getCommand() : "item:" + parsed.getMaterial().name() + " " + parsed.getAmount();
                     remaining.add(baseCommandOrItem + "#retry:" + nextRetry);
                     plugin.getLogger().warning("Transient delivery failure for offline reward '" + reward + "' for " + player.getName() + " (attempt " + nextRetry + "/3), retaining for retry.");
-                }
-                dataConfig.set(path, remaining.isEmpty() ? null : remaining);
-                if (!saveData()) {
-                    plugin.getLogger().severe("Failed to persist retry state for offline reward for " + player.getName() + ", aborting remaining queue.");
-                    break;
+                    dataConfig.set(path, remaining.isEmpty() ? null : remaining);
+                    saveData();
                 }
             }
         }
