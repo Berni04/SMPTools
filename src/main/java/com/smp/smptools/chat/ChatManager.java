@@ -28,44 +28,51 @@ public class ChatManager {
         return lastMessengers.get(recipient);
     }
 
-    public Component getFormattedDisplayName(Player player) {
-        FileConfiguration statsConfig = plugin.getStatsConfig();
-        FileConfiguration tagsConfig = plugin.getTagsConfig();
-        String playerUUID = player.getUniqueId().toString();
+    public synchronized Component getFormattedDisplayName(Player player) {
+        if (player == null) return Component.empty();
+        try {
+            FileConfiguration statsConfig = plugin.getStatsConfig();
+            String playerUUID = player.getUniqueId().toString();
 
-        // 1. Get the raw color tag (e.g., "<red>" or "<#ff0000>"), defaulting to "<white>"
-        // Sanitize to prevent MiniMessage tag injection (hover/click/etc.) from saved values.
-        String colorTag = InputValidator.sanitizeMiniMessage(
-                statsConfig.getString("players." + playerUUID + ".name-color", "<white>"));
-        if (colorTag.isEmpty()) colorTag = "<white>";
-
-        // 2. Get prefix and tag strings
-        String prefixStr = InputValidator.sanitizeMiniMessage(
-                statsConfig.getString("players." + playerUUID + ".prefix", ""));
-        String tagTitle = plugin.getTagManager() != null ? plugin.getTagManager().getTagTitle(player) : null;
-
-        // 3. Build a single MiniMessage string
-        StringBuilder mmString = new StringBuilder();
-
-        mmString.append(colorTag);
-
-        if (!prefixStr.isEmpty()) {
-            mmString.append(prefixStr).append(" ");
-        }
-
-        mmString.append(player.getName());
-
-        if (tagTitle != null && !tagTitle.isEmpty()) {
-            String tagDescription = plugin.getTagManager().getTagDescription(tagTitle);
-            if (tagDescription != null && !tagDescription.isEmpty()) {
-                String sanitizedDescription = InputValidator.sanitizeMiniMessage(tagDescription)
-                        .replace("'", "\\'");
-                mmString.append(" <hover:show_text:'").append(colorTag).append(sanitizedDescription).append("'>[").append(tagTitle).append("]</hover>");
-            } else {
-                mmString.append(" [").append(tagTitle).append("]");
+            // 1. Get the raw color tag (e.g., "<red>" or "<#ff0000>"), defaulting to "<white>"
+            // Sanitize to prevent MiniMessage tag injection (hover/click/etc.) from saved values.
+            String colorTag = "<white>";
+            String prefixStr = "";
+            if (statsConfig != null) {
+                colorTag = InputValidator.sanitizeMiniMessage(
+                        statsConfig.getString("players." + playerUUID + ".name-color", "<white>"));
+                if (colorTag.isEmpty()) colorTag = "<white>";
+                prefixStr = InputValidator.sanitizeMiniMessage(
+                        statsConfig.getString("players." + playerUUID + ".prefix", ""));
             }
-        }
 
-        return MiniMessage.miniMessage().deserialize(mmString.toString());
+            // 2. Get prefix and tag strings
+            String tagTitle = plugin.getTagManager() != null ? plugin.getTagManager().getTagTitle(player) : null;
+
+            // 3. Build a single MiniMessage string
+            StringBuilder mmString = new StringBuilder();
+            mmString.append(colorTag);
+
+            if (!prefixStr.isEmpty()) {
+                mmString.append(prefixStr).append(" ");
+            }
+
+            mmString.append(player.getName());
+
+            if (tagTitle != null && !tagTitle.isEmpty()) {
+                String tagDescription = plugin.getTagManager().getTagDescription(tagTitle);
+                if (tagDescription != null && !tagDescription.isEmpty()) {
+                    String sanitizedDescription = InputValidator.sanitizeMiniMessage(tagDescription)
+                            .replace("'", "\\'");
+                    mmString.append(" <hover:show_text:'").append(colorTag).append(sanitizedDescription).append("'>[").append(tagTitle).append("]</hover>");
+                } else {
+                    mmString.append(" [").append(tagTitle).append("]");
+                }
+            }
+
+            return MiniMessage.miniMessage().deserialize(mmString.toString());
+        } catch (Exception e) {
+            return Component.text(player.getName(), net.kyori.adventure.text.format.NamedTextColor.WHITE);
+        }
     }
 }
