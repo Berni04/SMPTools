@@ -182,21 +182,50 @@ public class KrampusManager {
         int minY = world.getMinHeight() + 1;
         int maxY = world.getMaxHeight() - 6;
 
-        int[] yOffsets = {50, 30, 70, 20, 85, 10, 100};
         int[] horizontalOffsets = {0, 20, -20, 40, -40};
 
         for (int dx : horizontalOffsets) {
             for (int dz : horizontalOffsets) {
-                for (int dy : yOffsets) {
-                    int targetY = Math.max(minY, Math.min(maxY, baseLoc.getBlockY() + dy));
-                    Location candidate = new Location(world, baseLoc.getBlockX() + dx, targetY, baseLoc.getBlockZ() + dz);
-                    if (!isCageOverlapping(candidate)) {
+                int bx = baseLoc.getBlockX() + dx;
+                int bz = baseLoc.getBlockZ() + dz;
+                int surfaceY = world.getHighestBlockYAt(bx, bz);
+                int[] candidateY = {
+                    Math.max(surfaceY + 15, baseLoc.getBlockY() + 30),
+                    Math.max(surfaceY + 10, baseLoc.getBlockY() + 50),
+                    Math.max(surfaceY + 25, baseLoc.getBlockY() + 70),
+                    Math.max(surfaceY + 5, baseLoc.getBlockY() + 20)
+                };
+
+                for (int ty : candidateY) {
+                    int targetY = Math.max(minY, Math.min(maxY, ty));
+                    Location candidate = new Location(world, bx, targetY, bz);
+                    if (!isCageOverlapping(candidate) && isCageAreaClear(candidate)) {
                         return candidate;
                     }
                 }
             }
         }
         return null;
+    }
+
+    private boolean isCageAreaClear(Location center) {
+        if (center == null || center.getWorld() == null) return false;
+        org.bukkit.World world = center.getWorld();
+        int cx = center.getBlockX();
+        int cy = center.getBlockY();
+        int cz = center.getBlockZ();
+
+        for (int x = -4; x <= 4; x++) {
+            for (int y = 0; y <= 5; y++) {
+                for (int z = -4; z <= 4; z++) {
+                    org.bukkit.block.Block b = world.getBlockAt(cx + x, cy + y, cz + z);
+                    if (!b.getType().isAir()) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
     }
 
     private boolean isCageOverlapping(Location candidate) {
