@@ -59,11 +59,18 @@ public class KrampusManager {
         org.bukkit.configuration.ConfigurationSection section = christmasConfig.getConfigurationSection("active_cages");
         if (section == null) return;
 
+        List<String> cleanedKeys = new ArrayList<>();
         for (String key : section.getKeys(false)) {
             String worldName = section.getString(key + ".world");
-            if (worldName == null) continue;
+            if (worldName == null) {
+                cleanedKeys.add(key);
+                continue;
+            }
             org.bukkit.World world = Bukkit.getWorld(worldName);
-            if (world == null) continue;
+            if (world == null) {
+                // World not loaded yet - retain entry for later world load cleanup
+                continue;
+            }
 
             int cx = section.getInt(key + ".x");
             int cy = section.getInt(key + ".y");
@@ -74,15 +81,35 @@ public class KrampusManager {
                 for (int y = 0; y <= 5; y++) {
                     for (int z = -4; z <= 4; z++) {
                         org.bukkit.block.Block b = center.clone().add(x, y, z).getBlock();
-                        if (b.getType() == Material.IRON_BARS || b.getType() == Material.BEDROCK) {
+                        if (isCageFrameBlock(b, x, y, z)) {
                             b.setType(Material.AIR);
                         }
                     }
                 }
             }
+            cleanedKeys.add(key);
         }
-        christmasConfig.set("active_cages", null);
-        saveChristmasConfig();
+
+        if (!cleanedKeys.isEmpty()) {
+            for (String key : cleanedKeys) {
+                christmasConfig.set("active_cages." + key, null);
+            }
+            if (section.getKeys(false).isEmpty()) {
+                christmasConfig.set("active_cages", null);
+            }
+            saveChristmasConfig();
+        }
+    }
+
+    private boolean isCageFrameBlock(org.bukkit.block.Block b, int x, int y, int z) {
+        if (b == null) return false;
+        if (y == 0 && Math.abs(x) <= 3 && Math.abs(z) <= 3) {
+            return b.getType() == Material.BEDROCK;
+        }
+        if (x == -4 || x == 4 || z == -4 || z == 4 || y == 0 || y == 5) {
+            return b.getType() == Material.IRON_BARS;
+        }
+        return false;
     }
 
     private void saveCageLocation(UUID uuid, Location center) {
@@ -294,13 +321,13 @@ public class KrampusManager {
     }
 
     private void removeCage(UUID uuid, Location center) {
-        removeCageLocation(uuid);
         Map<Location, org.bukkit.block.BlockState> original = originalCageBlocks.remove(uuid);
         if (original != null) {
             for (org.bukkit.block.BlockState state : original.values()) {
                 state.update(true, false);
             }
         }
+        removeCageLocation(uuid);
     }
 
     public void cleanupAll() {
