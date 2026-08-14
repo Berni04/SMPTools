@@ -26,7 +26,11 @@ public class SecretSantaManager {
 
     public SecretSantaManager(SMPTools plugin) {
         this.plugin = plugin;
-        loadConfig();
+        if (plugin != null) {
+            loadConfig();
+        } else {
+            this.config = new YamlConfiguration();
+        }
     }
 
     private void loadConfig() {
@@ -42,10 +46,13 @@ public class SecretSantaManager {
     }
 
     public void saveConfig() {
+        if (configFile == null || config == null) return;
         try {
             config.save(configFile);
         } catch (IOException e) {
-            plugin.getLogger().severe("Could not save secretsanta.yml!");
+            if (plugin != null) {
+                plugin.getLogger().severe("Could not save secretsanta.yml!");
+            }
         }
     }
 
@@ -117,7 +124,15 @@ public class SecretSantaManager {
     }
 
     public void depositGift(UUID target, ItemStack[] items) {
-        config.set("gifts." + target.toString(), items);
+        List<ItemStack> list = new ArrayList<>();
+        if (items != null) {
+            for (ItemStack item : items) {
+                if (item != null && item.getType() != org.bukkit.Material.AIR) {
+                    list.add(item);
+                }
+            }
+        }
+        config.set("gifts." + target.toString(), list);
         saveConfig();
     }
 
@@ -134,11 +149,23 @@ public class SecretSantaManager {
                 try {
                     items.add(ItemStack.deserialize((java.util.Map<String, Object>) map));
                 } catch (Exception e) {
-                    plugin.getLogger().warning("Failed to deserialize Secret Santa gift item for recipient " + recipient + ": " + e.getMessage());
+                    if (plugin != null) {
+                        plugin.getLogger().warning("Failed to deserialize Secret Santa gift item for recipient " + recipient + ": " + e.getMessage());
+                    }
                 }
             }
         }
         return items.toArray(new ItemStack[0]);
+    }
+
+    public ItemStack[] claimGift(UUID recipient) {
+        ItemStack[] gift = getGift(recipient);
+        if (gift == null || gift.length == 0) {
+            return null;
+        }
+        config.set("gifts." + recipient.toString(), null);
+        saveConfig();
+        return gift;
     }
 
     public boolean hasGiftDeposited(UUID target) {
