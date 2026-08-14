@@ -21,7 +21,7 @@ import java.util.logging.Level;
 
 /**
  * Core event management engine for SMPTools.
- * Manages automated event timers, active event state, event listeners, and offline reward delivery.
+ * Manages automated event timers, active event state, event listeners, and batched offline reward delivery.
  */
 public class EventManager {
 
@@ -59,6 +59,18 @@ public class EventManager {
         }
     }
 
+    public synchronized void queueOfflineRewardsBatch(Map<UUID, List<String>> rewardsByPlayer) {
+        if (rewardsByPlayer == null || rewardsByPlayer.isEmpty()) return;
+
+        for (Map.Entry<UUID, List<String>> entry : rewardsByPlayer.entrySet()) {
+            String path = "pending_rewards." + entry.getKey().toString();
+            List<String> current = new ArrayList<>(dataConfig.getStringList(path));
+            current.addAll(entry.getValue());
+            dataConfig.set(path, current);
+        }
+        saveData();
+    }
+
     public synchronized void queueOfflineReward(UUID uuid, String rewardStr) {
         List<String> list = dataConfig.getStringList("pending_rewards." + uuid.toString());
         list.add(rewardStr);
@@ -68,23 +80,38 @@ public class EventManager {
 
     public synchronized void claimOfflineRewards(Player player) {
         String path = "pending_rewards." + player.getUniqueId().toString();
-        List<String> pending = dataConfig.getStringList(path);
+        List<String> pending = new ArrayList<>(dataConfig.getStringList(path));
         if (!pending.isEmpty()) {
-            dataConfig.set(path, null);
+            List<String> remaining = new ArrayList<>();
+            boolean anyDelivered = false;
+
+            for (String reward : pending) {
+                boolean ok = executeReward(player, reward);
+                if (ok) {
+                    anyDelivered = true;
+                } else {
+                    remaining.add(reward);
+                }
+            }
+
+            if (remaining.isEmpty()) {
+                dataConfig.set(path, null);
+            } else {
+                dataConfig.set(path, remaining);
+            }
             saveData();
 
-            player.sendMessage(MiniMessage.miniMessage().deserialize("<gold><b>[EVENT]</b></gold> <yellow>You received event rewards earned while offline!</yellow>"));
-            for (String reward : pending) {
-                executeReward(player, reward);
+            if (anyDelivered) {
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<gold><b>[EVENT]</b></gold> <yellow>You received event rewards earned while offline!</yellow>"));
             }
         }
     }
 
-    public void executeReward(Player player, String rewardStr) {
+    public boolean executeReward(Player player, String rewardStr) {
         try {
             if (rewardStr.startsWith("cmd:")) {
                 String cmd = rewardStr.substring(4).replace("%player%", player.getName());
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+                return Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
             } else if (rewardStr.startsWith("item:")) {
                 String[] parts = rewardStr.substring(5).trim().split("\\s+");
                 Material mat = Material.matchMaterial(parts[0].toUpperCase());
@@ -99,10 +126,16 @@ public class EventManager {
                     for (ItemStack drop : leftover.values()) {
                         player.getWorld().dropItemNaturally(player.getLocation(), drop);
                     }
+                    return true;
+                } else {
+                    plugin.getLogger().warning("Unknown material in reward '" + rewardStr + "' for " + player.getName());
+                    return false;
                 }
             }
+            return true;
         } catch (Exception e) {
             plugin.getLogger().warning("Error delivering reward '" + rewardStr + "' to " + player.getName() + ": " + e.getMessage());
+            return false;
         }
     }
 

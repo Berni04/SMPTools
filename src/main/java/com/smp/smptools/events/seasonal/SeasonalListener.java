@@ -70,6 +70,21 @@ public class SeasonalListener implements Listener {
 
         if (pumpkinId != null || eggId != null) {
             Player player = event.getPlayer();
+            if (!(player.hasPermission("smptools.seasonal.admin") && player.getGameMode() == GameMode.CREATIVE)) {
+                event.setCancelled(true);
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>You cannot break seasonal scavenger hunt targets!</red>"));
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onTargetBlockBreakMonitor(BlockBreakEvent event) {
+        Location loc = event.getBlock().getLocation();
+        Integer pumpkinId = seasonalManager.getPumpkinIdAt(loc);
+        Integer eggId = seasonalManager.getEggIdAt(loc);
+
+        if (pumpkinId != null || eggId != null) {
+            Player player = event.getPlayer();
             if (player.hasPermission("smptools.seasonal.admin") && player.getGameMode() == GameMode.CREATIVE) {
                 if (pumpkinId != null) {
                     seasonalManager.removePumpkinLocation(pumpkinId);
@@ -79,9 +94,6 @@ public class SeasonalListener implements Listener {
                     seasonalManager.removeEggLocation(eggId);
                     player.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>Removed Easter Egg #" + eggId + " from registered seasonal locations.</yellow>"));
                 }
-            } else {
-                event.setCancelled(true);
-                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>You cannot break seasonal scavenger hunt targets!</red>"));
             }
         }
     }

@@ -39,6 +39,9 @@ public class SeasonalManager {
     private ZoneId cachedZoneId = ZoneId.of("Europe/Paris");
     private final Map<SeasonType, MonthDay[]> cachedDateRanges = new EnumMap<>(SeasonType.class);
 
+    private final Map<String, Integer> pumpkinLocations = new HashMap<>();
+    private final Map<String, Integer> eggLocations = new HashMap<>();
+
     public SeasonalManager(SMPTools plugin) {
         this.plugin = plugin;
         loadConfigurations();
@@ -81,6 +84,56 @@ public class SeasonalManager {
         cacheDateRange(SeasonType.CHRISTMAS, cfg.getString("seasonal.dates.christmas.start", "12-01"), cfg.getString("seasonal.dates.christmas.end", "01-06"));
         cacheDateRange(SeasonType.EASTER, cfg.getString("seasonal.dates.easter.start", "03-25"), cfg.getString("seasonal.dates.easter.end", "04-25"));
         cacheDateRange(SeasonType.SUMMER, cfg.getString("seasonal.dates.summer.start", "07-01"), cfg.getString("seasonal.dates.summer.end", "08-31"));
+
+        // Cache target locations in memory
+        reloadLocationCaches();
+    }
+
+    private void reloadLocationCaches() {
+        pumpkinLocations.clear();
+        eggLocations.clear();
+
+        if (locationsConfig.isConfigurationSection("halloween_pumpkins")) {
+            ConfigurationSection sec = locationsConfig.getConfigurationSection("halloween_pumpkins");
+            if (sec != null) {
+                for (String key : sec.getKeys(false)) {
+                    try {
+                        int id = Integer.parseInt(key);
+                        String path = "halloween_pumpkins." + key;
+                        String world = locationsConfig.getString(path + ".world");
+                        int x = locationsConfig.getInt(path + ".x");
+                        int y = locationsConfig.getInt(path + ".y");
+                        int z = locationsConfig.getInt(path + ".z");
+                        if (world != null) {
+                            pumpkinLocations.put(locKey(world, x, y, z), id);
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+        }
+
+        if (locationsConfig.isConfigurationSection("easter_eggs")) {
+            ConfigurationSection sec = locationsConfig.getConfigurationSection("easter_eggs");
+            if (sec != null) {
+                for (String key : sec.getKeys(false)) {
+                    try {
+                        int id = Integer.parseInt(key);
+                        String path = "easter_eggs." + key;
+                        String world = locationsConfig.getString(path + ".world");
+                        int x = locationsConfig.getInt(path + ".x");
+                        int y = locationsConfig.getInt(path + ".y");
+                        int z = locationsConfig.getInt(path + ".z");
+                        if (world != null) {
+                            eggLocations.put(locKey(world, x, y, z), id);
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+        }
+    }
+
+    private String locKey(String world, int x, int y, int z) {
+        return world + ":" + x + "," + y + "," + z;
     }
 
     private void cacheDateRange(SeasonType season, String startStr, String endStr) {
@@ -98,6 +151,7 @@ public class SeasonalManager {
     public boolean saveLocations() {
         try {
             locationsConfig.save(locationsFile);
+            reloadLocationCaches();
             return true;
         } catch (IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Could not save seasonal_locations.yml", e);
@@ -262,14 +316,14 @@ public class SeasonalManager {
         player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
         player.getWorld().spawnParticle(Particle.FIREWORK, player.getLocation().add(0, 1, 0), 50, 0.5, 1.0, 0.5, 0.2);
 
-        // Global Announcement
+        // Global Announcement using dynamic configured total
         if (artifactsEnabled) {
             Bukkit.broadcast(MiniMessage.miniMessage().deserialize(
-                    "<gold><b>🎃 [HALLOWEEN]</b></gold> <yellow><b>" + player.getName() + "</b> has found all 20 hidden Spooky Pumpkins and unlocked <b>Jack's Pumpkin Helmet</b>!</yellow>"
+                    "<gold><b>🎃 [HALLOWEEN]</b></gold> <yellow><b>" + player.getName() + "</b> has found all " + total + " hidden Spooky Pumpkins and unlocked <b>Jack's Pumpkin Helmet</b>!</yellow>"
             ));
         } else {
             Bukkit.broadcast(MiniMessage.miniMessage().deserialize(
-                    "<gold><b>🎃 [HALLOWEEN]</b></gold> <yellow><b>" + player.getName() + "</b> has found all 20 hidden Spooky Pumpkins and unlocked the <b>Halloween Grand Reward</b>!</yellow>"
+                    "<gold><b>🎃 [HALLOWEEN]</b></gold> <yellow><b>" + player.getName() + "</b> has found all " + total + " hidden Spooky Pumpkins and unlocked the <b>Halloween Grand Reward</b>!</yellow>"
             ));
         }
 
@@ -398,14 +452,14 @@ public class SeasonalManager {
         player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
         player.getWorld().spawnParticle(Particle.FIREWORK, player.getLocation().add(0, 1, 0), 50, 0.5, 1.0, 0.5, 0.2);
 
-        // Global Announcement
+        // Global Announcement using dynamic configured total
         if (artifactsEnabled) {
             Bukkit.broadcast(MiniMessage.miniMessage().deserialize(
-                    "<green><b>🐣 [EASTER]</b></green> <yellow><b>" + player.getName() + "</b> has found all 15 hidden Easter Eggs and claimed the <b>Chlorophyll Band</b>!</yellow>"
+                    "<green><b>🐣 [EASTER]</b></green> <yellow><b>" + player.getName() + "</b> has found all " + total + " hidden Easter Eggs and claimed the <b>Chlorophyll Band</b>!</yellow>"
             ));
         } else {
             Bukkit.broadcast(MiniMessage.miniMessage().deserialize(
-                    "<green><b>🐣 [EASTER]</b></green> <yellow><b>" + player.getName() + "</b> has found all 15 hidden Easter Eggs and claimed the <b>Easter Grand Reward</b>!</yellow>"
+                    "<green><b>🐣 [EASTER]</b></green> <yellow><b>" + player.getName() + "</b> has found all " + total + " hidden Easter Eggs and claimed the <b>Easter Grand Reward</b>!</yellow>"
             ));
         }
 
@@ -417,47 +471,13 @@ public class SeasonalManager {
     // ==========================================
 
     public Integer getPumpkinIdAt(Location loc) {
-        if (!locationsConfig.isConfigurationSection("halloween_pumpkins")) return null;
-        ConfigurationSection sec = locationsConfig.getConfigurationSection("halloween_pumpkins");
-        if (sec == null) return null;
-
-        for (String key : sec.getKeys(false)) {
-            String path = "halloween_pumpkins." + key;
-            String world = locationsConfig.getString(path + ".world");
-            int x = locationsConfig.getInt(path + ".x");
-            int y = locationsConfig.getInt(path + ".y");
-            int z = locationsConfig.getInt(path + ".z");
-
-            if (loc.getWorld() != null && loc.getWorld().getName().equals(world) &&
-                loc.getBlockX() == x && loc.getBlockY() == y && loc.getBlockZ() == z) {
-                try {
-                    return Integer.parseInt(key);
-                } catch (NumberFormatException ignored) {}
-            }
-        }
-        return null;
+        if (loc == null || loc.getWorld() == null) return null;
+        return pumpkinLocations.get(locKey(loc.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()));
     }
 
     public Integer getEggIdAt(Location loc) {
-        if (!locationsConfig.isConfigurationSection("easter_eggs")) return null;
-        ConfigurationSection sec = locationsConfig.getConfigurationSection("easter_eggs");
-        if (sec == null) return null;
-
-        for (String key : sec.getKeys(false)) {
-            String path = "easter_eggs." + key;
-            String world = locationsConfig.getString(path + ".world");
-            int x = locationsConfig.getInt(path + ".x");
-            int y = locationsConfig.getInt(path + ".y");
-            int z = locationsConfig.getInt(path + ".z");
-
-            if (loc.getWorld() != null && loc.getWorld().getName().equals(world) &&
-                loc.getBlockX() == x && loc.getBlockY() == y && loc.getBlockZ() == z) {
-                try {
-                    return Integer.parseInt(key);
-                } catch (NumberFormatException ignored) {}
-            }
-        }
-        return null;
+        if (loc == null || loc.getWorld() == null) return null;
+        return eggLocations.get(locKey(loc.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()));
     }
 
     public void setPumpkinLocation(int id, Location loc, String hint) {

@@ -83,14 +83,19 @@ public class HalloweenGUI implements Listener {
         rewardLore.add("<gray>Progress: <yellow>" + foundList.size() + "/" + total + " Found</yellow></gray>");
         rewardLore.add("");
 
+        boolean artifactsEnabled = plugin.getConfig().getBoolean("features.artifacts.enabled", true);
         if (claimed) {
             rewardLore.add("<green>✔ Grand Reward Already Claimed!</green>");
             gui.setItem(22, createItem(Material.BARRIER, "<green><b>Grand Reward Claimed</b></green>", rewardLore, false));
         } else if (foundList.size() >= total) {
-            rewardLore.add("<gold><b>🎉 Click to claim Jack's Pumpkin Helmet & 16 Diamonds!</b></gold>");
+            if (artifactsEnabled) {
+                rewardLore.add("<gold><b>🎉 Click to claim Jack's Pumpkin Helmet & 16 Diamonds!</b></gold>");
+            } else {
+                rewardLore.add("<gold><b>🎉 Click to claim 32 Diamonds!</b></gold>");
+            }
             gui.setItem(22, createItem(Material.NETHER_STAR, "<gold><b>🏆 CLAIM GRAND REWARD!</b></gold>", rewardLore, true));
         } else {
-            rewardLore.add("<red>Find all 20 hidden pumpkins to unlock the Grand Reward!</red>");
+            rewardLore.add("<red>Find all " + total + " hidden pumpkins to unlock the Grand Reward!</red>");
             gui.setItem(22, createItem(Material.CHEST, "<yellow><b>Grand Reward Locked (" + foundList.size() + "/" + total + ")</b></yellow>", rewardLore, false));
         }
 

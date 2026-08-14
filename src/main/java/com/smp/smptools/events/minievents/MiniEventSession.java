@@ -19,7 +19,7 @@ import java.util.*;
 
 /**
  * Tracks and manages a live active mini-event session.
- * Handles timers, score maps, combo streaks, BossBar HUD, Scoreboard sidebar, and reward delivery.
+ * Handles timers, score maps, combo streaks, BossBar HUD, Scoreboard sidebar, and batched reward delivery.
  */
 public class MiniEventSession {
 
@@ -42,7 +42,7 @@ public class MiniEventSession {
         this.plugin = plugin;
         this.eventManager = eventManager;
         this.type = type;
-        this.totalDurationSeconds = Math.max(1, durationMinutes) * 60;
+        this.totalDurationSeconds = (int) (Math.min((long) Integer.MAX_VALUE / 60, (long) Math.max(1, durationMinutes)) * 60);
         this.remainingSeconds = totalDurationSeconds;
     }
 
@@ -271,6 +271,7 @@ public class MiniEventSession {
 
     private void deliverRewards(List<Map.Entry<UUID, Integer>> top3) {
         FileConfiguration cfg = plugin.getEventsConfig();
+        Map<UUID, List<String>> offlineQueue = new HashMap<>();
 
         // 1st, 2nd, 3rd place rewards
         String[] keys = new String[]{"1st_place", "2nd_place", "3rd_place"};
@@ -282,7 +283,7 @@ public class MiniEventSession {
                 if (winner != null && winner.isOnline()) {
                     eventManager.executeReward(winner, reward);
                 } else {
-                    eventManager.queueOfflineReward(winnerUuid, reward);
+                    offlineQueue.computeIfAbsent(winnerUuid, k -> new ArrayList<>()).add(reward);
                 }
             }
         }
@@ -297,11 +298,16 @@ public class MiniEventSession {
                         if (p != null && p.isOnline()) {
                             eventManager.executeReward(p, reward);
                         } else {
-                            eventManager.queueOfflineReward(uuid, reward);
+                            offlineQueue.computeIfAbsent(uuid, k -> new ArrayList<>()).add(reward);
                         }
                     }
                 }
             }
+        }
+
+        // Batch persist all queued offline rewards in a single write operation
+        if (!offlineQueue.isEmpty()) {
+            eventManager.queueOfflineRewardsBatch(offlineQueue);
         }
     }
 

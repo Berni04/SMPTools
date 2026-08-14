@@ -31,6 +31,7 @@ public class ArtifactListener implements Listener {
     private final ArtifactManager artifactManager;
     private final Map<UUID, Map<ArtifactType, Long>> cooldowns = new HashMap<>();
     private final Set<UUID> fallImmune = new HashSet<>();
+    private final Set<UUID> bootsFlightGranted = new HashSet<>();
     private final Map<UUID, Integer> homingCompassTargetMode = new HashMap<>(); // 0: Nearest Player, 1: Nearest Boss, 2: Grave/Death
     private final Set<Block> currentlyFelling = Collections.synchronizedSet(new HashSet<>());
     private final Random random = new Random();
@@ -56,6 +57,7 @@ public class ArtifactListener implements Listener {
         UUID uuid = event.getPlayer().getUniqueId();
         cooldowns.remove(uuid);
         fallImmune.remove(uuid);
+        bootsFlightGranted.remove(uuid);
         homingCompassTargetMode.remove(uuid);
     }
 
@@ -230,6 +232,8 @@ public class ArtifactListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onDamage(EntityDamageEvent event) {
+        if (event.isCancelled()) return;
+
         if (event.getEntity() instanceof Player player) {
             if (event.getCause() == EntityDamageEvent.DamageCause.FALL && fallImmune.contains(player.getUniqueId())) {
                 event.setCancelled(true);
@@ -371,6 +375,7 @@ public class ArtifactListener implements Listener {
             event.setCancelled(true);
             player.setAllowFlight(false);
             player.setFlying(false);
+            bootsFlightGranted.remove(player.getUniqueId());
 
             Vector dir = player.getLocation().getDirection().normalize().multiply(0.8).setY(0.9);
             player.setVelocity(dir);
@@ -384,19 +389,18 @@ public class ArtifactListener implements Listener {
     public void onMove(PlayerMoveEvent event) {
         Player player = event.getPlayer();
 
-        // Leap Frog Boots flight enable/disable check
+        // Leap Frog Boots flight enable/disable scoped check
         if (artifactManager.hasEquippedArtifact(player, ArtifactType.LEAP_FROG_BOOTS)) {
             if (player.getGameMode() != GameMode.CREATIVE && player.getGameMode() != GameMode.SPECTATOR) {
                 if (player.getLocation().subtract(0, 0.1, 0).getBlock().getType().isSolid()) {
                     player.setAllowFlight(true);
+                    bootsFlightGranted.add(player.getUniqueId());
                 }
             }
-        } else {
+        } else if (bootsFlightGranted.remove(player.getUniqueId())) {
             if (player.getGameMode() != GameMode.CREATIVE && player.getGameMode() != GameMode.SPECTATOR) {
-                if (player.getAllowFlight()) {
-                    player.setAllowFlight(false);
-                    player.setFlying(false);
-                }
+                player.setAllowFlight(false);
+                player.setFlying(false);
             }
         }
 
@@ -533,9 +537,9 @@ public class ArtifactListener implements Listener {
                                 }
                             }
                         } else if (mode == 1) {
-                            // Nearest Boss
+                            // Nearest Boss (bounded search in 128 block radius)
                             double closestDist = Double.MAX_VALUE;
-                            for (Entity entity : player.getWorld().getEntities()) {
+                            for (Entity entity : player.getNearbyEntities(128, 128, 128)) {
                                 if (entity instanceof Boss || entity instanceof Warden || entity instanceof Wither || 
                                     entity instanceof EnderDragon || entity instanceof ElderGuardian) {
                                     double d = player.getLocation().distanceSquared(entity.getLocation());
