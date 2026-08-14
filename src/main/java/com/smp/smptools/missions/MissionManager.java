@@ -149,14 +149,15 @@ public class MissionManager {
             String baseReward = reward != null ? reward.trim() : "";
             int retryCount = 0;
             if (reward != null) {
-                java.util.regex.Matcher matcher = RETRY_PATTERN.matcher(reward.trim());
-                if (matcher.matches()) {
+                int retryIndex = baseReward.lastIndexOf("#retry:");
+                if (retryIndex != -1) {
+                    String suffix = baseReward.substring(retryIndex + 7).trim();
+                    baseReward = baseReward.substring(0, retryIndex).trim();
                     try {
-                        retryCount = Integer.parseInt(matcher.group(2).trim());
+                        retryCount = Integer.parseInt(suffix);
                         if (retryCount < 0) {
                             retryCount = 3;
                         }
-                        baseReward = matcher.group(1).trim();
                     } catch (NumberFormatException e) {
                         retryCount = 3;
                     }
@@ -215,6 +216,7 @@ public class MissionManager {
                         }
                         data.getPendingRewards().clear();
                         data.getPendingRewards().addAll(snapshotBefore);
+                        saveSinglePlayerData(player.getUniqueId());
                         break;
                     }
                 }
