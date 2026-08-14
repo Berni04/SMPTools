@@ -72,6 +72,15 @@ public class KrampusManager implements Listener {
 
         List<String> cleanedKeys = new ArrayList<>();
         for (String key : section.getKeys(false)) {
+            UUID cageUuid = null;
+            try {
+                cageUuid = UUID.fromString(key);
+            } catch (IllegalArgumentException ignored) {}
+            if (cageUuid != null && (playerCages.containsKey(cageUuid) || kidnappedPlayers.containsKey(cageUuid))) {
+                // Live active cage currently managed in memory, do not clean up
+                continue;
+            }
+
             String worldName = section.getString(key + ".world");
             if (worldName == null) {
                 cleanedKeys.add(key);
