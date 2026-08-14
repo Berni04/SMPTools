@@ -72,10 +72,11 @@ public class GraveManager implements Listener {
         for (int dy = 0; dy <= 10; dy++) {
             int[] candidates = dy == 0 ? new int[]{startY} : new int[]{startY + dy, startY - dy};
             for (int y : candidates) {
-                if (y < world.getMinHeight() || y >= world.getMaxHeight()) continue;
+                if (y <= world.getMinHeight() || y >= world.getMaxHeight()) continue;
                 Location checkLoc = new Location(world, baseX, y, baseZ);
                 Block b = checkLoc.getBlock();
-                if ((b.getType().isAir() || b.isReplaceable()) && !b.isLiquid()) {
+                Block below = checkLoc.clone().add(0, -1, 0).getBlock();
+                if (b.getType().isAir() && !b.isLiquid() && !below.getType().isAir() && !below.isLiquid() && below.getType().isSolid()) {
                     validLocation = checkLoc;
                     break;
                 }
@@ -83,13 +84,14 @@ public class GraveManager implements Listener {
             if (validLocation != null) break;
         }
 
-        // If not found near death location (e.g. deep ocean or void), find highest safe block above water/ground
+        // If not found near death location (e.g. mid-air death or void), fallback to top solid surface block
         if (validLocation == null) {
             int topY = world.getHighestBlockYAt(baseX, baseZ);
             if (topY >= world.getMinHeight() && topY < world.getMaxHeight() - 1) {
                 Location topLoc = new Location(world, baseX, topY + 1, baseZ);
                 Block topBlock = topLoc.getBlock();
-                if ((topBlock.getType().isAir() || topBlock.isReplaceable()) && !topBlock.isLiquid()) {
+                Block belowTop = new Location(world, baseX, topY, baseZ).getBlock();
+                if (topBlock.getType().isAir() && !topBlock.isLiquid() && !belowTop.getType().isAir() && !belowTop.isLiquid() && belowTop.getType().isSolid()) {
                     validLocation = topLoc;
                 }
             }
