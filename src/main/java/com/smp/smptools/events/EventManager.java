@@ -157,13 +157,14 @@ public class EventManager {
         List<String> remaining = new ArrayList<>(pending);
 
         for (String reward : pending) {
+            List<String> snapshotBefore = new ArrayList<>(remaining);
             ParsedEventReward parsed = parseRewardString(reward);
             if (parsed == null) {
                 plugin.getLogger().warning("Discarding unparseable/malformed offline reward '" + reward + "' for " + player.getName());
                 remaining.remove(reward);
                 dataConfig.set(path, remaining.isEmpty() ? null : remaining);
                 if (!saveData()) {
-                    dataConfig.set(path, pending);
+                    dataConfig.set(path, snapshotBefore.isEmpty() ? null : snapshotBefore);
                     break;
                 }
                 continue;
@@ -174,7 +175,7 @@ public class EventManager {
             dataConfig.set(path, remaining.isEmpty() ? null : remaining);
             if (!saveData()) {
                 plugin.getLogger().severe("Failed to persist offline reward removal for " + player.getName() + ", aborting claim execution.");
-                dataConfig.set(path, pending);
+                dataConfig.set(path, snapshotBefore.isEmpty() ? null : snapshotBefore);
                 break;
             }
 
