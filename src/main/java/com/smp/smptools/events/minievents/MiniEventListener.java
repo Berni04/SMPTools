@@ -99,6 +99,10 @@ public class MiniEventListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockPlace(org.bukkit.event.block.BlockPlaceEvent event) {
+        MiniEventSession activeSession = eventManager.getActiveSession();
+        if (activeSession == null || !activeSession.isActive()) {
+            return;
+        }
         event.getBlock().setMetadata("placed_by_player", new org.bukkit.metadata.FixedMetadataValue(plugin, true));
     }
 
@@ -109,6 +113,7 @@ public class MiniEventListener implements Listener {
         }
 
         if (event.getBlock().hasMetadata("placed_by_player")) {
+            event.getBlock().removeMetadata("placed_by_player", plugin);
             return;
         }
 
