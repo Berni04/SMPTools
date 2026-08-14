@@ -154,10 +154,10 @@ public class StatsCommand extends AbstractPlayerCommand {
         String time = (String) death.get("time");
         String cause = (String) death.get("cause");
         Map<?, ?> location = death.get("location") instanceof Map<?, ?> locMap ? locMap : null;
-        String world = death.get("world") instanceof String w ? w : (location != null && location.get("world") instanceof String w ? w : "Unknown");
-        double x = death.get("x") instanceof Number num ? num.doubleValue() : (location != null && location.get("x") instanceof Number num ? num.doubleValue() : 0);
-        double y = death.get("y") instanceof Number num ? num.doubleValue() : (location != null && location.get("y") instanceof Number num ? num.doubleValue() : 0);
-        double z = death.get("z") instanceof Number num ? num.doubleValue() : (location != null && location.get("z") instanceof Number num ? num.doubleValue() : 0);
+        String world = readDeathString(death, location, "world", "Unknown");
+        double x = readDeathDouble(death, location, "x", 0.0);
+        double y = readDeathDouble(death, location, "y", 0.0);
+        double z = readDeathDouble(death, location, "z", 0.0);
 
         Inventory detailedDeathInfoGUI = Bukkit.createInventory(null, 54,
                 Component.text(target.getName() + "'s Death #" + (deathIndex + 1), TextColor.fromHexString("#8B0000")));
@@ -221,5 +221,25 @@ public class StatsCommand extends AbstractPlayerCommand {
         }
 
         viewer.openInventory(deathInventoryGUI);
+    }
+
+    private static String readDeathString(Map<?, ?> death, Map<?, ?> location, String key, String fallback) {
+        Object direct = death.get(key);
+        if (direct instanceof String str) return str;
+        if (location != null) {
+            Object nested = location.get(key);
+            if (nested instanceof String str) return str;
+        }
+        return fallback;
+    }
+
+    private static double readDeathDouble(Map<?, ?> death, Map<?, ?> location, String key, double fallback) {
+        Object direct = death.get(key);
+        if (direct instanceof Number num) return num.doubleValue();
+        if (location != null) {
+            Object nested = location.get(key);
+            if (nested instanceof Number num) return num.doubleValue();
+        }
+        return fallback;
     }
 }
