@@ -55,7 +55,8 @@ public class SkillsManager {
             com.smp.smptools.events.minievents.MiniEventSession session = plugin.getEventManager().getActiveSession();
             if (session.isActive() && session.getType() == com.smp.smptools.events.minievents.MiniEventType.DOUBLE_XP) {
                 double multiplier = plugin.getEventsConfig().getDouble("events.types.double_xp.multiplier", 2.0);
-                amount = (int) Math.round(amount * multiplier);
+                multiplier = Math.max(1.0, multiplier);
+                amount = (int) Math.max(1L, Math.round(amount * multiplier));
                 session.addPoints(player, amount, skill.getDisplayName());
             }
         }
