@@ -20,6 +20,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,20 +79,81 @@ public class ArtifactEquipmentGUI implements Listener {
         if (!event.getView().title().equals(TITLE)) return;
 
         int rawSlot = event.getRawSlot();
+        Player player = event.getWhoClicked() instanceof Player ? (Player) event.getWhoClicked() : null;
+
+        // Shift click from player bottom inventory into GUI
+        if (event.isShiftClick()) {
+            if (rawSlot >= 27) {
+                ItemStack current = event.getCurrentItem();
+                if (current != null && !current.getType().isAir()) {
+                    ArtifactType type = artifactManager.getArtifactType(current);
+                    if (type == null || type.getSlotType() != ArtifactType.ArtifactSlotType.PASSIVE) {
+                        event.setCancelled(true);
+                        if (player != null) {
+                            player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Only Passive Custom Artifacts can be equipped in the Pouch!</red>"));
+                        }
+                        return;
+                    }
+                }
+            } else if (!ALLOWED_SLOTS.contains(rawSlot)) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+
+        // Top GUI clicks
         if (rawSlot >= 0 && rawSlot < 27) {
             if (!ALLOWED_SLOTS.contains(rawSlot)) {
                 event.setCancelled(true);
                 return;
             }
 
-            // Verify if placed item is a valid artifact
+            // Hotbar number key swap into pouch slot
+            if (event.getClick().isKeyboardClick() && player != null) {
+                int hotbarButton = event.getHotbarButton();
+                if (hotbarButton >= 0 && hotbarButton < 9) {
+                    ItemStack hotbarItem = player.getInventory().getItem(hotbarButton);
+                    if (hotbarItem != null && !hotbarItem.getType().isAir()) {
+                        ArtifactType type = artifactManager.getArtifactType(hotbarItem);
+                        if (type == null || type.getSlotType() != ArtifactType.ArtifactSlotType.PASSIVE) {
+                            event.setCancelled(true);
+                            player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Only Passive Custom Artifacts can be equipped in the Pouch!</red>"));
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // Verify if placed item on cursor is a valid PASSIVE artifact
             ItemStack cursor = event.getCursor();
             if (cursor != null && !cursor.getType().isAir()) {
                 ArtifactType type = artifactManager.getArtifactType(cursor);
-                if (type == null) {
+                if (type == null || type.getSlotType() != ArtifactType.ArtifactSlotType.PASSIVE) {
+                    event.setCancelled(true);
+                    if (player != null) {
+                        player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Only Passive Custom Artifacts can be equipped in the Pouch!</red>"));
+                    }
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onInventoryDrag(org.bukkit.event.inventory.InventoryDragEvent event) {
+        if (!event.getView().title().equals(TITLE)) return;
+
+        for (int slot : event.getRawSlots()) {
+            if (slot < 27) {
+                if (!ALLOWED_SLOTS.contains(slot)) {
+                    event.setCancelled(true);
+                    return;
+                }
+                ItemStack dragged = event.getOldCursor();
+                ArtifactType type = artifactManager.getArtifactType(dragged);
+                if (type == null || type.getSlotType() != ArtifactType.ArtifactSlotType.PASSIVE) {
                     event.setCancelled(true);
                     if (event.getWhoClicked() instanceof Player p) {
-                        p.sendMessage(MiniMessage.miniMessage().deserialize("<red>Only Custom SMPTools Artifacts can be equipped in the Pouch!</red>"));
+                        p.sendMessage(MiniMessage.miniMessage().deserialize("<red>Only Passive Custom Artifacts can be equipped in the Pouch!</red>"));
                     }
                     return;
                 }
@@ -105,10 +167,17 @@ public class ArtifactEquipmentGUI implements Listener {
 
         if (event.getPlayer() instanceof Player player) {
             Inventory inv = event.getInventory();
+            Map<Integer, ItemStack> slots = new HashMap<>();
             for (int slot : ALLOWED_SLOTS) {
                 ItemStack item = inv.getItem(slot);
-                artifactManager.setEquippedSlot(player.getUniqueId(), slot, item);
+                if (item != null && !item.getType().isAir()) {
+                    ArtifactType type = artifactManager.getArtifactType(item);
+                    if (type != null && type.getSlotType() == ArtifactType.ArtifactSlotType.PASSIVE) {
+                        slots.put(slot, item);
+                    }
+                }
             }
+            artifactManager.setEquippedPouch(player.getUniqueId(), slots);
             player.playSound(player.getLocation(), Sound.BLOCK_CHEST_CLOSE, 1.0f, 1.2f);
         }
     }

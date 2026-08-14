@@ -62,11 +62,18 @@ public class EventCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            int duration = 15;
+            int duration = plugin.getEventsConfig().getInt("events.types." + type.getConfigKey() + ".duration-minutes", 15);
             if (args.length >= 3) {
                 try {
                     duration = Integer.parseInt(args[2]);
-                } catch (NumberFormatException ignored) {}
+                    if (duration <= 0) {
+                        sender.sendMessage(MiniMessage.miniMessage().deserialize("<red>Duration must be a positive number of minutes.</red>"));
+                        return true;
+                    }
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(MiniMessage.miniMessage().deserialize("<red>Duration must be a valid number of minutes.</red>"));
+                    return true;
+                }
             }
 
             boolean started = eventManager.startEvent(type, duration);

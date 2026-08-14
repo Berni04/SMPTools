@@ -8,7 +8,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
-import org.bukkit.World;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -20,6 +20,7 @@ import java.time.MonthDay;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.logging.Level;
 
 /**
  * Core manager for seasonal event dates, scavenger hunt locations, and player progress.
@@ -45,7 +46,9 @@ public class SeasonalManager {
         if (!locationsFile.exists()) {
             try {
                 locationsFile.createNewFile();
-            } catch (IOException ignored) {}
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.SEVERE, "Could not create seasonal_locations.yml", e);
+            }
         }
         locationsConfig = YamlConfiguration.loadConfiguration(locationsFile);
 
@@ -53,21 +56,31 @@ public class SeasonalManager {
         if (!playerDataFile.exists()) {
             try {
                 playerDataFile.createNewFile();
-            } catch (IOException ignored) {}
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.SEVERE, "Could not create player_seasonal.yml", e);
+            }
         }
         playerDataConfig = YamlConfiguration.loadConfiguration(playerDataFile);
     }
 
-    public void saveLocations() {
+    public boolean saveLocations() {
         try {
             locationsConfig.save(locationsFile);
-        } catch (IOException ignored) {}
+            return true;
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.SEVERE, "Could not save seasonal_locations.yml", e);
+            return false;
+        }
     }
 
-    public void savePlayerData() {
+    public boolean savePlayerData() {
         try {
             playerDataConfig.save(playerDataFile);
-        } catch (IOException ignored) {}
+            return true;
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.SEVERE, "Could not save player_seasonal.yml", e);
+            return false;
+        }
     }
 
     /**
@@ -79,47 +92,74 @@ public class SeasonalManager {
         }
 
         String tzStr = plugin.getSeasonalConfig().getString("seasonal.timezone", "Europe/Paris");
-        ZoneId zone = ZoneId.of(tzStr);
+        ZoneId zone;
+        try {
+            zone = ZoneId.of(tzStr);
+        } catch (Exception e) {
+            plugin.getLogger().warning("Invalid seasonal.timezone '" + tzStr + "', defaulting to Europe/Paris");
+            zone = ZoneId.of("Europe/Paris");
+        }
+
         ZonedDateTime now = ZonedDateTime.now(zone);
         MonthDay currentDay = MonthDay.from(now);
 
-        // Halloween: Oct 15 - Nov 2
-        MonthDay hwStart = MonthDay.of(10, 15);
-        MonthDay hwEnd = MonthDay.of(11, 2);
-        if ((!currentDay.isBefore(hwStart) && !currentDay.isAfter(MonthDay.of(10, 31))) ||
-            (!currentDay.isBefore(MonthDay.of(11, 1)) && !currentDay.isAfter(hwEnd))) {
+        FileConfiguration cfg = plugin.getSeasonalConfig();
+
+        // Halloween
+        String hwStart = cfg.getString("seasonal.dates.halloween.start", "10-15");
+        String hwEnd = cfg.getString("seasonal.dates.halloween.end", "11-02");
+        if (isDateInRange(currentDay, hwStart, hwEnd)) {
             return SeasonType.HALLOWEEN;
         }
 
-        // Black Friday: Nov 20 - Nov 30
-        MonthDay bfStart = MonthDay.of(11, 20);
-        MonthDay bfEnd = MonthDay.of(11, 30);
-        if (!currentDay.isBefore(bfStart) && !currentDay.isAfter(bfEnd)) {
+        // Black Friday
+        String bfStart = cfg.getString("seasonal.dates.black_friday.start", "11-20");
+        String bfEnd = cfg.getString("seasonal.dates.black_friday.end", "11-30");
+        if (isDateInRange(currentDay, bfStart, bfEnd)) {
             return SeasonType.BLACK_FRIDAY;
         }
 
-        // Christmas: Dec 1 - Jan 6
-        MonthDay xmasStart = MonthDay.of(12, 1);
-        MonthDay xmasEnd = MonthDay.of(1, 6);
-        if (!currentDay.isBefore(xmasStart) || !currentDay.isAfter(xmasEnd)) {
+        // Christmas
+        String xmasStart = cfg.getString("seasonal.dates.christmas.start", "12-01");
+        String xmasEnd = cfg.getString("seasonal.dates.christmas.end", "01-06");
+        if (isDateInRange(currentDay, xmasStart, xmasEnd)) {
             return SeasonType.CHRISTMAS;
         }
 
-        // Easter: Mar 25 - Apr 25
-        MonthDay easterStart = MonthDay.of(3, 25);
-        MonthDay easterEnd = MonthDay.of(4, 25);
-        if (!currentDay.isBefore(easterStart) && !currentDay.isAfter(easterEnd)) {
+        // Easter
+        String easterStart = cfg.getString("seasonal.dates.easter.start", "03-25");
+        String easterEnd = cfg.getString("seasonal.dates.easter.end", "04-25");
+        if (isDateInRange(currentDay, easterStart, easterEnd)) {
             return SeasonType.EASTER;
         }
 
-        // Summer: Jul 1 - Aug 31
-        MonthDay sumStart = MonthDay.of(7, 1);
-        MonthDay sumEnd = MonthDay.of(8, 31);
-        if (!currentDay.isBefore(sumStart) && !currentDay.isAfter(sumEnd)) {
+        // Summer
+        String sumStart = cfg.getString("seasonal.dates.summer.start", "07-01");
+        String sumEnd = cfg.getString("seasonal.dates.summer.end", "08-31");
+        if (isDateInRange(currentDay, sumStart, sumEnd)) {
             return SeasonType.SUMMER;
         }
 
         return SeasonType.NONE;
+    }
+
+    private boolean isDateInRange(MonthDay current, String startStr, String endStr) {
+        try {
+            String[] startParts = startStr.split("-");
+            String[] endParts = endStr.split("-");
+            MonthDay start = MonthDay.of(Integer.parseInt(startParts[0]), Integer.parseInt(startParts[1]));
+            MonthDay end = MonthDay.of(Integer.parseInt(endParts[0]), Integer.parseInt(endParts[1]));
+
+            if (start.isAfter(end)) {
+                // Cross-year date range (e.g. Dec 1 to Jan 6)
+                return !current.isBefore(start) || !current.isAfter(end);
+            } else {
+                return !current.isBefore(start) && !current.isAfter(end);
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to parse seasonal date range [" + startStr + " - " + endStr + "]: " + e.getMessage());
+            return false;
+        }
     }
 
     public void setForcedSeason(SeasonType season) {
@@ -143,6 +183,11 @@ public class SeasonalManager {
     }
 
     public boolean discoverPumpkin(Player player, int pumpkinId) {
+        if (!isSeasonActive(SeasonType.HALLOWEEN)) {
+            player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Halloween season is not currently active!</red>"));
+            return false;
+        }
+
         UUID uuid = player.getUniqueId();
         List<Integer> found = new ArrayList<>(getFoundPumpkins(uuid));
 
@@ -153,7 +198,10 @@ public class SeasonalManager {
 
         found.add(pumpkinId);
         playerDataConfig.set("players." + uuid + ".halloween.found", found);
-        savePlayerData();
+        if (!savePlayerData()) {
+            player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to save pumpkin discovery! Please try again.</red>"));
+            return false;
+        }
 
         int total = plugin.getSeasonalConfig().getInt("seasonal.halloween.total_pumpkins", 20);
 
@@ -166,13 +214,23 @@ public class SeasonalManager {
 
         // Mini reward
         int diamonds = plugin.getSeasonalConfig().getInt("seasonal.halloween.mini_reward_diamonds", 2);
-        player.getInventory().addItem(new ItemStack(Material.DIAMOND, diamonds));
+        if (diamonds > 0) {
+            Map<Integer, ItemStack> leftover = player.getInventory().addItem(new ItemStack(Material.DIAMOND, diamonds));
+            for (ItemStack drop : leftover.values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), drop);
+            }
+        }
         player.giveExp(plugin.getSeasonalConfig().getInt("seasonal.halloween.mini_reward_xp", 50));
 
         return true;
     }
 
     public boolean claimHalloweenGrandReward(Player player) {
+        if (!isSeasonActive(SeasonType.HALLOWEEN)) {
+            player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Halloween season is not currently active!</red>"));
+            return false;
+        }
+
         UUID uuid = player.getUniqueId();
         int total = plugin.getSeasonalConfig().getInt("seasonal.halloween.total_pumpkins", 20);
         List<Integer> found = getFoundPumpkins(uuid);
@@ -188,16 +246,26 @@ public class SeasonalManager {
         }
 
         playerDataConfig.set("players." + uuid + ".halloween.claimed_grand", true);
-        savePlayerData();
+        if (!savePlayerData()) {
+            player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to save reward claim status! Please contact an administrator.</red>"));
+            return false;
+        }
 
         // Award Jack's Pumpkin Helmet Artifact
-        if (plugin.getArtifactManager() != null) {
+        if (plugin.getArtifactManager() != null && plugin.getConfig().getBoolean("features.artifacts.enabled", true)) {
             ItemStack helmet = plugin.getArtifactManager().createArtifact(ArtifactType.JACKS_PUMPKIN_HELMET);
-            player.getInventory().addItem(helmet);
+            Map<Integer, ItemStack> helmetLeftover = player.getInventory().addItem(helmet);
+            for (ItemStack drop : helmetLeftover.values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), drop);
+            }
         }
 
         // Award Diamonds & Sound
-        player.getInventory().addItem(new ItemStack(Material.DIAMOND, 16));
+        Map<Integer, ItemStack> diaLeftover = player.getInventory().addItem(new ItemStack(Material.DIAMOND, 16));
+        for (ItemStack drop : diaLeftover.values()) {
+            player.getWorld().dropItemNaturally(player.getLocation(), drop);
+        }
+
         player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
         player.getWorld().spawnParticle(Particle.FIREWORK, player.getLocation().add(0, 1, 0), 50, 0.5, 1.0, 0.5, 0.2);
 
@@ -222,6 +290,11 @@ public class SeasonalManager {
     }
 
     public boolean discoverEgg(Player player, int eggId) {
+        if (!isSeasonActive(SeasonType.EASTER)) {
+            player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Easter season is not currently active!</red>"));
+            return false;
+        }
+
         UUID uuid = player.getUniqueId();
         List<Integer> found = new ArrayList<>(getFoundEggs(uuid));
 
@@ -232,7 +305,10 @@ public class SeasonalManager {
 
         found.add(eggId);
         playerDataConfig.set("players." + uuid + ".easter.found", found);
-        savePlayerData();
+        if (!savePlayerData()) {
+            player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to save Easter egg discovery! Please try again.</red>"));
+            return false;
+        }
 
         int total = plugin.getSeasonalConfig().getInt("seasonal.easter.total_eggs", 15);
 
@@ -243,15 +319,33 @@ public class SeasonalManager {
                 "<green><b>🥚 Easter Egg #" + eggId + " Discovered! (" + found.size() + "/" + total + " Found)</b></green>"
         ));
 
-        // Mini reward
+        // Mini rewards: Carrots & Diamonds
         int carrots = plugin.getSeasonalConfig().getInt("seasonal.easter.mini_reward_golden_carrots", 8);
-        player.getInventory().addItem(new ItemStack(Material.GOLDEN_CARROT, carrots));
+        int diamonds = plugin.getSeasonalConfig().getInt("seasonal.easter.mini_reward_diamonds", 1);
+
+        if (carrots > 0) {
+            Map<Integer, ItemStack> cLeft = player.getInventory().addItem(new ItemStack(Material.GOLDEN_CARROT, carrots));
+            for (ItemStack drop : cLeft.values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), drop);
+            }
+        }
+        if (diamonds > 0) {
+            Map<Integer, ItemStack> dLeft = player.getInventory().addItem(new ItemStack(Material.DIAMOND, diamonds));
+            for (ItemStack drop : dLeft.values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), drop);
+            }
+        }
         player.giveExp(40);
 
         return true;
     }
 
     public boolean claimEasterGrandReward(Player player) {
+        if (!isSeasonActive(SeasonType.EASTER)) {
+            player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Easter season is not currently active!</red>"));
+            return false;
+        }
+
         UUID uuid = player.getUniqueId();
         int total = plugin.getSeasonalConfig().getInt("seasonal.easter.total_eggs", 15);
         List<Integer> found = getFoundEggs(uuid);
@@ -267,17 +361,31 @@ public class SeasonalManager {
         }
 
         playerDataConfig.set("players." + uuid + ".easter.claimed_grand", true);
-        savePlayerData();
+        if (!savePlayerData()) {
+            player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to save reward claim status! Please contact an administrator.</red>"));
+            return false;
+        }
 
-        // Award Chlorophyll Band Artifact
-        if (plugin.getArtifactManager() != null) {
+        // Award Chlorophyll Band Artifact if artifacts enabled
+        if (plugin.getArtifactManager() != null && plugin.getConfig().getBoolean("features.artifacts.enabled", true)) {
             ItemStack band = plugin.getArtifactManager().createArtifact(ArtifactType.CHLOROPHYLL_BAND);
-            player.getInventory().addItem(band);
+            Map<Integer, ItemStack> bandLeft = player.getInventory().addItem(band);
+            for (ItemStack drop : bandLeft.values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), drop);
+            }
         }
 
         // Award Golden Carrots, Diamonds & Sound
-        player.getInventory().addItem(new ItemStack(Material.DIAMOND, 12));
-        player.getInventory().addItem(new ItemStack(Material.GOLDEN_CARROT, 32));
+        Map<Integer, ItemStack> diaLeft = player.getInventory().addItem(new ItemStack(Material.DIAMOND, 12));
+        for (ItemStack drop : diaLeft.values()) {
+            player.getWorld().dropItemNaturally(player.getLocation(), drop);
+        }
+
+        Map<Integer, ItemStack> carrotLeft = player.getInventory().addItem(new ItemStack(Material.GOLDEN_CARROT, 32));
+        for (ItemStack drop : carrotLeft.values()) {
+            player.getWorld().dropItemNaturally(player.getLocation(), drop);
+        }
+
         player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
         player.getWorld().spawnParticle(Particle.FIREWORK, player.getLocation().add(0, 1, 0), 50, 0.5, 1.0, 0.5, 0.2);
 
@@ -294,8 +402,11 @@ public class SeasonalManager {
     // ==========================================
 
     public Integer getPumpkinIdAt(Location loc) {
-        if (!locationsConfig.contains("halloween_pumpkins")) return null;
-        for (String key : Objects.requireNonNull(locationsConfig.getConfigurationSection("halloween_pumpkins")).getKeys(false)) {
+        if (!locationsConfig.isConfigurationSection("halloween_pumpkins")) return null;
+        ConfigurationSection sec = locationsConfig.getConfigurationSection("halloween_pumpkins");
+        if (sec == null) return null;
+
+        for (String key : sec.getKeys(false)) {
             String path = "halloween_pumpkins." + key;
             String world = locationsConfig.getString(path + ".world");
             int x = locationsConfig.getInt(path + ".x");
@@ -313,8 +424,11 @@ public class SeasonalManager {
     }
 
     public Integer getEggIdAt(Location loc) {
-        if (!locationsConfig.contains("easter_eggs")) return null;
-        for (String key : Objects.requireNonNull(locationsConfig.getConfigurationSection("easter_eggs")).getKeys(false)) {
+        if (!locationsConfig.isConfigurationSection("easter_eggs")) return null;
+        ConfigurationSection sec = locationsConfig.getConfigurationSection("easter_eggs");
+        if (sec == null) return null;
+
+        for (String key : sec.getKeys(false)) {
             String path = "easter_eggs." + key;
             String world = locationsConfig.getString(path + ".world");
             int x = locationsConfig.getInt(path + ".x");

@@ -13,6 +13,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -35,10 +36,26 @@ public class EventGUI implements Listener {
         this.plugin = plugin;
         this.eventManager = eventManager;
         Bukkit.getPluginManager().registerEvents(this, plugin);
+        startLiveRefreshTask();
+    }
+
+    private void startLiveRefreshTask() {
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                if (player.getOpenInventory().title().equals(TITLE)) {
+                    updateInventoryContents(player, player.getOpenInventory().getTopInventory());
+                }
+            }
+        }, 20L, 20L);
     }
 
     public void openGUI(Player player) {
         Inventory gui = Bukkit.createInventory(null, 27, TITLE);
+        updateInventoryContents(player, gui);
+        player.openInventory(gui);
+    }
+
+    private void updateInventoryContents(Player player, Inventory gui) {
         MiniEventSession active = eventManager.getActiveSession();
 
         // Fill background with black glass panes
@@ -89,12 +106,10 @@ public class EventGUI implements Listener {
 
         // Slot 15: Personal Stats Card
         List<String> statsLore = new ArrayList<>();
-        statsLore.add("<gray>View all available mini-events and schedule.</gray>");
-        statsLore.add("<gray>Use <yellow>/event</yellow> to refresh this menu.</gray>");
+        statsLore.add("<gray>View live active mini-event status.</gray>");
+        statsLore.add("<gray>Updates automatically every second.</gray>");
         ItemStack infoItem = createItem(Material.BOOK, "<cyan><b>Event Info & Rules</b></cyan>", statsLore);
         gui.setItem(15, infoItem);
-
-        player.openInventory(gui);
     }
 
     private ItemStack createItem(Material mat, String displayNameMiniMsg, List<String> loreMiniMsg) {
@@ -116,6 +131,13 @@ public class EventGUI implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
+        if (event.getView().title().equals(TITLE)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onInventoryDrag(InventoryDragEvent event) {
         if (event.getView().title().equals(TITLE)) {
             event.setCancelled(true);
         }

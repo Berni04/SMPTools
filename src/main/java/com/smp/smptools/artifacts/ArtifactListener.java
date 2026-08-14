@@ -12,12 +12,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.player.PlayerFishEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerItemConsumeEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerToggleFlightEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -26,19 +23,39 @@ import org.bukkit.util.Vector;
 import java.util.*;
 
 /**
- * Handles interactive triggers and passive ticks for all 21 Custom Utility Artifacts.
+ * Handles interactive triggers and passive ticks for all Custom Utility Artifacts.
  */
 public class ArtifactListener implements Listener {
 
     private final SMPTools plugin;
     private final ArtifactManager artifactManager;
-    private final Map<UUID, Long> cooldowns = new HashMap<>();
+    private final Map<UUID, Map<ArtifactType, Long>> cooldowns = new HashMap<>();
     private final Set<UUID> fallImmune = new HashSet<>();
+    private final Map<UUID, Integer> homingCompassTargetMode = new HashMap<>(); // 0: Nearest Player, 1: World Spawn, 2: Bed/Respawn Anchor
+    private final Random random = new Random();
 
     public ArtifactListener(SMPTools plugin, ArtifactManager artifactManager) {
         this.plugin = plugin;
         this.artifactManager = artifactManager;
         startPassiveTasks();
+    }
+
+    private long getCooldown(UUID uuid, ArtifactType type) {
+        Map<ArtifactType, Long> playerCooldowns = cooldowns.get(uuid);
+        if (playerCooldowns == null) return 0L;
+        return playerCooldowns.getOrDefault(type, 0L);
+    }
+
+    private void setCooldown(UUID uuid, ArtifactType type, long time) {
+        cooldowns.computeIfAbsent(uuid, k -> new EnumMap<>(ArtifactType.class)).put(type, time);
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        UUID uuid = event.getPlayer().getUniqueId();
+        cooldowns.remove(uuid);
+        fallImmune.remove(uuid);
+        homingCompassTargetMode.remove(uuid);
     }
 
     @EventHandler
@@ -51,7 +68,7 @@ public class ArtifactListener implements Listener {
 
         if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
             long now = System.currentTimeMillis();
-            long last = cooldowns.getOrDefault(player.getUniqueId(), 0L);
+            long last = getCooldown(player.getUniqueId(), type);
 
             switch (type) {
                 case WIND_DASH_FEATHER:
@@ -59,7 +76,7 @@ public class ArtifactListener implements Listener {
                         player.sendActionBar(MiniMessage.miniMessage().deserialize("<red>Wind Dash on cooldown!</red>"));
                         return;
                     }
-                    cooldowns.put(player.getUniqueId(), now);
+                    setCooldown(player.getUniqueId(), type, now);
                     Vector gaze = player.getLocation().getDirection().normalize();
                     player.setVelocity(gaze.multiply(2.0).setY(0.4));
                     player.getWorld().spawnParticle(Particle.CLOUD, player.getLocation(), 30, 0.5, 0.5, 0.5, 0.1);
@@ -73,7 +90,7 @@ public class ArtifactListener implements Listener {
                         player.sendActionBar(MiniMessage.miniMessage().deserialize("<red>Shadow Step on cooldown!</red>"));
                         return;
                     }
-                    cooldowns.put(player.getUniqueId(), now);
+                    setCooldown(player.getUniqueId(), type, now);
                     Location dest = player.getLocation().add(player.getLocation().getDirection().multiply(8));
                     player.teleport(dest);
                     player.getWorld().spawnParticle(Particle.PORTAL, dest, 50, 0.5, 1.0, 0.5, 0.2);
@@ -87,12 +104,23 @@ public class ArtifactListener implements Listener {
                     event.setCancelled(true);
                     break;
 
+                case HOMING_COMPASS:
+                    if (player.isSneaking()) {
+                        int mode = (homingCompassTargetMode.getOrDefault(player.getUniqueId(), 0) + 1) % 3;
+                        homingCompassTargetMode.put(player.getUniqueId(), mode);
+                        String modeName = mode == 0 ? "Nearest Player" : (mode == 1 ? "World Spawn" : "Bed / Anchor");
+                        player.sendActionBar(MiniMessage.miniMessage().deserialize("<gold>🧭 Homing Compass Target: <yellow>" + modeName + "</yellow></gold>"));
+                        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.4f);
+                        event.setCancelled(true);
+                    }
+                    break;
+
                 case VAMPIRIC_SCYTHE:
                     if (now - last < 20000) {
                         player.sendActionBar(MiniMessage.miniMessage().deserialize("<red>Vampiric Scythe on cooldown!</red>"));
                         return;
                     }
-                    cooldowns.put(player.getUniqueId(), now);
+                    setCooldown(player.getUniqueId(), type, now);
                     double drained = 0;
                     for (Entity entity : player.getNearbyEntities(5, 5, 5)) {
                         if (entity instanceof LivingEntity target && target != player) {
@@ -114,7 +142,7 @@ public class ArtifactListener implements Listener {
                         player.sendActionBar(MiniMessage.miniMessage().deserialize("<red>Sonic Horn on cooldown!</red>"));
                         return;
                     }
-                    cooldowns.put(player.getUniqueId(), now);
+                    setCooldown(player.getUniqueId(), type, now);
                     Vector dir = player.getLocation().getDirection().normalize();
                     for (Entity entity : player.getNearbyEntities(8, 8, 8)) {
                         if (entity instanceof LivingEntity target && target != player) {
@@ -132,7 +160,7 @@ public class ArtifactListener implements Listener {
                         player.sendActionBar(MiniMessage.miniMessage().deserialize("<red>Dragon Breath Cannon on cooldown!</red>"));
                         return;
                     }
-                    cooldowns.put(player.getUniqueId(), now);
+                    setCooldown(player.getUniqueId(), type, now);
                     DragonFireball fireball = player.launchProjectile(DragonFireball.class);
                     fireball.setVelocity(player.getLocation().getDirection().multiply(1.5));
                     player.getWorld().playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_SHOOT, 1.0f, 1.0f);
@@ -184,7 +212,15 @@ public class ArtifactListener implements Listener {
             }
         } else if (artifactManager.isArtifact(main, ArtifactType.MASTER_ANGLER_LURE)) {
             if (event.getState() == PlayerFishEvent.State.FISHING) {
-                event.getHook().setWaitTime(event.getHook().getWaitTime() / 2);
+                event.getHook().setWaitTime(Math.max(20, event.getHook().getWaitTime() / 2));
+            } else if (event.getState() == PlayerFishEvent.State.CAUGHT_FISH) {
+                // 25% chance for double catch bonus
+                if (random.nextDouble() < 0.25 && event.getCaught() instanceof Item caughtItem) {
+                    ItemStack clone = caughtItem.getItemStack().clone();
+                    player.getWorld().dropItemNaturally(caughtItem.getLocation(), clone);
+                    player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.8f, 1.8f);
+                    player.sendActionBar(MiniMessage.miniMessage().deserialize("<gold>🎣 <b>Master Angler Bonus: Double Catch!</b></gold>"));
+                }
             }
         }
     }
@@ -195,6 +231,21 @@ public class ArtifactListener implements Listener {
             if (event.getCause() == EntityDamageEvent.DamageCause.FALL && fallImmune.contains(player.getUniqueId())) {
                 event.setCancelled(true);
                 return;
+            }
+
+            // Void Saver Charm Check on void damage
+            if (event.getCause() == EntityDamageEvent.DamageCause.VOID) {
+                if (artifactManager.hasEquippedArtifact(player, ArtifactType.VOID_SAVER_CHARM)) {
+                    event.setCancelled(true);
+                    Location safe = player.getWorld().getSpawnLocation();
+                    player.teleport(safe);
+                    player.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 400, 2));
+                    player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 200, 1));
+                    player.getWorld().spawnParticle(Particle.PORTAL, safe, 40, 0.5, 1.0, 0.5, 0.1);
+                    player.getWorld().playSound(safe, Sound.ITEM_TOTEM_USE, 1.0f, 1.0f);
+                    player.sendActionBar(MiniMessage.miniMessage().deserialize("<purple><b>🔮 Void Saver Charm Teleported You to Safety!</b></purple>"));
+                    return;
+                }
             }
 
             // Phoenix Feather Check
@@ -212,22 +263,45 @@ public class ArtifactListener implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onConsume(PlayerItemConsumeEvent event) {
         Player player = event.getPlayer();
+        ItemStack item = event.getItem();
+
         if (artifactManager.hasEquippedArtifact(player, ArtifactType.ALCHEMISTS_SATCHEL)) {
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    for (PotionEffect effect : player.getActivePotionEffects()) {
-                        player.addPotionEffect(new PotionEffect(effect.getType(), effect.getDuration() * 2, effect.getAmplifier()), true);
-                    }
+            if (item.getItemMeta() instanceof PotionMeta potionMeta) {
+                List<PotionEffect> effectsToDouble = new ArrayList<>(potionMeta.getCustomEffects());
+                if (potionMeta.getBasePotionType() != null) {
+                    effectsToDouble.addAll(potionMeta.getBasePotionType().getPotionEffects());
                 }
-            }.runTaskLater(plugin, 2L);
+
+                if (!effectsToDouble.isEmpty()) {
+                    new BukkitRunnable() {
+                        @Override
+                        public void run() {
+                            for (PotionEffect potionEffect : effectsToDouble) {
+                                PotionEffect existing = player.getPotionEffect(potionEffect.getType());
+                                if (existing != null) {
+                                    player.addPotionEffect(new PotionEffect(
+                                            existing.getType(),
+                                            existing.getDuration() * 2,
+                                            existing.getAmplifier(),
+                                            existing.isAmbient(),
+                                            existing.hasParticles(),
+                                            existing.hasIcon()
+                                    ), true);
+                                }
+                            }
+                            player.playSound(player.getLocation(), Sound.BLOCK_BREWING_STAND_BREW, 0.8f, 1.2f);
+                            player.sendActionBar(MiniMessage.miniMessage().deserialize("<green>🧪 <b>Alchemist's Satchel Doubled Potion Duration!</b></green>"));
+                        }
+                    }.runTaskLater(plugin, 2L);
+                }
+            }
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
         ItemStack main = player.getInventory().getItemInMainHand();
@@ -254,7 +328,14 @@ public class ArtifactListener implements Listener {
             visited.add(current);
 
             if (current.getType().name().contains("LOG")) {
-                current.breakNaturally(tool);
+                if (!current.equals(start)) {
+                    BlockBreakEvent subEvent = new BlockBreakEvent(current, player);
+                    Bukkit.getPluginManager().callEvent(subEvent);
+                    if (subEvent.isCancelled()) {
+                        continue;
+                    }
+                    current.breakNaturally(tool);
+                }
                 count++;
 
                 for (int x = -1; x <= 1; x++) {
@@ -271,6 +352,48 @@ public class ArtifactListener implements Listener {
         }
     }
 
+    @EventHandler
+    public void onToggleFlight(PlayerToggleFlightEvent event) {
+        Player player = event.getPlayer();
+        if (player.getGameMode() == GameMode.CREATIVE || player.getGameMode() == GameMode.SPECTATOR) return;
+
+        if (artifactManager.hasEquippedArtifact(player, ArtifactType.LEAP_FROG_BOOTS)) {
+            event.setCancelled(true);
+            player.setAllowFlight(false);
+            player.setFlying(false);
+
+            Vector dir = player.getLocation().getDirection().normalize().multiply(0.8).setY(0.9);
+            player.setVelocity(dir);
+            player.getWorld().spawnParticle(Particle.CLOUD, player.getLocation(), 20, 0.4, 0.2, 0.4, 0.05);
+            player.getWorld().playSound(player.getLocation(), Sound.ENTITY_SLIME_JUMP, 1.0f, 1.2f);
+            grantFallImmunity(player, 6);
+        }
+    }
+
+    @EventHandler
+    public void onMove(PlayerMoveEvent event) {
+        Player player = event.getPlayer();
+
+        // Leap Frog Boots flight enable check
+        if (artifactManager.hasEquippedArtifact(player, ArtifactType.LEAP_FROG_BOOTS)) {
+            if (player.getGameMode() != GameMode.CREATIVE && player.getGameMode() != GameMode.SPECTATOR) {
+                if (player.getLocation().subtract(0, 0.1, 0).getBlock().getType().isSolid()) {
+                    player.setAllowFlight(true);
+                }
+            }
+        }
+
+        // Feather Glider Ring check
+        if (artifactManager.hasEquippedArtifact(player, ArtifactType.FEATHER_GLIDER_RING)) {
+            if (player.isSneaking() && player.getFallDistance() > 1.5 && !player.isOnGround()) {
+                player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 40, 0, false, false));
+                if (random.nextDouble() < 0.3) {
+                    player.getWorld().spawnParticle(Particle.CLOUD, player.getLocation().add(0, 0.5, 0), 2, 0.2, 0.1, 0.2, 0.01);
+                }
+            }
+        }
+    }
+
     private void grantFallImmunity(Player player, int seconds) {
         fallImmune.add(player.getUniqueId());
         new BukkitRunnable() {
@@ -282,10 +405,14 @@ public class ArtifactListener implements Listener {
     }
 
     private void startPassiveTasks() {
-        // Magnet Totem, Abyssal Lantern, Auto-Feeder, Chlorophyll Band task
+        // Ticks passive effects every second (20 ticks)
         new BukkitRunnable() {
+            int ticks = 0;
+
             @Override
             public void run() {
+                ticks++;
+
                 for (Player player : Bukkit.getOnlinePlayers()) {
                     // Abyssal Lantern
                     if (artifactManager.hasEquippedArtifact(player, ArtifactType.ABYSSAL_LANTERN)) {
@@ -314,8 +441,8 @@ public class ArtifactListener implements Listener {
                         }
                     }
 
-                    // Chlorophyll Band
-                    if (artifactManager.hasEquippedArtifact(player, ArtifactType.CHLOROPHYLL_BAND)) {
+                    // Chlorophyll Band (every 3 seconds)
+                    if (ticks % 3 == 0 && artifactManager.hasEquippedArtifact(player, ArtifactType.CHLOROPHYLL_BAND)) {
                         Location pLoc = player.getLocation();
                         for (int x = -2; x <= 2; x++) {
                             for (int z = -2; z <= 2; z++) {
@@ -335,6 +462,59 @@ public class ArtifactListener implements Listener {
                         player.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, 300, 0, false, false));
                         player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 300, 0, false, false));
                         player.getWorld().spawnParticle(Particle.FLAME, player.getLocation().add(0, 1.0, 0), 2, 0.2, 0.2, 0.2, 0.01);
+                    }
+
+                    // Ore Radar Scanner (every 2 seconds)
+                    if (ticks % 2 == 0 && artifactManager.hasEquippedArtifact(player, ArtifactType.ORE_RADAR_SCANNER)) {
+                        Location loc = player.getLocation();
+                        boolean oreFound = false;
+                        int minDistanceSq = Integer.MAX_VALUE;
+
+                        for (int x = -8; x <= 8; x++) {
+                            for (int y = -8; y <= 8; y++) {
+                                for (int z = -8; z <= 8; z++) {
+                                    Material mat = loc.getBlock().getRelative(x, y, z).getType();
+                                    if (mat == Material.DIAMOND_ORE || mat == Material.DEEPSLATE_DIAMOND_ORE || mat == Material.ANCIENT_DEBRIS) {
+                                        oreFound = true;
+                                        int distSq = x * x + y * y + z * z;
+                                        if (distSq < minDistanceSq) {
+                                            minDistanceSq = distSq;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (oreFound) {
+                            float pitch = 1.0f + (float) Math.max(0.0, 1.0 - (Math.sqrt(minDistanceSq) / 12.0));
+                            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.4f, pitch);
+                        }
+                    }
+
+                    // Homing Compass Target Update
+                    if (artifactManager.hasEquippedArtifact(player, ArtifactType.HOMING_COMPASS) ||
+                        artifactManager.isArtifact(player.getInventory().getItemInMainHand(), ArtifactType.HOMING_COMPASS)) {
+                        int mode = homingCompassTargetMode.getOrDefault(player.getUniqueId(), 0);
+                        Location targetLoc = null;
+                        if (mode == 0) {
+                            double closestDist = Double.MAX_VALUE;
+                            for (Player other : player.getWorld().getPlayers()) {
+                                if (!other.equals(player)) {
+                                    double d = player.getLocation().distanceSquared(other.getLocation());
+                                    if (d < closestDist) {
+                                        closestDist = d;
+                                        targetLoc = other.getLocation();
+                                    }
+                                }
+                            }
+                        } else if (mode == 1) {
+                            targetLoc = player.getWorld().getSpawnLocation();
+                        } else if (mode == 2) {
+                            targetLoc = player.getRespawnLocation() != null ? player.getRespawnLocation() : player.getWorld().getSpawnLocation();
+                        }
+                        if (targetLoc != null) {
+                            player.setCompassTarget(targetLoc);
+                        }
                     }
                 }
             }

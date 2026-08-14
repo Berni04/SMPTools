@@ -44,4 +44,8 @@ public enum MiniEventType {
     public String getFormattedName() {
         return iconEmoji + " " + displayName;
     }
+
+    public String getConfigKey() {
+        return name().toLowerCase();
+    }
 }

@@ -2,13 +2,7 @@ package com.smp.smptools.events.seasonal;
 
 import com.smp.smptools.SMPTools;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Particle;
-import org.bukkit.Sound;
-import org.bukkit.World;
-import org.bukkit.entity.Bat;
+import org.bukkit.*;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
@@ -16,6 +10,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
@@ -29,7 +24,7 @@ import java.util.Random;
 import java.util.UUID;
 
 /**
- * Handles in-world discovery of hidden seasonal targets, Trick-or-Treating, and Summer buffs.
+ * Handles in-world discovery of hidden seasonal targets, protection of targets, Trick-or-Treating, and Summer buffs.
  */
 public class SeasonalListener implements Listener {
 
@@ -44,7 +39,7 @@ public class SeasonalListener implements Listener {
         startSummerPassiveTask();
     }
 
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBlockInteract(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK || event.getClickedBlock() == null) {
             return;
@@ -69,7 +64,24 @@ public class SeasonalListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.NORMAL)
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onTargetBlockBreak(BlockBreakEvent event) {
+        Location loc = event.getBlock().getLocation();
+        Integer pumpkinId = seasonalManager.getPumpkinIdAt(loc);
+        Integer eggId = seasonalManager.getEggIdAt(loc);
+
+        if (pumpkinId != null || eggId != null) {
+            Player player = event.getPlayer();
+            if (player.hasPermission("smptools.seasonal.admin") && player.getGameMode() == GameMode.CREATIVE) {
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>You broke a registered seasonal target.</yellow>"));
+            } else {
+                event.setCancelled(true);
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>You cannot break seasonal scavenger hunt targets!</red>"));
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void onVillagerInteract(PlayerInteractEntityEvent event) {
         if (!(event.getRightClicked() instanceof Villager)) return;
 
@@ -90,7 +102,11 @@ public class SeasonalListener implements Listener {
 
         if (random.nextDouble() < 0.70) {
             // Treat!
-            player.getInventory().addItem(new ItemStack(Material.COOKIE, 4));
+            ItemStack cookies = new ItemStack(Material.COOKIE, 4);
+            Map<Integer, ItemStack> leftover = player.getInventory().addItem(cookies);
+            for (ItemStack drop : leftover.values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), drop);
+            }
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.8f);
             player.sendMessage(MiniMessage.miniMessage().deserialize("<gold>🍬 <b>Trick or Treat!</b> The villager gave you Halloween treats!</gold>"));
             player.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, event.getRightClicked().getLocation().add(0, 1.5, 0), 10);
@@ -108,6 +124,7 @@ public class SeasonalListener implements Listener {
             public void run() {
                 if (seasonalManager.getCurrentSeason() != SeasonType.SUMMER) return;
                 if (!plugin.getSeasonalConfig().getBoolean("seasonal.summer.solar_flares_enabled", true)) return;
+                if (!plugin.getSeasonalConfig().getBoolean("seasonal.summer.solar_flare_buffs", true)) return;
 
                 for (Player player : Bukkit.getOnlinePlayers()) {
                     World world = player.getWorld();

@@ -12,6 +12,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -21,11 +22,11 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 27-Slot Checklist GUI for the Easter Spring Egg Hunt (/easter).
+ * 27-Slot GUI for displaying Easter Egg scavenger hunt progress and claiming Grand Rewards.
  */
 public class EasterGUI implements Listener {
 
-    private static final Component TITLE = Component.text("🐣 Easter Egg Hunt Checklist", NamedTextColor.GREEN, TextDecoration.BOLD);
+    private static final Component TITLE = Component.text("🐣 Easter Egg Scavenger Hunt", NamedTextColor.GREEN, TextDecoration.BOLD);
 
     private final SMPTools plugin;
     private final SeasonalManager seasonalManager;
@@ -48,13 +49,9 @@ public class EasterGUI implements Listener {
             gui.setItem(i, filler);
         }
 
-        // Slots 0 to 14: Easter Egg cards
-        int[] displaySlots = new int[]{
-                0, 1, 2, 3, 4, 5, 6, 7, 8,
-                9, 10, 11, 12, 13, 14
-        };
-
-        for (int i = 0; i < total && i < displaySlots.length; i++) {
+        // Slots 0 to 17: Easter Egg cards
+        int maxSlots = 18;
+        for (int i = 0; i < total && i < maxSlots; i++) {
             int eggId = i + 1;
             boolean isFound = foundList.contains(eggId);
 
@@ -63,7 +60,7 @@ public class EasterGUI implements Listener {
                         "<green>Status: DISCOVERED</green>",
                         "<gray>You collected this Easter Egg!</gray>"
                 );
-                gui.setItem(displaySlots[i], createItem(Material.EGG, "<green><b>🥚 Easter Egg #" + eggId + " [FOUND]</b></green>", lore, true));
+                gui.setItem(i, createItem(Material.EGG, "<green><b>🥚 Easter Egg #" + eggId + " [FOUND]</b></green>", lore, true));
             } else {
                 String hint = seasonalManager.getEggHint(eggId);
                 List<String> lore = List.of(
@@ -72,12 +69,13 @@ public class EasterGUI implements Listener {
                         "",
                         "<yellow>Find and right-click it in nature biomes!</yellow>"
                 );
-                gui.setItem(displaySlots[i], createItem(Material.PINK_STAINED_GLASS_PANE, "<red><b>🥚 Easter Egg #" + eggId + " [MISSING]</b></red>", lore, false));
+                gui.setItem(i, createItem(Material.PINK_STAINED_GLASS_PANE, "<red><b>🥚 Easter Egg #" + eggId + " [MISSING]</b></red>", lore, false));
             }
         }
 
         // Slot 22: Grand Reward Button
         boolean claimed = seasonalManager.hasClaimedEasterGrand(uuid);
+        boolean artifactsEnabled = plugin.getConfig().getBoolean("features.artifacts.enabled", true);
         List<String> rewardLore = new ArrayList<>();
         rewardLore.add("<gray>Progress: <yellow>" + foundList.size() + "/" + total + " Found</yellow></gray>");
         rewardLore.add("");
@@ -86,10 +84,14 @@ public class EasterGUI implements Listener {
             rewardLore.add("<green>✔ Grand Reward Already Claimed!</green>");
             gui.setItem(22, createItem(Material.BARRIER, "<green><b>Grand Reward Claimed</b></green>", rewardLore, false));
         } else if (foundList.size() >= total) {
-            rewardLore.add("<gold><b>🎉 Click to claim Chlorophyll Band & 12 Diamonds!</b></gold>");
+            if (artifactsEnabled) {
+                rewardLore.add("<gold><b>🎉 Click to claim Chlorophyll Band & 12 Diamonds!</b></gold>");
+            } else {
+                rewardLore.add("<gold><b>🎉 Click to claim 12 Diamonds & 32 Golden Carrots!</b></gold>");
+            }
             gui.setItem(22, createItem(Material.NETHER_STAR, "<gold><b>🏆 CLAIM GRAND REWARD!</b></gold>", rewardLore, true));
         } else {
-            rewardLore.add("<red>Find all 15 hidden eggs to unlock the Grand Reward!</red>");
+            rewardLore.add("<red>Find all " + total + " hidden eggs to unlock the Grand Reward!</red>");
             gui.setItem(22, createItem(Material.CHEST, "<yellow><b>Grand Reward Locked (" + foundList.size() + "/" + total + ")</b></yellow>", rewardLore, false));
         }
 
@@ -126,6 +128,13 @@ public class EasterGUI implements Listener {
             if (claimed) {
                 openGUI(player);
             }
+        }
+    }
+
+    @EventHandler
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (event.getView().title().equals(TITLE)) {
+            event.setCancelled(true);
         }
     }
 }

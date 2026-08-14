@@ -7,8 +7,11 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.Sound;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.*;
@@ -17,7 +20,7 @@ import java.util.*;
 
 /**
  * Tracks and manages a live active mini-event session.
- * Handles timers, score maps, combo streaks, BossBar HUD, and Scoreboard sidebar.
+ * Handles timers, score maps, combo streaks, BossBar HUD, Scoreboard sidebar, and reward delivery.
  */
 public class MiniEventSession {
 
@@ -29,6 +32,7 @@ public class MiniEventSession {
     private final Map<UUID, Integer> playerScores = new HashMap<>();
     private final Map<UUID, Integer> comboCounts = new HashMap<>();
     private final Map<UUID, Long> lastActionTimes = new HashMap<>();
+    private final Map<UUID, Scoreboard> originalScoreboards = new HashMap<>();
 
     private BossBar bossBar;
     private BukkitTask timerTask;
@@ -103,8 +107,11 @@ public class MiniEventSession {
         UUID uuid = player.getUniqueId();
         long now = System.currentTimeMillis();
         long lastTime = lastActionTimes.getOrDefault(uuid, 0L);
+        FileConfiguration cfg = plugin.getEventsConfig();
 
-        // Check Combo (within 10 seconds)
+        boolean comboEnabled = cfg.getBoolean("events.types." + type.getConfigKey() + ".combo.enabled", true);
+        double maxMultiplier = cfg.getDouble("events.types." + type.getConfigKey() + ".combo.max-multiplier", 2.0);
+
         int currentCombo = comboCounts.getOrDefault(uuid, 0);
         if (now - lastTime < 10000) {
             currentCombo++;
@@ -115,7 +122,11 @@ public class MiniEventSession {
         comboCounts.put(uuid, currentCombo);
         lastActionTimes.put(uuid, now);
 
-        double multiplier = Math.min(2.0, 1.0 + ((currentCombo - 1) * 0.1));
+        double multiplier = 1.0;
+        if (comboEnabled) {
+            multiplier = Math.min(maxMultiplier, 1.0 + ((currentCombo - 1) * 0.1));
+        }
+
         int earnedPoints = (int) Math.round(basePoints * multiplier);
 
         int currentScore = playerScores.getOrDefault(uuid, 0);
@@ -124,7 +135,7 @@ public class MiniEventSession {
 
         // Action Bar Notification
         String actionMsg = "<gold><b>+" + earnedPoints + " Event Pts!</b></gold> <gray>(" + reason + ")</gray>";
-        if (currentCombo > 1) {
+        if (comboEnabled && currentCombo > 1) {
             actionMsg += " <yellow><b>[" + currentCombo + "x Combo (" + String.format("%.1f", multiplier) + "x)]</b></yellow>";
         }
         player.sendActionBar(MiniMessage.miniMessage().deserialize(actionMsg));
@@ -159,6 +170,9 @@ public class MiniEventSession {
         for (Player p : Bukkit.getOnlinePlayers()) {
             Scoreboard board = p.getScoreboard();
             if (board == manager.getMainScoreboard()) {
+                if (!originalScoreboards.containsKey(p.getUniqueId())) {
+                    originalScoreboards.put(p.getUniqueId(), board);
+                }
                 board = manager.getNewScoreboard();
                 p.setScoreboard(board);
             }
@@ -207,19 +221,23 @@ public class MiniEventSession {
             bossBar = null;
         }
 
-        // Clean up event scoreboards
-        if (plugin.getEventsConfig().getBoolean("events.hud.scoreboard", true)) {
-            ScoreboardManager manager = Bukkit.getScoreboardManager();
-            if (manager != null) {
-                for (Player p : Bukkit.getOnlinePlayers()) {
-                    Scoreboard board = p.getScoreboard();
-                    Objective obj = board.getObjective("smpevent");
+        // Restore original scoreboards
+        ScoreboardManager manager = Bukkit.getScoreboardManager();
+        if (manager != null) {
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                Scoreboard orig = originalScoreboards.get(p.getUniqueId());
+                if (orig != null) {
+                    p.setScoreboard(orig);
+                } else {
+                    Scoreboard current = p.getScoreboard();
+                    Objective obj = current.getObjective("smpevent");
                     if (obj != null) {
                         obj.unregister();
                     }
                 }
             }
         }
+        originalScoreboards.clear();
 
         // Podium reveal broadcast
         List<Map.Entry<UUID, Integer>> top3 = getTopPlayers(3);
@@ -243,6 +261,55 @@ public class MiniEventSession {
             }
         }
         Bukkit.broadcast(MiniMessage.miniMessage().deserialize("<gold>====================================</gold>\n"));
+
+        // Deliver Rewards
+        deliverRewards(top3);
+    }
+
+    private void deliverRewards(List<Map.Entry<UUID, Integer>> top3) {
+        FileConfiguration cfg = plugin.getEventsConfig();
+
+        // 1st, 2nd, 3rd place rewards
+        String[] keys = new String[]{"1st_place", "2nd_place", "3rd_place"};
+        for (int i = 0; i < top3.size() && i < keys.length; i++) {
+            Player winner = Bukkit.getPlayer(top3.get(i).getKey());
+            if (winner != null && winner.isOnline()) {
+                List<String> rewards = cfg.getStringList("events.rewards." + keys[i]);
+                for (String reward : rewards) {
+                    executeReward(winner, reward);
+                }
+            }
+        }
+
+        // Participation rewards
+        List<String> partRewards = cfg.getStringList("events.rewards.participation");
+        if (!partRewards.isEmpty()) {
+            for (UUID uuid : playerScores.keySet()) {
+                Player p = Bukkit.getPlayer(uuid);
+                if (p != null && p.isOnline() && playerScores.get(uuid) > 0) {
+                    for (String reward : partRewards) {
+                        executeReward(p, reward);
+                    }
+                }
+            }
+        }
+    }
+
+    private void executeReward(Player player, String rewardStr) {
+        if (rewardStr.startsWith("cmd:")) {
+            String cmd = rewardStr.substring(4).replace("%player%", player.getName());
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+        } else if (rewardStr.startsWith("item:")) {
+            String[] parts = rewardStr.substring(5).split(" ");
+            Material mat = Material.matchMaterial(parts[0].toUpperCase());
+            int amount = parts.length > 1 ? Integer.parseInt(parts[1]) : 1;
+            if (mat != null) {
+                Map<Integer, ItemStack> leftover = player.getInventory().addItem(new ItemStack(mat, amount));
+                for (ItemStack drop : leftover.values()) {
+                    player.getWorld().dropItemNaturally(player.getLocation(), drop);
+                }
+            }
+        }
     }
 
     public List<Map.Entry<UUID, Integer>> getTopPlayers(int limit) {

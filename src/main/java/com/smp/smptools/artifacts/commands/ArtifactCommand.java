@@ -17,6 +17,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Command handler for /artifacts and /artifacts give.
@@ -70,7 +71,13 @@ public class ArtifactCommand implements CommandExecutor, TabCompleter {
             }
 
             ItemStack artifactItem = artifactManager.createArtifact(type);
-            target.getInventory().addItem(artifactItem);
+            Map<Integer, ItemStack> leftover = target.getInventory().addItem(artifactItem);
+            if (!leftover.isEmpty()) {
+                for (ItemStack dropped : leftover.values()) {
+                    target.getWorld().dropItemNaturally(target.getLocation(), dropped);
+                }
+                target.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>Your inventory was full! Artifact was dropped at your feet.</yellow>"));
+            }
             target.sendMessage(MiniMessage.miniMessage().deserialize("<green>You received the artifact: </green>" + type.getFormattedName()));
             sender.sendMessage(MiniMessage.miniMessage().deserialize("<green>Gave artifact " + type.getFormattedName() + " to " + target.getName() + "</green>"));
             return true;

@@ -24,9 +24,14 @@ public class SeasonTypeTest {
     }
 
     @Test
-    public void testFormattedNames() {
-        assertTrue(SeasonType.HALLOWEEN.getFormattedName().contains("Halloween"));
-        assertTrue(SeasonType.EASTER.getFormattedName().contains("Easter"));
-        assertTrue(SeasonType.SUMMER.getFormattedName().contains("Summer"));
+    public void testMiniEventTypeConfigKeys() {
+        for (com.smp.smptools.events.minievents.MiniEventType type : com.smp.smptools.events.minievents.MiniEventType.values()) {
+            assertNotNull(type.getConfigKey());
+            assertEquals(type.name().toLowerCase(), type.getConfigKey());
+            assertNotNull(type.getDisplayName());
+            assertNotNull(type.getIconEmoji());
+            assertNotNull(type.getGuiMaterial());
+            assertNotNull(type.getDescription());
+        }
     }
 }

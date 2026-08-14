@@ -59,10 +59,15 @@ public class EasterCommand implements CommandExecutor, TabCompleter {
             }
 
             int id;
+            int totalEggs = plugin.getSeasonalConfig().getInt("seasonal.easter.total_eggs", 15);
             try {
                 id = Integer.parseInt(args[1]);
+                if (id < 1 || id > totalEggs) {
+                    player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Egg ID must be between 1 and " + totalEggs + ".</red>"));
+                    return true;
+                }
             } catch (NumberFormatException e) {
-                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Egg ID must be a number (1-15).</red>"));
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Egg ID must be a number (1-" + totalEggs + ").</red>"));
                 return true;
             }
 

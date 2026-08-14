@@ -59,10 +59,15 @@ public class HalloweenCommand implements CommandExecutor, TabCompleter {
             }
 
             int id;
+            int totalPumpkins = plugin.getSeasonalConfig().getInt("seasonal.halloween.total_pumpkins", 20);
             try {
                 id = Integer.parseInt(args[1]);
+                if (id < 1 || id > totalPumpkins) {
+                    player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Pumpkin ID must be between 1 and " + totalPumpkins + ".</red>"));
+                    return true;
+                }
             } catch (NumberFormatException e) {
-                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Pumpkin ID must be a number (1-20).</red>"));
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Pumpkin ID must be a number (1-" + totalPumpkins + ").</red>"));
                 return true;
             }
 

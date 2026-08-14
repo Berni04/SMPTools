@@ -13,6 +13,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -72,22 +73,32 @@ public class SeasonalGUI implements Listener {
         gui.setItem(12, createItem(Material.EGG, "<green><b>🐣 Easter Spring Fest</b></green>", easterLore));
 
         // Slot 14: Christmas Card
-        List<String> xmasLore = List.of(
+        boolean xmasEnabled = plugin.getConfig().getBoolean("features.christmas.enabled", true);
+        List<String> xmasLore = xmasEnabled ? List.of(
                 "<gray>Dates: Dec 1 - Jan 6</gray>",
                 "<gray>Features: Advent Calendar, Secret Santa, Krampus</gray>",
                 "",
                 "<yellow>Click to open Advent Calendar (/advent)</yellow>"
+        ) : List.of(
+                "<gray>Dates: Dec 1 - Jan 6</gray>",
+                "<red>Christmas features are currently disabled in config.</red>"
         );
-        gui.setItem(14, createItem(Material.SNOWBALL, "<aqua><b>🎄 Christmas & Winter Fest</b></aqua>", xmasLore));
+        gui.setItem(14, createItem(xmasEnabled ? Material.SNOWBALL : Material.GRAY_DYE, "<aqua><b>🎄 Christmas & Winter Fest</b></aqua>", xmasLore));
 
         // Slot 16: Black Friday Card
-        List<String> bfLore = List.of(
+        boolean bfEnabled = plugin.getConfig().getBoolean("features.blackfriday.enabled", true);
+        boolean isBfActive = seasonalManager.isSeasonActive(SeasonType.BLACK_FRIDAY);
+        List<String> bfLore = bfEnabled ? List.of(
                 "<gray>Dates: Late November</gray>",
                 "<gray>Features: 90% Villager Discounts</gray>",
+                "<gray>Status: " + (isBfActive ? "<green>ACTIVE</green>" : "<red>INACTIVE</red>") + "</gray>",
                 "",
-                "<yellow>Use /blackfriday to view sales</yellow>"
+                "<yellow>Click to view event details in chat</yellow>"
+        ) : List.of(
+                "<gray>Dates: Late November</gray>",
+                "<red>Black Friday features are currently disabled in config.</red>"
         );
-        gui.setItem(16, createItem(Material.EMERALD, "<green><b>🛍️ Black Friday Sale</b></green>", bfLore));
+        gui.setItem(16, createItem(bfEnabled ? Material.EMERALD : Material.GRAY_DYE, "<green><b>🛍️ Black Friday Sale</b></green>", bfLore));
 
         player.openInventory(gui);
     }
@@ -121,10 +132,29 @@ public class SeasonalGUI implements Listener {
             } else if (slot == 12) {
                 player.performCommand("easter");
             } else if (slot == 14) {
-                player.performCommand("advent");
+                if (plugin.getConfig().getBoolean("features.christmas.enabled", true)) {
+                    player.performCommand("advent");
+                } else {
+                    player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Christmas features are disabled.</red>"));
+                }
             } else if (slot == 16) {
-                player.performCommand("blackfriday");
+                if (plugin.getConfig().getBoolean("features.blackfriday.enabled", true)) {
+                    boolean active = seasonalManager.isSeasonActive(SeasonType.BLACK_FRIDAY);
+                    player.sendMessage(MiniMessage.miniMessage().deserialize(
+                            "<green>🛍️ <b>Black Friday Event:</b> Villagers offer up to 90% trade discounts! Active: " +
+                            (active ? "<green>YES</green>" : "<red>NO (Late November)</red>") + "</green>"
+                    ));
+                } else {
+                    player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Black Friday features are disabled.</red>"));
+                }
             }
+        }
+    }
+
+    @EventHandler
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (event.getView().title().equals(TITLE)) {
+            event.setCancelled(true);
         }
     }
 }

@@ -104,7 +104,29 @@ public class ArtifactManager {
         if (item == null || item.getType().isAir()) {
             pouch.remove(slot);
         } else {
-            pouch.put(slot, item);
+            ArtifactType type = getArtifactType(item);
+            if (type != null && type.getSlotType() == ArtifactType.ArtifactSlotType.PASSIVE) {
+                pouch.put(slot, item);
+            } else {
+                return;
+            }
+        }
+        savePouchData();
+    }
+
+    public void setEquippedPouch(UUID uuid, Map<Integer, ItemStack> slots) {
+        Map<Integer, ItemStack> pouch = getEquippedPouch(uuid);
+        pouch.clear();
+        if (slots != null) {
+            for (Map.Entry<Integer, ItemStack> entry : slots.entrySet()) {
+                ItemStack item = entry.getValue();
+                if (item != null && !item.getType().isAir()) {
+                    ArtifactType type = getArtifactType(item);
+                    if (type != null && type.getSlotType() == ArtifactType.ArtifactSlotType.PASSIVE) {
+                        pouch.put(entry.getKey(), item);
+                    }
+                }
+            }
         }
         savePouchData();
     }
@@ -114,24 +136,41 @@ public class ArtifactManager {
         if (!artifactsFile.exists()) {
             try {
                 artifactsFile.createNewFile();
-            } catch (IOException ignored) {}
+            } catch (IOException e) {
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Could not create artifacts.yml", e);
+            }
         }
         artifactsConfig = YamlConfiguration.loadConfiguration(artifactsFile);
 
-        if (artifactsConfig.contains("pouch")) {
-            for (String uuidStr : Objects.requireNonNull(artifactsConfig.getConfigurationSection("pouch")).getKeys(false)) {
-                try {
-                    UUID uuid = UUID.fromString(uuidStr);
-                    Map<Integer, ItemStack> map = new HashMap<>();
-                    for (String slotStr : Objects.requireNonNull(artifactsConfig.getConfigurationSection("pouch." + uuidStr)).getKeys(false)) {
-                        int slot = Integer.parseInt(slotStr);
-                        ItemStack item = artifactsConfig.getItemStack("pouch." + uuidStr + "." + slotStr);
-                        if (item != null) {
-                            map.put(slot, item);
+        if (artifactsConfig.isConfigurationSection("pouch")) {
+            org.bukkit.configuration.ConfigurationSection pouchSec = artifactsConfig.getConfigurationSection("pouch");
+            if (pouchSec != null) {
+                for (String uuidStr : pouchSec.getKeys(false)) {
+                    try {
+                        UUID uuid = UUID.fromString(uuidStr);
+                        Map<Integer, ItemStack> map = new HashMap<>();
+                        org.bukkit.configuration.ConfigurationSection userSec = artifactsConfig.getConfigurationSection("pouch." + uuidStr);
+                        if (userSec != null) {
+                            for (String slotStr : userSec.getKeys(false)) {
+                                try {
+                                    int slot = Integer.parseInt(slotStr);
+                                    ItemStack item = artifactsConfig.getItemStack("pouch." + uuidStr + "." + slotStr);
+                                    if (item != null) {
+                                        ArtifactType type = getArtifactType(item);
+                                        if (type != null && type.getSlotType() == ArtifactType.ArtifactSlotType.PASSIVE) {
+                                            map.put(slot, item);
+                                        }
+                                    }
+                                } catch (Exception ex) {
+                                    plugin.getLogger().warning("Failed to load pouch slot '" + slotStr + "' for " + uuidStr + ": " + ex.getMessage());
+                                }
+                            }
                         }
+                        equippedPouchMap.put(uuid, map);
+                    } catch (Exception ex) {
+                        plugin.getLogger().warning("Failed to load pouch data for UUID '" + uuidStr + "': " + ex.getMessage());
                     }
-                    equippedPouchMap.put(uuid, map);
-                } catch (Exception ignored) {}
+                }
             }
         }
     }
@@ -149,6 +188,8 @@ public class ArtifactManager {
 
         try {
             artifactsConfig.save(artifactsFile);
-        } catch (IOException ignored) {}
+        } catch (IOException e) {
+            plugin.getLogger().log(java.util.logging.Level.SEVERE, "Could not save artifacts.yml", e);
+        }
     }
 }

@@ -129,4 +129,11 @@ public class HalloweenGUI implements Listener {
             }
         }
     }
+
+    @EventHandler
+    public void onInventoryDrag(org.bukkit.event.inventory.InventoryDragEvent event) {
+        if (event.getView().title().equals(TITLE)) {
+            event.setCancelled(true);
+        }
+    }
 }

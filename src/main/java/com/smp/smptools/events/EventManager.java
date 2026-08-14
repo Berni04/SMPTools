@@ -38,9 +38,17 @@ public class EventManager {
                 @Override
                 public void run() {
                     if (activeSession == null || !activeSession.isActive()) {
-                        MiniEventType[] types = MiniEventType.values();
-                        MiniEventType randomType = types[random.nextInt(types.length)];
-                        startEvent(randomType, 15);
+                        java.util.List<MiniEventType> enabledTypes = new java.util.ArrayList<>();
+                        for (MiniEventType t : MiniEventType.values()) {
+                            if (plugin.getEventsConfig().getBoolean("events.types." + t.getConfigKey() + ".enabled", true)) {
+                                enabledTypes.add(t);
+                            }
+                        }
+                        if (!enabledTypes.isEmpty()) {
+                            MiniEventType randomType = enabledTypes.get(random.nextInt(enabledTypes.size()));
+                            int duration = plugin.getEventsConfig().getInt("events.types." + randomType.getConfigKey() + ".duration-minutes", 15);
+                            startEvent(randomType, duration);
+                        }
                     }
                 }
             }.runTaskTimer(plugin, periodTicks, periodTicks);
