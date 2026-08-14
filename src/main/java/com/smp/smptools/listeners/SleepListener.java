@@ -52,8 +52,11 @@ public class SleepListener implements Listener {
         handleInitiatorLeave(event.getPlayer());
     }
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     public void onPlayerKick(org.bukkit.event.player.PlayerKickEvent event) {
+        if (event.isCancelled()) {
+            return;
+        }
         handleInitiatorLeave(event.getPlayer());
     }
 
