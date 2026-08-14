@@ -153,11 +153,13 @@ public class ArtifactListener implements Listener {
                     setCooldown(player.getUniqueId(), type, now);
                     double drained = 0;
                     for (Entity entity : player.getNearbyEntities(5, 5, 5)) {
-                        if (entity instanceof LivingEntity target && target != player) {
-                            double damage = target.getHealth() * 0.15;
-                            target.damage(damage, player);
-                            drained += damage;
-                            target.getWorld().spawnParticle(Particle.CRIMSON_SPORE, target.getLocation(), 20, 0.3, 0.5, 0.3, 0.1);
+                        if (entity instanceof LivingEntity target && target != player && isHostileTarget(target, player)) {
+                            if (player.hasLineOfSight(target)) {
+                                double damage = target.getHealth() * 0.15;
+                                target.damage(damage, player);
+                                drained += damage;
+                                target.getWorld().spawnParticle(Particle.CRIMSON_SPORE, target.getLocation(), 20, 0.3, 0.5, 0.3, 0.1);
+                            }
                         }
                     }
                     if (drained > 0) {
@@ -175,9 +177,11 @@ public class ArtifactListener implements Listener {
                     setCooldown(player.getUniqueId(), type, now);
                     Vector dir = player.getLocation().getDirection().normalize();
                     for (Entity entity : player.getNearbyEntities(8, 8, 8)) {
-                        if (entity instanceof LivingEntity target && target != player) {
-                            target.setVelocity(dir.multiply(2.5).setY(0.5));
-                            target.damage(6.0, player);
+                        if (entity instanceof LivingEntity target && target != player && isHostileTarget(target, player)) {
+                            if (player.hasLineOfSight(target)) {
+                                target.setVelocity(dir.clone().multiply(2.5).setY(0.5));
+                                target.damage(6.0, player);
+                            }
                         }
                     }
                     player.getWorld().spawnParticle(Particle.SONIC_BOOM, player.getEyeLocation(), 1);
@@ -605,5 +609,13 @@ public class ArtifactListener implements Listener {
                 }
             }
         }.runTaskTimer(plugin, 20L, 20L);
+    }
+
+    private boolean isHostileTarget(LivingEntity target, Player player) {
+        if (target instanceof Player) return false;
+        if (target instanceof org.bukkit.entity.Tameable tameable && tameable.isTamed()) return false;
+        if (target instanceof org.bukkit.entity.Villager || target instanceof org.bukkit.entity.WanderingTrader) return false;
+        if (target instanceof org.bukkit.entity.ArmorStand) return false;
+        return true;
     }
 }
