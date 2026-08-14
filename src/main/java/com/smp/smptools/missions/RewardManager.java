@@ -50,6 +50,21 @@ public class RewardManager {
         return new ParsedItemReward(material, amount);
     }
 
+    public static boolean isValidReward(String reward) {
+        if (reward == null || reward.isBlank()) return false;
+        if (reward.startsWith("item:")) {
+            return parseItemReward(reward) != null;
+        } else if (reward.startsWith("custom_item:")) {
+            String customItem = reward.substring(12);
+            return customItem.equalsIgnoreCase("chromatic_elytra");
+        } else if (reward.startsWith("command:")) {
+            String cmd = reward.substring(8);
+            return !cmd.isBlank() && !CommandBlacklist.isBlocked(cmd);
+        } else {
+            return !reward.isBlank() && !CommandBlacklist.isBlocked(reward);
+        }
+    }
+
     public static boolean giveChromaticElytra(Player player, String color) {
         if (player == null) return false;
         try {

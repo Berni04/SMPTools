@@ -45,4 +45,18 @@ public class RewardManagerTest {
         assertFalse(RewardManager.giveReward(null, ""));
         assertFalse(RewardManager.giveReward(null, null));
     }
+
+    @Test
+    public void testIsValidReward() {
+        assertTrue(RewardManager.isValidReward("item:DIAMOND 5"));
+        assertTrue(RewardManager.isValidReward("item:EMERALD"));
+        assertTrue(RewardManager.isValidReward("custom_item:chromatic_elytra"));
+        assertTrue(RewardManager.isValidReward("command:eco give %player% 100"));
+
+        assertFalse(RewardManager.isValidReward(null));
+        assertFalse(RewardManager.isValidReward(""));
+        assertFalse(RewardManager.isValidReward("item:INVALID_XYZ 5"));
+        assertFalse(RewardManager.isValidReward("custom_item:unknown"));
+        assertFalse(RewardManager.isValidReward("command:op %player%"));
+    }
 }

@@ -193,29 +193,35 @@ public class MissionGUIListener implements Listener {
             if (hasChromaticElytra) {
                 openColorSelectionGUI(player, clickedMission.getId());
             } else {
-                boolean allSucceeded = true;
+                // Validate all rewards before mutating state or delivering items
+                boolean allValid = true;
+                for (String reward : clickedMission.getRewards()) {
+                    if (!RewardManager.isValidReward(reward)) {
+                        allValid = false;
+                        break;
+                    }
+                }
+                if (!allValid) {
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Some rewards could not be validated. Please contact an admin.</red>"));
+                    return;
+                }
+
+                playerData.getClaimedMissions().add(clickedMission.getId());
+                if (!missionManager.saveSinglePlayerData(player.getUniqueId())) {
+                    SMPTools.getInstance().getLogger().severe("Failed to persist mission claim " + clickedMission.getId() + " for " + player.getName());
+                }
+
                 for (String reward : clickedMission.getRewards()) {
                     try {
-                        if (!RewardManager.giveReward(player, reward)) {
-                            allSucceeded = false;
-                            SMPTools.getInstance().getLogger().warning("Failed to give mission reward '" + reward + "' to " + player.getName());
-                        }
+                        RewardManager.giveReward(player, reward);
                     } catch (Exception e) {
-                        allSucceeded = false;
                         SMPTools.getInstance().getLogger().warning("Exception giving mission reward '" + reward + "' to " + player.getName() + ": " + e.getMessage());
                     }
                 }
-                if (allSucceeded) {
-                    playerData.getClaimedMissions().add(clickedMission.getId());
-                    if (!missionManager.saveSinglePlayerData(player.getUniqueId())) {
-                        SMPTools.getInstance().getLogger().severe("Failed to persist mission claim " + clickedMission.getId() + " for " + player.getName());
-                    }
-                    player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-claimed", player));
-                    // Re-open the GUI to update the item state
-                    openCompletedMissionsGUI(player, isNpc);
-                } else {
-                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Some rewards could not be delivered. Please contact an admin.</red>"));
-                }
+
+                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-claimed", player));
+                // Re-open the GUI to update the item state
+                openCompletedMissionsGUI(player, isNpc);
             }
         } else if (playerData.getClaimedMissions().contains(clickedMission.getId())) {
             player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-already-claimed"));
@@ -299,7 +305,6 @@ public class MissionGUIListener implements Listener {
                 SMPTools.getInstance().getLogger().severe("Failed to persist Chromatic Elytra claim " + missionId + " for " + player.getName());
             }
             player.closeInventory();
-            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.chromatic-elytra-received"));
         } else {
             player.closeInventory();
             player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Failed to create Chromatic Elytra reward. Please contact an admin.</red>"));
