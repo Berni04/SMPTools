@@ -84,28 +84,26 @@ public class GraveManager implements Listener {
             if (validLocation != null) break;
         }
 
-        // If not found near death location (e.g. mid-air death or void), fallback to top solid surface block
+        // If not found near death location (e.g. drowning in ocean, lava, mid-air, or void),
+        // search upward from death/surface for the first non-liquid air block
         if (validLocation == null) {
             int topY = world.getHighestBlockYAt(baseX, baseZ);
-            if (topY >= world.getMinHeight() && topY < world.getMaxHeight() - 1) {
-                Location topLoc = new Location(world, baseX, topY + 1, baseZ);
-                Block topBlock = topLoc.getBlock();
-                Block belowTop = new Location(world, baseX, topY, baseZ).getBlock();
-                if (topBlock.getType().isAir() && !topBlock.isLiquid() && !belowTop.getType().isAir() && !belowTop.isLiquid() && belowTop.getType().isSolid()) {
-                    validLocation = topLoc;
+            int searchStartY = Math.max(world.getMinHeight() + 1, Math.min(startY, topY));
+            for (int y = searchStartY; y < world.getMaxHeight() - 1; y++) {
+                Location candidate = new Location(world, baseX, y, baseZ);
+                Block candBlock = candidate.getBlock();
+                if (candBlock.getType().isAir() && !candBlock.isLiquid()) {
+                    validLocation = candidate;
+                    break;
                 }
             }
         }
 
-        // If no dry solid ground spot is found nearby (e.g. drowning in ocean/river or void),
-        // fallback to death location clamped within world height bounds so player items are always preserved
+        // If still no dry air block found, fallback to clamped location above highest block
         if (validLocation == null) {
-            validLocation = baseLoc.clone();
-            if (validLocation.getBlockY() <= world.getMinHeight()) {
-                validLocation.setY(world.getMinHeight() + 1);
-            } else if (validLocation.getBlockY() >= world.getMaxHeight()) {
-                validLocation.setY(world.getMaxHeight() - 1);
-            }
+            int topY = world.getHighestBlockYAt(baseX, baseZ);
+            int clampedY = Math.max(world.getMinHeight() + 1, Math.min(world.getMaxHeight() - 1, topY + 1));
+            validLocation = new Location(world, baseX, clampedY, baseZ);
         }
 
         // Remove drops from the event only after safe location is confirmed
@@ -185,6 +183,7 @@ public class GraveManager implements Listener {
         as.customName(text);
         as.setMarker(true);
         as.setSmall(true);
+        as.setInvulnerable(true);
         // Tag it so we can remove it later
         as.addScoreboardTag("grave_hologram");
         as.addScoreboardTag("grave_" + loc.getBlockX() + "_" + loc.getBlockY() + "_" + loc.getBlockZ());
