@@ -35,8 +35,25 @@ public class ArtifactListener implements Listener {
     private final Set<UUID> fallImmune = new HashSet<>();
     private final Set<UUID> bootsFlightGranted = new HashSet<>();
     private final Map<UUID, Integer> homingCompassTargetMode = new HashMap<>(); // 0: Nearest Player, 1: Nearest Boss, 2: Grave/Death
-    private final Set<Block> currentlyFelling = Collections.synchronizedSet(new HashSet<>());
+    private static final Set<Block> currentlyFelling = Collections.synchronizedSet(new HashSet<>());
     private final Random random = new Random();
+
+    public static boolean isFelling(Block block) {
+        return block != null && currentlyFelling.contains(block);
+    }
+
+    public static final Set<Material> EXCLUDED_AUTO_FEED_FOODS = Set.of(
+            Material.ROTTEN_FLESH,
+            Material.POISONOUS_POTATO,
+            Material.PUFFERFISH,
+            Material.SPIDER_EYE,
+            Material.CHORUS_FRUIT,
+            Material.SUSPICIOUS_STEW,
+            Material.GOLDEN_APPLE,
+            Material.ENCHANTED_GOLDEN_APPLE
+    );
+
+    public static final NamespacedKey PHOENIX_COOLDOWN_KEY = new NamespacedKey("smptools", "phoenix_cooldown");
 
     public ArtifactListener(SMPTools plugin, ArtifactManager artifactManager) {
         this.plugin = plugin;
@@ -120,11 +137,15 @@ public class ArtifactListener implements Listener {
                         player.sendActionBar(MiniMessage.miniMessage().deserialize("<red>Shadow Step on cooldown!</red>"));
                         return;
                     }
+                    Location safeDest = findSafeShadowStepDestination(player, 8);
+                    if (safeDest == null) {
+                        player.sendActionBar(MiniMessage.miniMessage().deserialize("<red>Cannot Shadow Step into obstructed area!</red>"));
+                        return;
+                    }
                     setCooldown(player.getUniqueId(), type, now);
-                    Location dest = player.getLocation().add(player.getLocation().getDirection().multiply(8));
-                    player.teleport(dest);
-                    player.getWorld().spawnParticle(Particle.PORTAL, dest, 50, 0.5, 1.0, 0.5, 0.2);
-                    player.getWorld().playSound(dest, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+                    player.teleport(safeDest);
+                    player.getWorld().spawnParticle(Particle.PORTAL, safeDest, 50, 0.5, 1.0, 0.5, 0.2);
+                    player.getWorld().playSound(safeDest, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
                     event.setCancelled(true);
                     break;
 
@@ -153,11 +174,13 @@ public class ArtifactListener implements Listener {
                     setCooldown(player.getUniqueId(), type, now);
                     double drained = 0;
                     for (Entity entity : player.getNearbyEntities(5, 5, 5)) {
-                        if (entity instanceof LivingEntity target && target != player) {
-                            double damage = target.getHealth() * 0.15;
-                            target.damage(damage, player);
-                            drained += damage;
-                            target.getWorld().spawnParticle(Particle.CRIMSON_SPORE, target.getLocation(), 20, 0.3, 0.5, 0.3, 0.1);
+                        if (entity instanceof LivingEntity target && target != player && isHostileTarget(target)) {
+                            if (player.hasLineOfSight(target)) {
+                                double damage = target.getHealth() * 0.15;
+                                target.damage(damage, player);
+                                drained += damage;
+                                target.getWorld().spawnParticle(Particle.CRIMSON_SPORE, target.getLocation(), 20, 0.3, 0.5, 0.3, 0.1);
+                            }
                         }
                     }
                     if (drained > 0) {
@@ -175,9 +198,11 @@ public class ArtifactListener implements Listener {
                     setCooldown(player.getUniqueId(), type, now);
                     Vector dir = player.getLocation().getDirection().normalize();
                     for (Entity entity : player.getNearbyEntities(8, 8, 8)) {
-                        if (entity instanceof LivingEntity target && target != player) {
-                            target.setVelocity(dir.multiply(2.5).setY(0.5));
-                            target.damage(6.0, player);
+                        if (entity instanceof LivingEntity target && target != player && isHostileTarget(target)) {
+                            if (player.hasLineOfSight(target)) {
+                                target.setVelocity(dir.clone().multiply(2.5).setY(0.5));
+                                target.damage(6.0, player);
+                            }
                         }
                     }
                     player.getWorld().spawnParticle(Particle.SONIC_BOOM, player.getEyeLocation(), 1);
@@ -284,16 +309,28 @@ public class ArtifactListener implements Listener {
                 }
             }
 
-            // Phoenix Feather Check
-            if (player.getHealth() - event.getFinalDamage() <= 0) {
+            // Phoenix Feather Check (exclude VOID damage since Phoenix Feather does not teleport player out of void)
+            if (event.getCause() != EntityDamageEvent.DamageCause.VOID && player.getHealth() - event.getFinalDamage() <= 0) {
                 if (artifactManager.hasEquippedArtifact(player, ArtifactType.PHOENIX_FEATHER)) {
-                    event.setCancelled(true);
-                    player.setHealth(player.getMaxHealth() * 0.5);
-                    player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 4));
-                    player.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 200, 0));
-                    player.getWorld().spawnParticle(Particle.FLAME, player.getLocation(), 50, 0.5, 1.0, 0.5, 0.2);
-                    player.getWorld().playSound(player.getLocation(), Sound.ITEM_TOTEM_USE, 1.0f, 1.0f);
-                    player.sendActionBar(MiniMessage.miniMessage().deserialize("<gold><b>🔥 Phoenix Feather Resurrected You!</b></gold>"));
+                    long now = System.currentTimeMillis();
+                    long last = getCooldown(player.getUniqueId(), ArtifactType.PHOENIX_FEATHER);
+                    if (player.getPersistentDataContainer().has(PHOENIX_COOLDOWN_KEY, PersistentDataType.LONG)) {
+                        Long pdcTime = player.getPersistentDataContainer().get(PHOENIX_COOLDOWN_KEY, PersistentDataType.LONG);
+                        if (pdcTime != null && pdcTime > last) {
+                            last = pdcTime;
+                        }
+                    }
+                    if (now - last >= 60000L) {
+                        setCooldown(player.getUniqueId(), ArtifactType.PHOENIX_FEATHER, now);
+                        player.getPersistentDataContainer().set(PHOENIX_COOLDOWN_KEY, PersistentDataType.LONG, now);
+                        event.setCancelled(true);
+                        player.setHealth(player.getMaxHealth() * 0.5);
+                        player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 4));
+                        player.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 200, 0));
+                        player.getWorld().spawnParticle(Particle.FLAME, player.getLocation(), 50, 0.5, 1.0, 0.5, 0.2);
+                        player.getWorld().playSound(player.getLocation(), Sound.ITEM_TOTEM_USE, 1.0f, 1.0f);
+                        player.sendActionBar(MiniMessage.miniMessage().deserialize("<gold><b>🔥 Phoenix Feather Resurrected You!</b></gold>"));
+                    }
                 }
             }
         }
@@ -391,6 +428,26 @@ public class ArtifactListener implements Listener {
                 }
             }
         }
+
+        if (count > 0 && (player.getGameMode() == GameMode.SURVIVAL || player.getGameMode() == GameMode.ADVENTURE)) {
+            if (tool != null && tool.getItemMeta() instanceof org.bukkit.inventory.meta.Damageable damageable) {
+                int unbreaking = tool.getEnchantmentLevel(org.bukkit.enchantments.Enchantment.UNBREAKING);
+                int damageToApply = 0;
+                for (int i = 0; i < count; i++) {
+                    if (unbreaking <= 0 || random.nextInt(unbreaking + 1) == 0) {
+                        damageToApply++;
+                    }
+                }
+                int newDamage = damageable.getDamage() + damageToApply;
+                if (newDamage >= tool.getType().getMaxDurability()) {
+                    player.getInventory().setItemInMainHand(null);
+                    player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
+                } else {
+                    damageable.setDamage(newDamage);
+                    tool.setItemMeta(damageable);
+                }
+            }
+        }
     }
 
     @EventHandler
@@ -476,9 +533,13 @@ public class ArtifactListener implements Listener {
 
                     // Magnet Totem
                     if (artifactManager.hasEquippedArtifact(player, ArtifactType.MAGNET_TOTEM)) {
+                        Vector pVec = player.getLocation().toVector();
                         for (Entity entity : player.getNearbyEntities(12, 12, 12)) {
                             if (entity instanceof Item || entity instanceof ExperienceOrb) {
-                                entity.setVelocity(player.getLocation().toVector().subtract(entity.getLocation().toVector()).normalize().multiply(0.4));
+                                Vector diff = pVec.clone().subtract(entity.getLocation().toVector());
+                                if (diff.lengthSquared() > 0.001) {
+                                    entity.setVelocity(diff.normalize().multiply(0.4));
+                                }
                             }
                         }
                     }
@@ -486,7 +547,7 @@ public class ArtifactListener implements Listener {
                     // Auto-Feeder Satchel
                     if (artifactManager.hasEquippedArtifact(player, ArtifactType.AUTO_FEEDER_SATCHEL) && player.getFoodLevel() < 16) {
                         for (ItemStack item : player.getInventory().getContents()) {
-                            if (item != null && item.getType().isEdible()) {
+                            if (item != null && item.getType().isEdible() && !EXCLUDED_AUTO_FEED_FOODS.contains(item.getType())) {
                                 player.setFoodLevel(20);
                                 item.setAmount(item.getAmount() - 1);
                                 player.playSound(player.getLocation(), Sound.ENTITY_GENERIC_EAT, 0.8f, 1.0f);
@@ -523,17 +584,24 @@ public class ArtifactListener implements Listener {
                         Location loc = player.getLocation();
                         World world = loc.getWorld();
                         if (world != null) {
+                            int px = loc.getBlockX();
+                            int py = loc.getBlockY();
+                            int pz = loc.getBlockZ();
                             boolean oreFound = false;
                             int minDistanceSq = Integer.MAX_VALUE;
 
                             for (int x = -4; x <= 4; x++) {
                                 for (int y = -4; y <= 4; y++) {
                                     for (int z = -4; z <= 4; z++) {
-                                        int targetX = loc.getBlockX() + x;
-                                        int targetZ = loc.getBlockZ() + z;
-                                        if (world.isChunkLoaded(targetX >> 4, targetZ >> 4)) {
-                                            Material mat = world.getBlockAt(targetX, loc.getBlockY() + y, targetZ).getType();
-                                            if (mat == Material.DIAMOND_ORE || mat == Material.DEEPSLATE_DIAMOND_ORE || mat == Material.ANCIENT_DEBRIS) {
+                                        int bx = px + x;
+                                        int bz = pz + z;
+                                        if (world.isChunkLoaded(bx >> 4, bz >> 4)) {
+                                            Block b = world.getBlockAt(bx, py + y, bz);
+                                            Material mat = b.getType();
+                                            if (mat == Material.DIAMOND_ORE || mat == Material.DEEPSLATE_DIAMOND_ORE ||
+                                                    mat == Material.ANCIENT_DEBRIS || mat == Material.EMERALD_ORE ||
+                                                    mat == Material.DEEPSLATE_EMERALD_ORE) {
+                                                player.spawnParticle(Particle.GLOW, b.getLocation().add(0.5, 0.5, 0.5), 1, 0, 0, 0, 0);
                                                 oreFound = true;
                                                 int distSq = x * x + y * y + z * z;
                                                 if (distSq < minDistanceSq) {
@@ -552,18 +620,19 @@ public class ArtifactListener implements Listener {
                         }
                     }
 
-                    // Homing Compass Target Update
+                    // Homing Compass
                     if (artifactManager.hasEquippedArtifact(player, ArtifactType.HOMING_COMPASS) ||
-                        artifactManager.isArtifact(player.getInventory().getItemInMainHand(), ArtifactType.HOMING_COMPASS)) {
+                            artifactManager.isArtifact(player.getInventory().getItemInMainHand(), ArtifactType.HOMING_COMPASS)) {
                         int mode = homingCompassTargetMode.getOrDefault(player.getUniqueId(), 0);
                         Location targetLoc = null;
+
                         if (mode == 0) {
-                            // Nearest Player
+                            // Nearest Player (bounded search in 256 block radius)
                             double closestDist = Double.MAX_VALUE;
                             for (Player other : player.getWorld().getPlayers()) {
-                                if (!other.equals(player)) {
+                                if (!other.getUniqueId().equals(player.getUniqueId()) && other.getGameMode() != GameMode.SPECTATOR) {
                                     double d = player.getLocation().distanceSquared(other.getLocation());
-                                    if (d < closestDist) {
+                                    if (d < closestDist && d <= 65536.0) {
                                         closestDist = d;
                                         targetLoc = other.getLocation();
                                     }
@@ -596,5 +665,95 @@ public class ArtifactListener implements Listener {
                 }
             }
         }.runTaskTimer(plugin, 20L, 20L);
+    }
+
+    private Location findSafeShadowStepDestination(Player player, double maxDist) {
+        Location eyeLoc = player.getEyeLocation();
+        Vector dir = eyeLoc.getDirection().normalize();
+        Location target = player.getLocation().add(dir.clone().multiply(maxDist));
+
+        // 1. If target endpoint is safe, verify contiguous wall thickness does not exceed 2 solid blocks
+        if (isSafePlayerStand(target) && getMaxContiguousSolidObstacleThickness(player.getLocation(), target) <= 2) {
+            return target;
+        }
+
+        // 2. Check vertical adjustments at maxDist if contiguous wall thickness <= 2
+        for (int dy : new int[]{1, 2, 3, -1, -2}) {
+            Location candidate = target.clone().add(0, dy, 0);
+            if (isSafePlayerStand(candidate) && getMaxContiguousSolidObstacleThickness(player.getLocation(), candidate) <= 2) {
+                return candidate;
+            }
+        }
+
+        // 3. If obstacle is thicker than 2 solid blocks or target is solid, trace backward along the ray
+        // to find the nearest safe spot before the obstacle
+        for (double d = maxDist - 0.5; d >= 1.0; d -= 0.5) {
+            Location fallback = player.getLocation().add(dir.clone().multiply(d));
+            if (isSafePlayerStand(fallback) && getMaxContiguousSolidObstacleThickness(player.getLocation(), fallback) == 0) {
+                return fallback;
+            }
+        }
+
+        return null;
+    }
+
+    private int getMaxContiguousSolidObstacleThickness(Location from, Location to) {
+        if (from == null || to == null || from.getWorld() == null) return Integer.MAX_VALUE;
+        double dist = from.distance(to);
+        if (dist <= 0.0) return 0;
+        Vector step = to.toVector().subtract(from.toVector()).normalize().multiply(0.2);
+        int maxContiguous = 0;
+        int currentContiguous = 0;
+        Block lastFeet = null;
+        Block lastHead = null;
+
+        for (double d = 0.2; d < dist - 0.1; d += 0.2) {
+            Location sample = from.clone().add(step.clone().multiply(d / 0.2));
+            Block feet = sample.getBlock();
+            Block head = sample.clone().add(0, 1, 0).getBlock();
+
+            boolean solidFeet = feet.getType().isSolid();
+            boolean solidHead = head.getType().isSolid();
+
+            if (solidFeet || solidHead) {
+                if (!feet.equals(lastFeet) || !head.equals(lastHead)) {
+                    currentContiguous++;
+                    lastFeet = feet;
+                    lastHead = head;
+                    if (currentContiguous > maxContiguous) {
+                        maxContiguous = currentContiguous;
+                    }
+                }
+            } else {
+                currentContiguous = 0;
+                lastFeet = null;
+                lastHead = null;
+            }
+        }
+        return maxContiguous;
+    }
+
+    private boolean isSafePlayerStand(Location loc) {
+        if (loc == null || loc.getWorld() == null) return false;
+        Block feet = loc.getBlock();
+        Block head = loc.clone().add(0, 1, 0).getBlock();
+
+        if (feet.getType().isSolid() || head.getType().isSolid()) {
+            return false;
+        }
+        if (feet.isLiquid()) {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean isHostileTarget(LivingEntity target) {
+        if (target == null || target.isDead()) return false;
+        if (target instanceof Player) return false;
+        if (target instanceof org.bukkit.entity.Tameable tameable && tameable.isTamed()) return false;
+        if (target instanceof org.bukkit.entity.Villager || target instanceof org.bukkit.entity.WanderingTrader) return false;
+        if (target instanceof org.bukkit.entity.ArmorStand) return false;
+
+        return target instanceof org.bukkit.entity.Enemy;
     }
 }

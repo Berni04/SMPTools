@@ -58,7 +58,7 @@ public class EventGUI implements Listener {
                 if (player == null || !player.isOnline() || !player.getOpenInventory().title().equals(TITLE)) {
                     it.remove();
                 } else {
-                    updateInventoryContents(player, player.getOpenInventory().getTopInventory());
+                    updateDynamicSlots(player, player.getOpenInventory().getTopInventory());
                 }
             }
 
@@ -71,20 +71,30 @@ public class EventGUI implements Listener {
 
     public void openGUI(Player player) {
         Inventory gui = Bukkit.createInventory(null, 27, TITLE);
-        updateInventoryContents(player, gui);
+        setupInitialInventory(gui);
+        updateDynamicSlots(player, gui);
         player.openInventory(gui);
         openViewers.add(player.getUniqueId());
         ensureRefreshTask();
     }
 
-    private void updateInventoryContents(Player player, Inventory gui) {
-        MiniEventSession active = eventManager.getActiveSession();
-
+    private void setupInitialInventory(Inventory gui) {
         // Fill background with black glass panes
         ItemStack filler = createItem(Material.BLACK_STAINED_GLASS_PANE, " ", null);
         for (int i = 0; i < 27; i++) {
             gui.setItem(i, filler);
         }
+
+        // Slot 15: Static Rules / Info Card
+        List<String> statsLore = new ArrayList<>();
+        statsLore.add("<gray>View live active mini-event status.</gray>");
+        statsLore.add("<gray>Updates automatically every second while open.</gray>");
+        ItemStack infoItem = createItem(Material.BOOK, "<cyan><b>Event Info & Rules</b></cyan>", statsLore);
+        gui.setItem(15, infoItem);
+    }
+
+    private void updateDynamicSlots(Player player, Inventory gui) {
+        MiniEventSession active = eventManager.getActiveSession();
 
         // Slot 11: Active Event Card
         if (active != null && active.isActive()) {
@@ -125,13 +135,6 @@ public class EventGUI implements Listener {
             ItemStack leaderboardItem = createItem(Material.BARRIER, "<gray><b>Leaderboard Unavailable</b></gray>", List.of("<gray>Wait for an event to start.</gray>"));
             gui.setItem(13, leaderboardItem);
         }
-
-        // Slot 15: Personal Stats Card
-        List<String> statsLore = new ArrayList<>();
-        statsLore.add("<gray>View live active mini-event status.</gray>");
-        statsLore.add("<gray>Updates automatically every second while open.</gray>");
-        ItemStack infoItem = createItem(Material.BOOK, "<cyan><b>Event Info & Rules</b></cyan>", statsLore);
-        gui.setItem(15, infoItem);
     }
 
     private ItemStack createItem(Material mat, String displayNameMiniMsg, List<String> loreMiniMsg) {

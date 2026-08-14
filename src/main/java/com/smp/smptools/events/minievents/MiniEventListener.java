@@ -98,7 +98,25 @@ public class MiniEventListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBlockPlace(org.bukkit.event.block.BlockPlaceEvent event) {
+        MiniEventSession activeSession = eventManager.getActiveSession();
+        if (activeSession == null || !activeSession.isActive()) {
+            return;
+        }
+        event.getBlock().setMetadata("placed_by_player", new org.bukkit.metadata.FixedMetadataValue(plugin, true));
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
+        if (com.smp.smptools.artifacts.ArtifactListener.isFelling(event.getBlock())) {
+            return;
+        }
+
+        if (event.getBlock().hasMetadata("placed_by_player")) {
+            event.getBlock().removeMetadata("placed_by_player", plugin);
+            return;
+        }
+
         MiniEventSession activeSession = eventManager.getActiveSession();
         if (activeSession == null || !activeSession.isActive()) {
             return;
@@ -110,6 +128,11 @@ public class MiniEventListener implements Listener {
         FileConfiguration cfg = plugin.getEventsConfig();
 
         if (activeType == MiniEventType.ORE_RUSH) {
+            ItemStack tool = player.getInventory().getItemInMainHand();
+            if (tool != null && tool.containsEnchantment(org.bukkit.enchantments.Enchantment.SILK_TOUCH)) {
+                return;
+            }
+
             int pts = 0;
             String name = "";
 

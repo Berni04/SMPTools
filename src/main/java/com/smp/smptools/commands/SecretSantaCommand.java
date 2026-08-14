@@ -88,9 +88,14 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
                     player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.registration-closed"));
                     return true;
                 }
-                ItemStack[] gift = manager.getGift(player.getUniqueId());
-                if (gift == null || gift.length == 0) {
-                    player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.not-registered"));
+                if (!manager.hasGiftDeposited(player.getUniqueId())) {
+                    player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.no-gift"));
+                    return true;
+                }
+                ItemStack[] gift = manager.claimGift(player.getUniqueId());
+                if (gift == null) {
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                            .deserialize("<red>Failed to process gift claim. Please try again or contact an admin.</red>"));
                     return true;
                 }
                 for (ItemStack item : gift) {
@@ -101,7 +106,7 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
                         }
                     }
                 }
-                player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.gift-deposited"));
+                player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.gift-claimed"));
                 break;
 
             case "admin":
@@ -135,19 +140,88 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
         Inventory gui = Bukkit.createInventory(holder, 27,
                 plugin.getMessageManager().getMessage("secret-santa.deposit-gui-title", player,
                         Map.of("target", String.valueOf(Bukkit.getOfflinePlayer(targetUUID).getName()))));
+        
+        ItemStack confirmBtn = new ItemStack(Material.EMERALD);
+        org.bukkit.inventory.meta.ItemMeta meta = confirmBtn.getItemMeta();
+        if (meta != null) {
+            meta.displayName(plugin.getMessageManager().getMessage("secret-santa.confirm-deposit-button", player));
+            meta.lore(java.util.List.of(plugin.getMessageManager().getMessage("secret-santa.confirm-deposit-lore", player)));
+            confirmBtn.setItemMeta(meta);
+        }
+        gui.setItem(26, confirmBtn);
+
         holder.setInventory(gui);
         player.openInventory(gui);
     }
 
     @EventHandler
+    public void onInventoryDrag(org.bukkit.event.inventory.InventoryDragEvent event) {
+        if (event.getInventory().getHolder() instanceof com.smp.smptools.christmas.SecretSantaHolder) {
+            if (event.getRawSlots().contains(26)) {
+                event.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onInventoryClick(org.bukkit.event.inventory.InventoryClickEvent event) {
+        if (event.getInventory().getHolder() instanceof com.smp.smptools.christmas.SecretSantaHolder holder) {
+            if (event.getAction() == org.bukkit.event.inventory.InventoryAction.COLLECT_TO_CURSOR || event.getClick() == org.bukkit.event.inventory.ClickType.DOUBLE_CLICK) {
+                event.setCancelled(true);
+                return;
+            }
+            if (event.getRawSlot() == 26) {
+                event.setCancelled(true);
+                if (event.getWhoClicked() instanceof Player player) {
+                    Inventory inv = event.getInventory();
+                    java.util.List<ItemStack> items = new java.util.ArrayList<>();
+                    for (int i = 0; i < 26; i++) {
+                        ItemStack item = inv.getItem(i);
+                        if (item != null && item.getType() != Material.AIR) {
+                            items.add(item.clone());
+                        }
+                    }
+                    if (items.isEmpty()) {
+                        player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.empty-deposit", player));
+                        return;
+                    }
+                    holder.setConfirmed(true);
+                    boolean saved = manager.depositGift(holder.getTargetUUID(), items.toArray(new ItemStack[0]));
+                    if (!saved) {
+                        holder.setConfirmed(false);
+                        player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.deposit-save-failed", player));
+                        return;
+                    }
+                    inv.clear();
+                    Bukkit.getScheduler().runTask(plugin, (Runnable) player::closeInventory);
+                    player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.gift-deposited", player));
+                }
+            }
+        }
+    }
+
+    @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         if (event.getInventory().getHolder() instanceof com.smp.smptools.christmas.SecretSantaHolder holder) {
-            UUID target = holder.getTargetUUID();
-            Inventory inv = event.getInventory();
-
-            ItemStack[] items = inv.getContents();
-            manager.depositGift(target, items);
-            event.getPlayer().sendMessage(plugin.getMessageManager().getMessage("secret-santa.gift-deposited"));
+            if (!holder.isConfirmed()) {
+                if (event.getPlayer() instanceof Player player) {
+                    Inventory inv = event.getInventory();
+                    boolean returnedAny = false;
+                    for (int i = 0; i < 26; i++) {
+                        ItemStack item = inv.getItem(i);
+                        if (item != null && item.getType() != Material.AIR) {
+                            returnedAny = true;
+                            HashMap<Integer, ItemStack> left = player.getInventory().addItem(item);
+                            for (ItemStack drop : left.values()) {
+                                player.getWorld().dropItemNaturally(player.getLocation(), drop);
+                            }
+                        }
+                    }
+                    if (returnedAny) {
+                        player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.deposit-cancelled"));
+                    }
+                }
+            }
         }
     }
 }

@@ -123,6 +123,7 @@ public class SMPTools extends JavaPlugin {
     private SeasonalGUI seasonalGUI;
     private HalloweenGUI halloweenGUI;
     private EasterGUI easterGUI;
+    private com.smp.smptools.christmas.KrampusManager krampusManager;
 
 
     @Override
@@ -276,7 +277,7 @@ public class SMPTools extends JavaPlugin {
             Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.SnowballListener(this), this);
 
             // Krampus Night
-            com.smp.smptools.christmas.KrampusManager krampusManager = new com.smp.smptools.christmas.KrampusManager(this);
+            this.krampusManager = new com.smp.smptools.christmas.KrampusManager(this);
             this.getCommand("krampus").setExecutor(new com.smp.smptools.commands.KrampusCommand(this, krampusManager));
             Bukkit.getPluginManager().registerEvents(new com.smp.smptools.listeners.KrampusListener(this, krampusManager),
                     this);
@@ -374,6 +375,9 @@ public class SMPTools extends JavaPlugin {
         }
         if (artifactManager != null) {
             artifactManager.savePouchData();
+        }
+        if (krampusManager != null) {
+            krampusManager.cleanupAll();
         }
         if (seasonalManager != null) {
             seasonalManager.saveLocations();

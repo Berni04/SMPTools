@@ -7,6 +7,9 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class ChatListener implements Listener {
@@ -19,23 +22,22 @@ public class ChatListener implements Listener {
 
     @EventHandler
     public void onPlayerChat(AsyncChatEvent event) {
-        event.setCancelled(true);
         Player player = event.getPlayer();
+        Component rawMessage = event.message();
 
         Component displayName = plugin.getChatManager().getFormattedDisplayName(player);
-        Component messageContent = event.message().color(NamedTextColor.WHITE);
+        Component messageContent = rawMessage.color(NamedTextColor.WHITE);
 
         if (TrollGUIListener.isChatScrambled(player)) {
             String plainMessage = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
-                    .serialize(event.message());
-            List<String> characters = java.util.Arrays.asList(plainMessage.split(""));
-            java.util.Collections.shuffle(characters);
+                    .serialize(rawMessage);
+            List<String> characters = Arrays.asList(plainMessage.split(""));
+            Collections.shuffle(characters);
             String scrambled = String.join("", characters);
             messageContent = Component.text(scrambled, NamedTextColor.WHITE);
         }
 
-        Component message = Component.text(": ").append(messageContent);
-
-        plugin.getServer().broadcast(displayName.append(message));
+        final Component formatted = displayName.append(Component.text(": ")).append(messageContent);
+        event.renderer((source, sourceDisplayName, message, viewer) -> formatted);
     }
 }

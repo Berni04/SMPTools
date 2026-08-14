@@ -6,6 +6,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Skull;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -58,28 +59,65 @@ public class GraveManager implements Listener {
             return; // No need for a grave if no items dropped
         }
 
-        // Remove drops from the event so they don't spawn on the ground
-        event.getDrops().clear();
+        Location baseLoc = player.getLocation().getBlock().getLocation();
+        World world = baseLoc.getWorld();
+        if (world == null) return;
 
-        Location deathLocation = player.getLocation().getBlock().getLocation(); // Snap to block
+        Location validLocation = null;
+        int baseX = baseLoc.getBlockX();
+        int baseZ = baseLoc.getBlockZ();
+        int startY = Math.min(world.getMaxHeight() - 1, Math.max(world.getMinHeight(), baseLoc.getBlockY()));
 
-        // Ensure we don't overwrite an existing block if possible, or find a safe spot?
-        // For simplicity, we'll just place it at the exact block location.
-        // If it's air/liquid, great. If not, we might overwrite.
-        // Let's try to find the nearest air block upwards if solid.
-        if (deathLocation.getBlock().getType().isSolid()) {
-            deathLocation.add(0, 1, 0);
+        // Scan nearby vertical offsets (0, +1, -1, +2, -2, ..., +10, -10)
+        for (int dy = 0; dy <= 10; dy++) {
+            int[] candidates = dy == 0 ? new int[]{startY} : new int[]{startY + dy, startY - dy};
+            for (int y : candidates) {
+                if (y <= world.getMinHeight() || y >= world.getMaxHeight()) continue;
+                Location checkLoc = new Location(world, baseX, y, baseZ);
+                Block b = checkLoc.getBlock();
+                Block below = checkLoc.clone().add(0, -1, 0).getBlock();
+                if (b.getType().isAir() && !b.isLiquid() && !below.getType().isAir() && !below.isLiquid() && below.getType().isSolid()) {
+                    validLocation = checkLoc;
+                    break;
+                }
+            }
+            if (validLocation != null) break;
         }
 
+        // If not found near death location (e.g. drowning in ocean, lava, mid-air, or void),
+        // search upward from death/surface for the first non-liquid air block
+        if (validLocation == null) {
+            int topY = world.getHighestBlockYAt(baseX, baseZ);
+            int searchStartY = Math.max(world.getMinHeight() + 1, Math.min(startY, topY));
+            for (int y = searchStartY; y < world.getMaxHeight() - 1; y++) {
+                Location candidate = new Location(world, baseX, y, baseZ);
+                Block candBlock = candidate.getBlock();
+                if (candBlock.getType().isAir() && !candBlock.isLiquid()) {
+                    validLocation = candidate;
+                    break;
+                }
+            }
+        }
+
+        // If still no dry air block found, fallback to clamped location above highest block
+        if (validLocation == null) {
+            int topY = world.getHighestBlockYAt(baseX, baseZ);
+            int clampedY = Math.max(world.getMinHeight() + 1, Math.min(world.getMaxHeight() - 1, topY + 1));
+            validLocation = new Location(world, baseX, clampedY, baseZ);
+        }
+
+        // Remove drops from the event only after safe location is confirmed
+        event.getDrops().clear();
+
         String cause = player.getLastDamageCause() != null ? player.getLastDamageCause().getCause().name() : "UNKNOWN";
-        Grave grave = new Grave(player.getUniqueId(), player.getName(), deathLocation, drops,
+        Grave grave = new Grave(player.getUniqueId(), player.getName(), validLocation, drops,
                 System.currentTimeMillis(), cause);
 
         createGraveBlock(grave);
-        graves.put(deathLocation, grave);
+        graves.put(validLocation, grave);
         saveGraves();
 
-        String graveLocation = deathLocation.getBlockX() + ", " + deathLocation.getBlockY() + ", " + deathLocation.getBlockZ();
+        String graveLocation = validLocation.getBlockX() + ", " + validLocation.getBlockY() + ", " + validLocation.getBlockZ();
         player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("grave.stored", player, Map.of("location", graveLocation)));
     }
 
@@ -121,23 +159,25 @@ public class GraveManager implements Listener {
     }
 
     private void spawnHologram(Grave grave) {
-        Location loc = grave.getLocation().clone().add(0.5, -0.5, 0.5); // Center above block
+        Location baseLoc = grave.getLocation();
+        String graveTag = "grave_" + baseLoc.getBlockX() + "_" + baseLoc.getBlockY() + "_" + baseLoc.getBlockZ();
+        Location loc = baseLoc.clone().add(0.5, -0.5, 0.5); // Center above block
         double lineSpacing = 0.25;
 
         spawnArmorStand(loc.clone().add(0, lineSpacing * 3, 0),
-                Component.text("R.I.P " + grave.getOwnerName(), NamedTextColor.RED));
+                Component.text("R.I.P " + grave.getOwnerName(), NamedTextColor.RED), graveTag);
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault());
         spawnArmorStand(loc.clone().add(0, lineSpacing * 2, 0), Component.text(
-                "Died on " + formatter.format(Instant.ofEpochMilli(grave.getTimeOfDeath())), NamedTextColor.GRAY));
+                "Died on " + formatter.format(Instant.ofEpochMilli(grave.getTimeOfDeath())), NamedTextColor.GRAY), graveTag);
 
         spawnArmorStand(loc.clone().add(0, lineSpacing * 1, 0),
-                Component.text("Cause: " + grave.getCauseOfDeath(), NamedTextColor.GRAY));
+                Component.text("Cause: " + grave.getCauseOfDeath(), NamedTextColor.GRAY), graveTag);
 
-        spawnArmorStand(loc, Component.text("Items: " + grave.getItems().size(), NamedTextColor.YELLOW));
+        spawnArmorStand(loc, Component.text("Items: " + grave.getItems().size(), NamedTextColor.YELLOW), graveTag);
     }
 
-    private void spawnArmorStand(Location loc, Component text) {
+    private void spawnArmorStand(Location loc, Component text, String graveTag) {
         ArmorStand as = (ArmorStand) loc.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
         as.setVisible(false);
         as.setGravity(false);
@@ -145,9 +185,10 @@ public class GraveManager implements Listener {
         as.customName(text);
         as.setMarker(true);
         as.setSmall(true);
+        as.setInvulnerable(true);
         // Tag it so we can remove it later
         as.addScoreboardTag("grave_hologram");
-        as.addScoreboardTag("grave_" + loc.getBlockX() + "_" + loc.getBlockY() + "_" + loc.getBlockZ());
+        as.addScoreboardTag(graveTag);
     }
 
     private void lootGrave(Grave grave, Player looter) {

@@ -50,17 +50,19 @@ public class EventManager {
         dataConfig = YamlConfiguration.loadConfiguration(dataFile);
     }
 
-    private synchronized void saveData() {
-        if (dataConfig == null) return;
+    private synchronized boolean saveData() {
+        if (dataConfig == null) return false;
         try {
             dataConfig.save(dataFile);
+            return true;
         } catch (IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Could not save events_data.yml", e);
+            return false;
         }
     }
 
-    public synchronized void queueOfflineRewardsBatch(Map<UUID, List<String>> rewardsByPlayer) {
-        if (rewardsByPlayer == null || rewardsByPlayer.isEmpty()) return;
+    public synchronized boolean queueOfflineRewardsBatch(Map<UUID, List<String>> rewardsByPlayer) {
+        if (rewardsByPlayer == null || rewardsByPlayer.isEmpty()) return true;
 
         for (Map.Entry<UUID, List<String>> entry : rewardsByPlayer.entrySet()) {
             String path = "pending_rewards." + entry.getKey().toString();
@@ -68,7 +70,86 @@ public class EventManager {
             current.addAll(entry.getValue());
             dataConfig.set(path, current);
         }
-        saveData();
+        boolean saved = saveData();
+        if (!saved && plugin != null) {
+            plugin.getLogger().severe("Failed to persist offline rewards batch in events_data.yml!");
+        }
+        return saved;
+    }
+
+    public enum RewardType {
+        COMMAND,
+        ITEM
+    }
+
+    public static class ParsedEventReward {
+        private final RewardType type;
+        private final String command;
+        private final Material material;
+        private final int amount;
+        private final int retryCount;
+
+        public ParsedEventReward(RewardType type, String command, Material material, int amount, int retryCount) {
+            this.type = type;
+            this.command = command;
+            this.material = material;
+            this.amount = amount;
+            this.retryCount = retryCount;
+        }
+
+        public RewardType getType() { return type; }
+        public String getCommand() { return command; }
+        public Material getMaterial() { return material; }
+        public int getAmount() { return amount; }
+        public int getRetryCount() { return retryCount; }
+    }
+
+    private static final java.util.regex.Pattern RETRY_PATTERN = java.util.regex.Pattern.compile("^(.*)#retry:(.*)$");
+
+    public static ParsedEventReward parseRewardString(String rewardStr) {
+        if (rewardStr == null || rewardStr.isBlank()) return null;
+        int retryCount = 0;
+        String raw = rewardStr.trim();
+        java.util.regex.Matcher matcher = RETRY_PATTERN.matcher(raw);
+        if (matcher.matches()) {
+            String suffix = matcher.group(2).trim();
+            if (suffix.isEmpty()) {
+                return null;
+            }
+            try {
+                retryCount = Integer.parseInt(suffix);
+                if (retryCount < 0) {
+                    return null;
+                }
+                raw = matcher.group(1).trim();
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+
+        if (raw.startsWith("cmd:")) {
+            String cmd = raw.substring(4).trim();
+            if (cmd.isBlank()) return null;
+            return new ParsedEventReward(RewardType.COMMAND, cmd, null, 0, retryCount);
+        } else if (raw.startsWith("item:")) {
+            String[] parts = raw.substring(5).trim().split("\\s+");
+            if (parts.length == 0 || parts[0].isBlank()) return null;
+            Material mat = Material.matchMaterial(parts[0].toUpperCase());
+            if (mat == null) return null;
+            int amount = 1;
+            if (parts.length > 1) {
+                try {
+                    amount = Integer.parseInt(parts[1]);
+                    if (amount <= 0) {
+                        return null;
+                    }
+                } catch (NumberFormatException e) {
+                    return null;
+                }
+            }
+            return new ParsedEventReward(RewardType.ITEM, null, mat, amount, retryCount);
+        }
+        return null;
     }
 
     public synchronized void claimOfflineRewards(Player player) {
@@ -80,16 +161,45 @@ public class EventManager {
         List<String> remaining = new ArrayList<>(pending);
 
         for (String reward : pending) {
-            boolean ok = executeReward(player, reward);
+            List<String> snapshotBefore = new ArrayList<>(remaining);
+            ParsedEventReward parsed = parseRewardString(reward);
+            if (parsed == null) {
+                plugin.getLogger().warning("Discarding unparseable/malformed offline reward '" + reward + "' for " + player.getName());
+                remaining.remove(reward);
+                dataConfig.set(path, remaining.isEmpty() ? null : remaining);
+                if (!saveData()) {
+                    dataConfig.set(path, snapshotBefore);
+                    break;
+                }
+                continue;
+            }
+
+            // Persist removal from queue BEFORE executing reward to prevent duplication on crash or disk save failure
+            remaining.remove(reward);
+            dataConfig.set(path, remaining.isEmpty() ? null : remaining);
+            if (!saveData()) {
+                plugin.getLogger().severe("Failed to persist offline reward removal for " + player.getName() + ", aborting claim execution.");
+                dataConfig.set(path, snapshotBefore);
+                break;
+            }
+
+            boolean ok = executeReward(player, parsed);
             if (ok) {
                 anyDelivered = true;
-                remaining.remove(reward);
-                if (remaining.isEmpty()) {
-                    dataConfig.set(path, null);
+            } else {
+                int nextRetry = parsed.getRetryCount() + 1;
+                if (nextRetry >= 3) {
+                    plugin.getLogger().severe("Permanently dropping unexecutable offline reward '" + reward + "' for " + player.getName() + " after 3 failed attempts.");
                 } else {
-                    dataConfig.set(path, remaining);
+                    String baseCommandOrItem = parsed.getType() == RewardType.COMMAND ? "cmd:" + parsed.getCommand() : "item:" + parsed.getMaterial().name() + " " + parsed.getAmount();
+                    remaining.add(baseCommandOrItem + "#retry:" + nextRetry);
+                    plugin.getLogger().warning("Transient delivery failure for offline reward '" + reward + "' for " + player.getName() + " (attempt " + nextRetry + "/3), retaining for retry.");
+                    dataConfig.set(path, remaining.isEmpty() ? null : remaining);
+                    if (!saveData()) {
+                        plugin.getLogger().severe("Failed to persist retry state for offline reward for " + player.getName() + ", aborting remaining queue.");
+                        break;
+                    }
                 }
-                saveData();
             }
         }
 
@@ -98,46 +208,38 @@ public class EventManager {
         }
     }
 
-    public boolean executeReward(Player player, String rewardStr) {
-        if (player == null || rewardStr == null || rewardStr.isBlank()) return false;
+    public boolean executeReward(Player player, ParsedEventReward parsed) {
+        if (player == null || parsed == null) return false;
         try {
-            if (rewardStr.startsWith("cmd:")) {
-                String cmd = rewardStr.substring(4).replace("%player%", player.getName());
+            if (parsed.getType() == RewardType.COMMAND) {
+                String cmd = parsed.getCommand().replace("%player%", player.getName());
                 return Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
-            } else if (rewardStr.startsWith("item:")) {
-                String[] parts = rewardStr.substring(5).trim().split("\\s+");
-                if (parts.length == 0 || parts[0].isBlank()) {
-                    plugin.getLogger().warning("Empty item reward string '" + rewardStr + "' for " + player.getName());
-                    return false;
+            } else if (parsed.getType() == RewardType.ITEM) {
+                ItemStack item = new ItemStack(parsed.getMaterial(), parsed.getAmount());
+                Map<Integer, ItemStack> leftover = player.getInventory().addItem(item);
+                for (ItemStack drop : leftover.values()) {
+                    player.getWorld().dropItemNaturally(player.getLocation(), drop);
                 }
-                Material mat = Material.matchMaterial(parts[0].toUpperCase());
-                int amount = 1;
-                if (parts.length > 1) {
-                    try {
-                        amount = Math.max(1, Integer.parseInt(parts[1]));
-                    } catch (NumberFormatException e) {
-                        plugin.getLogger().warning("Invalid item amount in reward '" + rewardStr + "' for " + player.getName());
-                        return false;
-                    }
-                }
-                if (mat != null) {
-                    Map<Integer, ItemStack> leftover = player.getInventory().addItem(new ItemStack(mat, amount));
-                    for (ItemStack drop : leftover.values()) {
-                        player.getWorld().dropItemNaturally(player.getLocation(), drop);
-                    }
-                    return true;
-                } else {
-                    plugin.getLogger().warning("Unknown material in reward '" + rewardStr + "' for " + player.getName());
-                    return false;
-                }
-            } else {
-                plugin.getLogger().warning("Unsupported reward format '" + rewardStr + "' for " + player.getName());
-                return false;
+                return true;
             }
         } catch (Exception e) {
-            plugin.getLogger().warning("Error delivering reward '" + rewardStr + "' to " + player.getName() + ": " + e.getMessage());
+            if (plugin != null) {
+                plugin.getLogger().warning("Failed to execute reward for " + player.getName() + ": " + e.getMessage());
+            }
+        }
+        return false;
+    }
+
+    public boolean executeReward(Player player, String rewardStr) {
+        if (player == null) return false;
+        ParsedEventReward parsed = parseRewardString(rewardStr);
+        if (parsed == null) {
+            if (plugin != null) {
+                plugin.getLogger().warning("Unparseable reward '" + rewardStr + "' for " + player.getName());
+            }
             return false;
         }
+        return executeReward(player, parsed);
     }
 
     public void initialize() {
@@ -147,7 +249,11 @@ public class EventManager {
         // Start automated scheduler if enabled
         if (plugin.getEventsConfig().getBoolean("events.enabled", true)) {
             int intervalMinutes = plugin.getEventsConfig().getInt("events.interval-minutes", 120);
-            long periodTicks = intervalMinutes * 60 * 20L;
+            if (intervalMinutes < 1) {
+                plugin.getLogger().warning("Mini-events interval is configured below 1 minute (" + intervalMinutes + "m). Clamping to 1 minute.");
+                intervalMinutes = 1;
+            }
+            long periodTicks = Math.max(1200L, intervalMinutes * 60L * 20L);
 
             autoScheduleTask = new BukkitRunnable() {
                 @Override

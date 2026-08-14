@@ -9,6 +9,7 @@ import java.util.UUID;
 public class SecretSantaHolder implements InventoryHolder {
     private final UUID targetUUID;
     private Inventory inventory;
+    private boolean confirmed = false;
 
     public SecretSantaHolder(UUID targetUUID) {
         this.targetUUID = targetUUID;
@@ -25,5 +26,13 @@ public class SecretSantaHolder implements InventoryHolder {
     @Override
     public Inventory getInventory() {
         return inventory;
+    }
+
+    public boolean isConfirmed() {
+        return confirmed;
+    }
+
+    public void setConfirmed(boolean confirmed) {
+        this.confirmed = confirmed;
     }
 }

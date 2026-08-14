@@ -207,15 +207,41 @@ public class SeasonalManager {
         return getCurrentSeason() == type;
     }
 
+    public int getCurrentYear() {
+        return ZonedDateTime.now(cachedZoneId).getYear();
+    }
+
+    public String getFormattedDateRange(SeasonType season) {
+        MonthDay[] range = cachedDateRanges.get(season);
+        if (range == null || range.length < 2 || range[0] == null || range[1] == null) {
+            return "Configured dates";
+        }
+        return String.format("%s %d - %s %d",
+                range[0].getMonth().name().substring(0, 1) + range[0].getMonth().name().substring(1, 3).toLowerCase(),
+                range[0].getDayOfMonth(),
+                range[1].getMonth().name().substring(0, 1) + range[1].getMonth().name().substring(1, 3).toLowerCase(),
+                range[1].getDayOfMonth());
+    }
+
     // ==========================================
     // Halloween Scavenger Hunt
     // ==========================================
 
     public List<Integer> getFoundPumpkins(UUID playerUuid) {
+        int year = getCurrentYear();
+        String path = "players." + playerUuid + ".halloween." + year + ".found";
+        if (playerDataConfig.contains(path)) {
+            return playerDataConfig.getIntegerList(path);
+        }
         return playerDataConfig.getIntegerList("players." + playerUuid + ".halloween.found");
     }
 
     public boolean hasClaimedHalloweenGrand(UUID playerUuid) {
+        int year = getCurrentYear();
+        String path = "players." + playerUuid + ".halloween." + year + ".claimed_grand";
+        if (playerDataConfig.contains(path)) {
+            return playerDataConfig.getBoolean(path, false);
+        }
         return playerDataConfig.getBoolean("players." + playerUuid + ".halloween.claimed_grand", false);
     }
 
@@ -226,6 +252,7 @@ public class SeasonalManager {
         }
 
         UUID uuid = player.getUniqueId();
+        int year = getCurrentYear();
         List<Integer> found = new ArrayList<>(getFoundPumpkins(uuid));
 
         if (found.contains(pumpkinId)) {
@@ -235,14 +262,14 @@ public class SeasonalManager {
 
         List<Integer> backup = new ArrayList<>(found);
         found.add(pumpkinId);
-        playerDataConfig.set("players." + uuid + ".halloween.found", found);
+        playerDataConfig.set("players." + uuid + ".halloween." + year + ".found", found);
         if (!savePlayerData()) {
-            playerDataConfig.set("players." + uuid + ".halloween.found", backup);
+            playerDataConfig.set("players." + uuid + ".halloween." + year + ".found", backup);
             player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to save pumpkin discovery! Please try again.</red>"));
             return false;
         }
 
-        int total = plugin.getSeasonalConfig().getInt("seasonal.halloween.total_pumpkins", 20);
+        int total = Math.max(1, plugin.getSeasonalConfig().getInt("seasonal.halloween.total_pumpkins", 20));
 
         // Visual & audio celebratory effects
         player.playSound(player.getLocation(), Sound.ENTITY_WITCH_CELEBRATE, 1.0f, 1.2f);
@@ -271,7 +298,8 @@ public class SeasonalManager {
         }
 
         UUID uuid = player.getUniqueId();
-        int total = plugin.getSeasonalConfig().getInt("seasonal.halloween.total_pumpkins", 20);
+        int year = getCurrentYear();
+        int total = Math.max(1, plugin.getSeasonalConfig().getInt("seasonal.halloween.total_pumpkins", 20));
         List<Integer> found = getFoundPumpkins(uuid);
 
         if (found.size() < total) {
@@ -284,9 +312,9 @@ public class SeasonalManager {
             return false;
         }
 
-        playerDataConfig.set("players." + uuid + ".halloween.claimed_grand", true);
+        playerDataConfig.set("players." + uuid + ".halloween." + year + ".claimed_grand", true);
         if (!savePlayerData()) {
-            playerDataConfig.set("players." + uuid + ".halloween.claimed_grand", false);
+            playerDataConfig.set("players." + uuid + ".halloween." + year + ".claimed_grand", false);
             player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to save reward claim status! Please contact an administrator.</red>"));
             return false;
         }
@@ -335,10 +363,20 @@ public class SeasonalManager {
     // ==========================================
 
     public List<Integer> getFoundEggs(UUID playerUuid) {
+        int year = getCurrentYear();
+        String path = "players." + playerUuid + ".easter." + year + ".found";
+        if (playerDataConfig.contains(path)) {
+            return playerDataConfig.getIntegerList(path);
+        }
         return playerDataConfig.getIntegerList("players." + playerUuid + ".easter.found");
     }
 
     public boolean hasClaimedEasterGrand(UUID playerUuid) {
+        int year = getCurrentYear();
+        String path = "players." + playerUuid + ".easter." + year + ".claimed_grand";
+        if (playerDataConfig.contains(path)) {
+            return playerDataConfig.getBoolean(path, false);
+        }
         return playerDataConfig.getBoolean("players." + playerUuid + ".easter.claimed_grand", false);
     }
 
@@ -349,6 +387,7 @@ public class SeasonalManager {
         }
 
         UUID uuid = player.getUniqueId();
+        int year = getCurrentYear();
         List<Integer> found = new ArrayList<>(getFoundEggs(uuid));
 
         if (found.contains(eggId)) {
@@ -358,14 +397,14 @@ public class SeasonalManager {
 
         List<Integer> backup = new ArrayList<>(found);
         found.add(eggId);
-        playerDataConfig.set("players." + uuid + ".easter.found", found);
+        playerDataConfig.set("players." + uuid + ".easter." + year + ".found", found);
         if (!savePlayerData()) {
-            playerDataConfig.set("players." + uuid + ".easter.found", backup);
+            playerDataConfig.set("players." + uuid + ".easter." + year + ".found", backup);
             player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to save Easter egg discovery! Please try again.</red>"));
             return false;
         }
 
-        int total = plugin.getSeasonalConfig().getInt("seasonal.easter.total_eggs", 15);
+        int total = Math.max(1, plugin.getSeasonalConfig().getInt("seasonal.easter.total_eggs", 15));
 
         // Visual & audio celebratory effects
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
@@ -402,7 +441,8 @@ public class SeasonalManager {
         }
 
         UUID uuid = player.getUniqueId();
-        int total = plugin.getSeasonalConfig().getInt("seasonal.easter.total_eggs", 15);
+        int year = getCurrentYear();
+        int total = Math.max(1, plugin.getSeasonalConfig().getInt("seasonal.easter.total_eggs", 15));
         List<Integer> found = getFoundEggs(uuid);
 
         if (found.size() < total) {
@@ -415,9 +455,9 @@ public class SeasonalManager {
             return false;
         }
 
-        playerDataConfig.set("players." + uuid + ".easter.claimed_grand", true);
+        playerDataConfig.set("players." + uuid + ".easter." + year + ".claimed_grand", true);
         if (!savePlayerData()) {
-            playerDataConfig.set("players." + uuid + ".easter.claimed_grand", false);
+            playerDataConfig.set("players." + uuid + ".easter." + year + ".claimed_grand", false);
             player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to save reward claim status! Please contact an administrator.</red>"));
             return false;
         }

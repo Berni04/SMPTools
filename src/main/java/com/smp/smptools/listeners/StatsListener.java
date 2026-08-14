@@ -52,6 +52,7 @@ public class StatsListener implements Listener {
         List<Map<?, ?>> deathInfo = plugin.getStatsConfig().getMapList("stats." + uuid + ".deaths_info");
         Map<String, Object> death = new HashMap<>();
         death.put("time", java.time.LocalDateTime.now().toString());
+        death.put("world", player.getWorld().getName());
         death.put("x", player.getLocation().getBlockX());
         death.put("y", player.getLocation().getBlockY());
         death.put("z", player.getLocation().getBlockZ());
@@ -123,6 +124,10 @@ public class StatsListener implements Listener {
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
+        if (com.smp.smptools.artifacts.ArtifactListener.isFelling(event.getBlock())) {
+            return;
+        }
+
         Player player = event.getPlayer();
         Material blockType = event.getBlock().getType();
 

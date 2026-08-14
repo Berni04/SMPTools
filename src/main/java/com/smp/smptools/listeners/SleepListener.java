@@ -35,7 +35,7 @@ public class SleepListener implements Listener {
 
         // Prevent starting a vote if one is already in progress by another player
         if (sleepManager.isVoteInProgress()) {
-             player.sendMessage("A sleep vote is already in progress.");
+            player.sendMessage(plugin.getMessageManager().getMessage("sleep.already-voting"));
             return;
         }
 
@@ -49,9 +49,18 @@ public class SleepListener implements Listener {
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        if (sleepManager.isVoteInProgress() && event.getPlayer().equals(sleepManager.getVoteInitiator())) {
+        handleInitiatorLeave(event.getPlayer());
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onPlayerKick(org.bukkit.event.player.PlayerKickEvent event) {
+        handleInitiatorLeave(event.getPlayer());
+    }
+
+    private void handleInitiatorLeave(Player player) {
+        if (sleepManager.isVoteInProgress() && player.equals(sleepManager.getVoteInitiator())) {
             sleepManager.endVote();
-            plugin.getServer().broadcastMessage("The sleep vote was cancelled because the initiator left.");
+            org.bukkit.Bukkit.broadcast(plugin.getMessageManager().getMessage("sleep.vote-cancelled-initiator-left"));
         }
     }
 }

@@ -193,11 +193,44 @@ public class MissionGUIListener implements Listener {
             if (hasChromaticElytra) {
                 openColorSelectionGUI(player, clickedMission.getId());
             } else {
+                // Validate all rewards before mutating state or delivering items
+                boolean allValid = true;
                 for (String reward : clickedMission.getRewards()) {
-                    RewardManager.giveReward(player, reward);
+                    if (!RewardManager.isValidReward(reward)) {
+                        allValid = false;
+                        break;
+                    }
                 }
-                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-claimed", player));
+                if (!allValid) {
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Some rewards could not be validated. Please contact an admin.</red>"));
+                    return;
+                }
+
+                // 1. Atomically persist claim AND pending rewards to disk BEFORE delivery to prevent lost or duplicate rewards
+                List<String> pendingSnapshot = new ArrayList<>(playerData.getPendingRewards());
                 playerData.getClaimedMissions().add(clickedMission.getId());
+                playerData.getPendingRewards().addAll(clickedMission.getRewards());
+                if (!missionManager.saveSinglePlayerData(player.getUniqueId())) {
+                    playerData.getClaimedMissions().remove(clickedMission.getId());
+                    playerData.getPendingRewards().clear();
+                    playerData.getPendingRewards().addAll(pendingSnapshot);
+                    SMPTools.getInstance().getLogger().severe("Failed to persist mission claim for " + clickedMission.getId() + " to " + player.getName() + "; aborting reward delivery.");
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Failed to save mission progress. Please try again.</red>"));
+                    return;
+                }
+
+                // 2. Deliver queued rewards via the transactional pending rewards processor
+                MissionManager.ClaimResult result = missionManager.claimPendingMissionRewards(player);
+                if (result == MissionManager.ClaimResult.PARTIALLY_PENDING_AND_DROPPED) {
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<yellow>Some rewards were saved for retry, but others could not be delivered and had to be dropped. Please contact an admin.</yellow>"));
+                } else if (result == MissionManager.ClaimResult.PARTIALLY_PENDING) {
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<yellow>Some rewards could not be delivered immediately and have been saved to your pending rewards queue for retry.</yellow>"));
+                } else if (result == MissionManager.ClaimResult.DROPPED_UNEXECUTABLE) {
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Some rewards could not be delivered and had to be dropped. Please contact an admin.</red>"));
+                } else {
+                    player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-claimed", player));
+                }
+
                 // Re-open the GUI to update the item state
                 openCompletedMissionsGUI(player, isNpc);
             }
@@ -269,11 +302,39 @@ public class MissionGUIListener implements Listener {
         if (missionId == null)
             return;
 
-        RewardManager.giveChromaticElytra(player, color);
         MissionManager.PlayerMissionData playerData = missionManager.getPlayerData(player);
+        if (playerData.getClaimedMissions().contains(missionId)) {
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-already-claimed"));
+            player.closeInventory();
+            return;
+        }
+
+        // 1. Atomically persist claim AND chosen chromatic elytra to disk BEFORE delivery
+        List<String> pendingSnapshot = new ArrayList<>(playerData.getPendingRewards());
+        String rewardStr = "custom_item:chromatic_elytra:" + color;
         playerData.getClaimedMissions().add(missionId);
+        playerData.getPendingRewards().add(rewardStr);
+        if (!missionManager.saveSinglePlayerData(player.getUniqueId())) {
+            playerData.getClaimedMissions().remove(missionId);
+            playerData.getPendingRewards().clear();
+            playerData.getPendingRewards().addAll(pendingSnapshot);
+            SMPTools.getInstance().getLogger().severe("Failed to persist Chromatic Elytra claim " + missionId + " for " + player.getName() + "; aborting reward delivery.");
+            player.closeInventory();
+            player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Failed to save mission progress. Please try again.</red>"));
+            return;
+        }
+
         player.closeInventory();
-        player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.chromatic-elytra-received"));
+        MissionManager.ClaimResult result = missionManager.claimPendingMissionRewards(player);
+        if (result == MissionManager.ClaimResult.PARTIALLY_PENDING_AND_DROPPED) {
+            player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<yellow>Some rewards were saved for retry, but others could not be delivered and had to be dropped. Please contact an admin.</yellow>"));
+        } else if (result == MissionManager.ClaimResult.PARTIALLY_PENDING) {
+            player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<yellow>Some rewards could not be delivered immediately and have been saved to your pending rewards queue for retry.</yellow>"));
+        } else if (result == MissionManager.ClaimResult.DROPPED_UNEXECUTABLE) {
+            player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Some rewards could not be delivered and had to be dropped. Please contact an admin.</red>"));
+        } else {
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-claimed", player));
+        }
     }
 
     private void handleQuestlineSelectionClick(InventoryClickEvent event, Player player) {

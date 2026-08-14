@@ -87,27 +87,165 @@ public class MissionManager {
         playerMissionsConfig = YamlConfiguration.loadConfiguration(playerMissionsFile);
     }
 
-    public void savePlayerData() {
+    private void serializePlayerMissionData(UUID uuid, PlayerMissionData data) {
+        String path = "players." + uuid.toString();
+        playerMissionsConfig.set(path + ".selectedQuestline", data.getSelectedQuestline());
+        playerMissionsConfig.set(path + ".completed", data.getCompletedMissions());
+        playerMissionsConfig.set(path + ".active", data.getActiveMissions());
+        playerMissionsConfig.set(path + ".claimed", data.getClaimedMissions());
+        playerMissionsConfig.set(path + ".pendingRewards", data.getPendingRewards().isEmpty() ? null : data.getPendingRewards());
+
+        // Save progress map
+        ConfigurationSection progressSection = playerMissionsConfig.createSection(path + ".progress");
+        for (Map.Entry<String, Integer> progressEntry : data.getMissionProgress().entrySet()) {
+            progressSection.set(progressEntry.getKey(), progressEntry.getValue());
+        }
+    }
+
+    public synchronized boolean savePlayerData() {
         for (Map.Entry<UUID, PlayerMissionData> entry : playerData.entrySet()) {
-            String path = "players." + entry.getKey().toString();
-            PlayerMissionData data = entry.getValue();
-
-            playerMissionsConfig.set(path + ".selectedQuestline", data.getSelectedQuestline());
-            playerMissionsConfig.set(path + ".completed", data.getCompletedMissions());
-            playerMissionsConfig.set(path + ".active", data.getActiveMissions());
-            playerMissionsConfig.set(path + ".claimed", data.getClaimedMissions());
-
-            // Save progress map
-            ConfigurationSection progressSection = playerMissionsConfig.createSection(path + ".progress");
-            for (Map.Entry<String, Integer> progressEntry : data.getMissionProgress().entrySet()) {
-                progressSection.set(progressEntry.getKey(), progressEntry.getValue());
-            }
+            serializePlayerMissionData(entry.getKey(), entry.getValue());
         }
 
         try {
             playerMissionsConfig.save(playerMissionsFile);
+            return true;
         } catch (IOException e) {
-            plugin.getLogger().severe("Could not save player_missions.yml!");
+            if (plugin != null) {
+                plugin.getLogger().severe("Could not save player_missions.yml: " + e.getMessage());
+            }
+            return false;
+        }
+    }
+
+    public synchronized boolean saveSinglePlayerData(UUID uuid) {
+        if (uuid == null) return false;
+        PlayerMissionData data = playerData.get(uuid);
+        if (data == null) return false;
+        serializePlayerMissionData(uuid, data);
+        try {
+            playerMissionsConfig.save(playerMissionsFile);
+            return true;
+        } catch (IOException e) {
+            if (plugin != null) {
+                plugin.getLogger().severe("Could not save player_missions.yml for " + uuid + ": " + e.getMessage());
+            }
+            return false;
+        }
+    }
+
+    public enum ClaimResult {
+        ALL_DELIVERED,
+        PARTIALLY_PENDING,
+        DROPPED_UNEXECUTABLE,
+        PARTIALLY_PENDING_AND_DROPPED,
+        NOTHING_TO_CLAIM
+    }
+
+    public synchronized ClaimResult claimPendingMissionRewards(Player player) {
+        if (player == null || !player.isOnline()) return ClaimResult.NOTHING_TO_CLAIM;
+        PlayerMissionData data = getPlayerData(player);
+        if (data.getPendingRewards().isEmpty()) return ClaimResult.NOTHING_TO_CLAIM;
+
+        List<String> pending = new ArrayList<>(data.getPendingRewards());
+        boolean anyDelivered = false;
+        int droppedCount = 0;
+
+        for (String reward : pending) {
+            List<String> snapshotBefore = new ArrayList<>(data.getPendingRewards());
+            String baseReward = reward != null ? reward.trim() : "";
+            int retryCount = 0;
+            if (reward != null) {
+                int retryIndex = baseReward.lastIndexOf("#retry:");
+                if (retryIndex != -1) {
+                    String suffix = baseReward.substring(retryIndex + 7).trim();
+                    baseReward = baseReward.substring(0, retryIndex).trim();
+                    try {
+                        retryCount = Integer.parseInt(suffix);
+                        if (retryCount < 0) {
+                            retryCount = 3;
+                        }
+                    } catch (NumberFormatException e) {
+                        retryCount = 3;
+                    }
+                }
+            }
+
+            if (!RewardManager.isValidReward(baseReward)) {
+                if (plugin != null) {
+                    plugin.getLogger().warning("Discarding unparseable/malformed pending mission reward '" + reward + "' for " + player.getName());
+                }
+                droppedCount++;
+                data.getPendingRewards().remove(reward);
+                if (!saveSinglePlayerData(player.getUniqueId())) {
+                    data.getPendingRewards().clear();
+                    data.getPendingRewards().addAll(snapshotBefore);
+                    break;
+                }
+                continue;
+            }
+
+            // Persist removal from pending queue BEFORE delivering reward to prevent duplicates on crash or save failure
+            data.getPendingRewards().remove(reward);
+            if (!saveSinglePlayerData(player.getUniqueId())) {
+                if (plugin != null) {
+                    plugin.getLogger().severe("Failed to persist pending mission reward removal for " + player.getName() + ", aborting claim execution.");
+                }
+                data.getPendingRewards().clear();
+                data.getPendingRewards().addAll(snapshotBefore);
+                break;
+            }
+
+            boolean delivered = false;
+            try {
+                delivered = RewardManager.giveReward(player, baseReward);
+            } catch (Exception e) {
+                if (plugin != null) {
+                    plugin.getLogger().warning("Failed to deliver pending mission reward '" + reward + "' to " + player.getName() + ": " + e.getMessage());
+                }
+            }
+
+            if (delivered) {
+                anyDelivered = true;
+            } else {
+                int nextRetry = retryCount + 1;
+                if (nextRetry >= 3) {
+                    droppedCount++;
+                    if (plugin != null) {
+                        plugin.getLogger().severe("Permanently dropping unexecutable pending mission reward '" + baseReward + "' for " + player.getName() + " after 3 failed attempts.");
+                    }
+                } else {
+                    data.getPendingRewards().add(baseReward + "#retry:" + nextRetry);
+                    if (plugin != null) {
+                        plugin.getLogger().warning("Transient delivery failure for pending mission reward '" + baseReward + "' for " + player.getName() + " (attempt " + nextRetry + "/3), retaining for retry.");
+                    }
+                    if (!saveSinglePlayerData(player.getUniqueId())) {
+                        if (plugin != null) {
+                            plugin.getLogger().severe("Failed to persist retry state for pending mission reward for " + player.getName() + ", aborting remaining queue.");
+                        }
+                        data.getPendingRewards().clear();
+                        data.getPendingRewards().addAll(snapshotBefore);
+                        saveSinglePlayerData(player.getUniqueId());
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (anyDelivered) {
+            player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                    .deserialize("<gold><b>[MISSIONS]</b></gold> <green>You received pending mission rewards!</green>"));
+        }
+
+        boolean queueHasPending = !data.getPendingRewards().isEmpty();
+        if (queueHasPending && droppedCount > 0) {
+            return ClaimResult.PARTIALLY_PENDING_AND_DROPPED;
+        } else if (queueHasPending) {
+            return ClaimResult.PARTIALLY_PENDING;
+        } else if (droppedCount > 0) {
+            return ClaimResult.DROPPED_UNEXECUTABLE;
+        } else {
+            return ClaimResult.ALL_DELIVERED;
         }
     }
 
@@ -121,6 +259,7 @@ public class MissionManager {
                 data.getCompletedMissions().addAll(playerMissionsConfig.getStringList(path + ".completed"));
                 data.getActiveMissions().addAll(playerMissionsConfig.getStringList(path + ".active"));
                 data.getClaimedMissions().addAll(playerMissionsConfig.getStringList(path + ".claimed"));
+                data.getPendingRewards().addAll(playerMissionsConfig.getStringList(path + ".pendingRewards"));
 
                 ConfigurationSection progressSection = playerMissionsConfig.getConfigurationSection(path + ".progress");
                 if (progressSection != null) {
@@ -170,6 +309,7 @@ public class MissionManager {
         private final List<String> completedMissions = new ArrayList<>();
         private final List<String> activeMissions = new ArrayList<>();
         private final List<String> claimedMissions = new ArrayList<>(); // New list for claimed missions
+        private final List<String> pendingRewards = new ArrayList<>();
         private String selectedQuestline = null;
 
         public PlayerMissionData(UUID playerUUID) {
@@ -191,6 +331,10 @@ public class MissionManager {
         public List<String> getClaimedMissions() {
             return claimedMissions;
         } // Getter for claimed missions
+
+        public List<String> getPendingRewards() {
+            return pendingRewards;
+        }
 
         public String getSelectedQuestline() {
             return selectedQuestline;

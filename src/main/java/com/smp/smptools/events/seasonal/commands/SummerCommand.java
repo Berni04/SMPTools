@@ -25,7 +25,8 @@ public class SummerCommand implements CommandExecutor {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         boolean active = seasonalManager.isSeasonActive(SeasonType.SUMMER);
-        String status = active ? "<green>ACTIVE</green>" : "<red>INACTIVE (Active Jul 1 - Aug 31)</red>";
+        String dates = seasonalManager.getFormattedDateRange(SeasonType.SUMMER);
+        String status = active ? "<green>ACTIVE</green>" : "<red>INACTIVE (Active " + dates + ")</red>";
 
         sender.sendMessage(MiniMessage.miniMessage().deserialize(
                 "\n<gold>====================================</gold>\n" +
