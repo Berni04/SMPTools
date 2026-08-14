@@ -672,25 +672,47 @@ public class ArtifactListener implements Listener {
         Vector dir = eyeLoc.getDirection().normalize();
         Location target = player.getLocation().add(dir.clone().multiply(maxDist));
 
-        if (isSafePlayerStand(target)) {
+        // 1. If target endpoint is safe, verify intervening wall thickness does not exceed 2 solid blocks
+        if (isSafePlayerStand(target) && countSolidBlocksOnPath(player.getLocation(), target) <= 2) {
             return target;
         }
 
+        // 2. Check vertical adjustments at maxDist if wall thickness <= 2
         for (int dy : new int[]{1, 2, 3, -1, -2}) {
             Location candidate = target.clone().add(0, dy, 0);
-            if (isSafePlayerStand(candidate)) {
+            if (isSafePlayerStand(candidate) && countSolidBlocksOnPath(player.getLocation(), candidate) <= 2) {
                 return candidate;
             }
         }
 
+        // 3. If obstacle is thicker than 2 solid blocks or target is solid, trace backward along the ray
+        // to find the nearest safe spot before the obstacle
         for (double d = maxDist - 0.5; d >= 1.0; d -= 0.5) {
             Location fallback = player.getLocation().add(dir.clone().multiply(d));
-            if (isSafePlayerStand(fallback)) {
+            if (isSafePlayerStand(fallback) && countSolidBlocksOnPath(player.getLocation(), fallback) == 0) {
                 return fallback;
             }
         }
 
         return null;
+    }
+
+    private int countSolidBlocksOnPath(Location from, Location to) {
+        if (from == null || to == null || from.getWorld() == null) return Integer.MAX_VALUE;
+        double dist = from.distance(to);
+        if (dist <= 0.0) return 0;
+        Vector step = to.toVector().subtract(from.toVector()).normalize().multiply(0.4);
+        int solidCount = 0;
+        Set<Block> countedBlocks = new HashSet<>();
+
+        for (double d = 0.4; d < dist - 0.2; d += 0.4) {
+            Location sample = from.clone().add(step.clone().multiply(d / 0.4));
+            Block b = sample.getBlock();
+            if (b.getType().isSolid() && countedBlocks.add(b)) {
+                solidCount++;
+            }
+        }
+        return solidCount;
     }
 
     private boolean isSafePlayerStand(Location loc) {
