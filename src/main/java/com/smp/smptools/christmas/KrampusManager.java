@@ -48,6 +48,68 @@ public class KrampusManager {
         File file = new File(plugin.getDataFolder(), "christmas.yml");
         if (file.exists()) {
             christmasConfig = YamlConfiguration.loadConfiguration(file);
+        } else {
+            christmasConfig = new YamlConfiguration();
+        }
+        cleanupStaleCages();
+    }
+
+    private void cleanupStaleCages() {
+        if (christmasConfig == null || !christmasConfig.contains("active_cages")) return;
+        org.bukkit.configuration.ConfigurationSection section = christmasConfig.getConfigurationSection("active_cages");
+        if (section == null) return;
+
+        for (String key : section.getKeys(false)) {
+            String worldName = section.getString(key + ".world");
+            if (worldName == null) continue;
+            org.bukkit.World world = Bukkit.getWorld(worldName);
+            if (world == null) continue;
+
+            int cx = section.getInt(key + ".x");
+            int cy = section.getInt(key + ".y");
+            int cz = section.getInt(key + ".z");
+            Location center = new Location(world, cx, cy, cz);
+
+            for (int x = -4; x <= 4; x++) {
+                for (int y = 0; y <= 5; y++) {
+                    for (int z = -4; z <= 4; z++) {
+                        org.bukkit.block.Block b = center.clone().add(x, y, z).getBlock();
+                        if (b.getType() == Material.IRON_BARS || b.getType() == Material.BEDROCK) {
+                            b.setType(Material.AIR);
+                        }
+                    }
+                }
+            }
+        }
+        christmasConfig.set("active_cages", null);
+        saveChristmasConfig();
+    }
+
+    private void saveCageLocation(UUID uuid, Location center) {
+        if (christmasConfig == null || center == null || center.getWorld() == null) return;
+        String path = "active_cages." + uuid.toString();
+        christmasConfig.set(path + ".world", center.getWorld().getName());
+        christmasConfig.set(path + ".x", center.getBlockX());
+        christmasConfig.set(path + ".y", center.getBlockY());
+        christmasConfig.set(path + ".z", center.getBlockZ());
+        saveChristmasConfig();
+    }
+
+    private void removeCageLocation(UUID uuid) {
+        if (christmasConfig == null) return;
+        christmasConfig.set("active_cages." + uuid.toString(), null);
+        saveChristmasConfig();
+    }
+
+    private void saveChristmasConfig() {
+        if (christmasConfig == null) return;
+        try {
+            File file = new File(plugin.getDataFolder(), "christmas.yml");
+            christmasConfig.save(file);
+        } catch (Exception e) {
+            if (plugin != null) {
+                plugin.getLogger().warning("Failed to save christmas config: " + e.getMessage());
+            }
         }
     }
 
@@ -203,6 +265,7 @@ public class KrampusManager {
     }
 
     private void removeCage(UUID uuid, Location center) {
+        removeCageLocation(uuid);
         Map<Location, org.bukkit.block.BlockState> original = originalCageBlocks.remove(uuid);
         if (original != null) {
             for (org.bukkit.block.BlockState state : original.values()) {
@@ -231,6 +294,7 @@ public class KrampusManager {
             }
         }
         originalCageBlocks.put(uuid, snapshot);
+        saveCageLocation(uuid, center);
 
         // 9x9 Cage (Radius 4)
         for (int x = -4; x <= 4; x++) {
