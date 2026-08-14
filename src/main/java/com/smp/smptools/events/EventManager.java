@@ -61,8 +61,8 @@ public class EventManager {
         }
     }
 
-    public synchronized void queueOfflineRewardsBatch(Map<UUID, List<String>> rewardsByPlayer) {
-        if (rewardsByPlayer == null || rewardsByPlayer.isEmpty()) return;
+    public synchronized boolean queueOfflineRewardsBatch(Map<UUID, List<String>> rewardsByPlayer) {
+        if (rewardsByPlayer == null || rewardsByPlayer.isEmpty()) return true;
 
         for (Map.Entry<UUID, List<String>> entry : rewardsByPlayer.entrySet()) {
             String path = "pending_rewards." + entry.getKey().toString();
@@ -70,7 +70,11 @@ public class EventManager {
             current.addAll(entry.getValue());
             dataConfig.set(path, current);
         }
-        saveData();
+        boolean saved = saveData();
+        if (!saved && plugin != null) {
+            plugin.getLogger().severe("Failed to persist offline rewards batch in events_data.yml!");
+        }
+        return saved;
     }
 
     public enum RewardType {
