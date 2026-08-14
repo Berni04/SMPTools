@@ -98,16 +98,23 @@ public class EventManager {
         public int getRetryCount() { return retryCount; }
     }
 
+    private static final java.util.regex.Pattern RETRY_PATTERN = java.util.regex.Pattern.compile("^(.*)#retry:(.+)$");
+
     public static ParsedEventReward parseRewardString(String rewardStr) {
         if (rewardStr == null || rewardStr.isBlank()) return null;
         int retryCount = 0;
         String raw = rewardStr.trim();
-        int retryIdx = raw.indexOf("#retry:");
-        if (retryIdx != -1) {
+        java.util.regex.Matcher matcher = RETRY_PATTERN.matcher(raw);
+        if (matcher.matches()) {
             try {
-                retryCount = Integer.parseInt(raw.substring(retryIdx + 7));
-            } catch (NumberFormatException ignored) {}
-            raw = raw.substring(0, retryIdx).trim();
+                retryCount = Integer.parseInt(matcher.group(2).trim());
+                if (retryCount < 0) {
+                    return null;
+                }
+                raw = matcher.group(1).trim();
+            } catch (NumberFormatException e) {
+                return null;
+            }
         }
 
         if (raw.startsWith("cmd:")) {
@@ -122,9 +129,12 @@ public class EventManager {
             int amount = 1;
             if (parts.length > 1) {
                 try {
-                    amount = Math.max(1, Integer.parseInt(parts[1]));
+                    amount = Integer.parseInt(parts[1]);
+                    if (amount <= 0) {
+                        return null;
+                    }
                 } catch (NumberFormatException e) {
-                    amount = 1;
+                    return null;
                 }
             }
             return new ParsedEventReward(RewardType.ITEM, null, mat, amount, retryCount);
@@ -150,7 +160,7 @@ public class EventManager {
                 continue;
             }
 
-            boolean ok = executeReward(player, reward);
+            boolean ok = executeReward(player, parsed);
             if (ok) {
                 anyDelivered = true;
                 remaining.remove(reward);
@@ -162,8 +172,8 @@ public class EventManager {
                 if (nextRetry >= 3) {
                     plugin.getLogger().severe("Permanently dropping unexecutable offline reward '" + reward + "' for " + player.getName() + " after 3 failed attempts.");
                 } else {
-                    String rawBase = reward.contains("#retry:") ? reward.substring(0, reward.indexOf("#retry:")).trim() : reward;
-                    remaining.add(rawBase + "#retry:" + nextRetry);
+                    String baseCommandOrItem = parsed.getType() == RewardType.COMMAND ? "cmd:" + parsed.getCommand() : "item:" + parsed.getMaterial().name() + " " + parsed.getAmount();
+                    remaining.add(baseCommandOrItem + "#retry:" + nextRetry);
                     plugin.getLogger().warning("Transient delivery failure for offline reward '" + reward + "' for " + player.getName() + " (attempt " + nextRetry + "/3), retaining for retry.");
                 }
                 dataConfig.set(path, remaining.isEmpty() ? null : remaining);
@@ -176,15 +186,8 @@ public class EventManager {
         }
     }
 
-    public boolean executeReward(Player player, String rewardStr) {
-        if (player == null) return false;
-        ParsedEventReward parsed = parseRewardString(rewardStr);
-        if (parsed == null) {
-            if (plugin != null) {
-                plugin.getLogger().warning("Unparseable reward '" + rewardStr + "' for " + player.getName());
-            }
-            return false;
-        }
+    public boolean executeReward(Player player, ParsedEventReward parsed) {
+        if (player == null || parsed == null) return false;
         try {
             if (parsed.getType() == RewardType.COMMAND) {
                 String cmd = parsed.getCommand().replace("%player%", player.getName());
@@ -199,10 +202,22 @@ public class EventManager {
             }
         } catch (Exception e) {
             if (plugin != null) {
-                plugin.getLogger().warning("Failed to execute reward '" + rewardStr + "' for " + player.getName() + ": " + e.getMessage());
+                plugin.getLogger().warning("Failed to execute reward for " + player.getName() + ": " + e.getMessage());
             }
         }
         return false;
+    }
+
+    public boolean executeReward(Player player, String rewardStr) {
+        if (player == null) return false;
+        ParsedEventReward parsed = parseRewardString(rewardStr);
+        if (parsed == null) {
+            if (plugin != null) {
+                plugin.getLogger().warning("Unparseable reward '" + rewardStr + "' for " + player.getName());
+            }
+            return false;
+        }
+        return executeReward(player, parsed);
     }
 
     public void initialize() {
