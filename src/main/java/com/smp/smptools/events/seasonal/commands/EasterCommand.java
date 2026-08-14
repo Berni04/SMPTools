@@ -77,6 +77,11 @@ public class EasterCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
+            if (target.getState() instanceof org.bukkit.block.Container) {
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Cannot set an Easter egg on a container block (e.g. Chest, Barrel, Shulker Box)! Please select a normal block.</red>"));
+                return true;
+            }
+
             String hint = "Hidden in nature biomes near " + target.getWorld().getName() + " coordinates " + target.getX() + ", " + target.getZ();
             if (args.length >= 3) {
                 hint = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
