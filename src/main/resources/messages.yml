@@ -372,6 +372,8 @@ secret-santa:
   click-to-copy: "<gray>Click to copy</gray>"
   deposit-gui-title: "Deposit Gift for {target}"
   deposit-gui-prefix: "Deposit Gift for "
+  confirm-deposit-button: "<green><b>Confirm Deposit</b></green>"
+  confirm-deposit-lore: "<gray>Click to finalize deposit.</gray>"
 
 # Krampus
 krampus:

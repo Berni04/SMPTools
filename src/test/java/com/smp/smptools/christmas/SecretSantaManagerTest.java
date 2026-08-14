@@ -63,4 +63,55 @@ public class SecretSantaManagerTest {
         ItemStack[] secondClaim = manager.claimGift(recipient);
         assertNull(secondClaim);
     }
+
+    @Test
+    public void testDepositEmptyGiftDoesNotCreateDeposit() {
+        SecretSantaManager manager = new SecretSantaManager(null);
+        UUID recipient = UUID.randomUUID();
+
+        manager.depositGift(recipient, new ItemStack[0]);
+        assertFalse(manager.hasGiftDeposited(recipient));
+        assertNull(manager.getGift(recipient));
+        assertNull(manager.claimGift(recipient));
+    }
+
+    @Test
+    public void testConcurrentClaimGiftPreventsDuplication() throws Exception {
+        SecretSantaManager manager = new SecretSantaManager(null);
+        UUID recipient = UUID.randomUUID();
+
+        ItemStack[] items = new ItemStack[]{
+                new DummyItemStack(Material.DIAMOND, 10)
+        };
+        manager.depositGift(recipient, items);
+        assertTrue(manager.hasGiftDeposited(recipient));
+
+        int threadCount = 10;
+        java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(threadCount);
+        java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicInteger successfulClaims = new java.util.concurrent.atomic.AtomicInteger(0);
+
+        List<java.util.concurrent.Future<?>> futures = new ArrayList<>();
+        for (int i = 0; i < threadCount; i++) {
+            futures.add(executor.submit(() -> {
+                try {
+                    latch.await();
+                    ItemStack[] claim = manager.claimGift(recipient);
+                    if (claim != null && claim.length > 0) {
+                        successfulClaims.incrementAndGet();
+                    }
+                } catch (InterruptedException ignored) {
+                }
+            }));
+        }
+
+        latch.countDown();
+        for (java.util.concurrent.Future<?> future : futures) {
+            future.get(5, java.util.concurrent.TimeUnit.SECONDS);
+        }
+        executor.shutdown();
+
+        assertEquals(1, successfulClaims.get(), "Exactly 1 thread must successfully claim the gift in concurrent race");
+        assertFalse(manager.hasGiftDeposited(recipient));
+    }
 }

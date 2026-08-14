@@ -139,8 +139,8 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
         ItemStack confirmBtn = new ItemStack(Material.EMERALD);
         org.bukkit.inventory.meta.ItemMeta meta = confirmBtn.getItemMeta();
         if (meta != null) {
-            meta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<green><b>Confirm Deposit</b></green>"));
-            meta.lore(java.util.List.of(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<gray>Click to finalize deposit.</gray>")));
+            meta.displayName(plugin.getMessageManager().getMessage("secret-santa.confirm-deposit-button", player));
+            meta.lore(java.util.List.of(plugin.getMessageManager().getMessage("secret-santa.confirm-deposit-lore", player)));
             confirmBtn.setItemMeta(meta);
         }
         gui.setItem(26, confirmBtn);
@@ -164,14 +164,14 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
                         }
                     }
                     if (items.isEmpty()) {
-                        player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.empty-deposit"));
+                        player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.empty-deposit", player));
                         return;
                     }
                     holder.setConfirmed(true);
                     manager.depositGift(holder.getTargetUUID(), items.toArray(new ItemStack[0]));
                     inv.clear();
-                    player.closeInventory();
-                    player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.gift-deposited"));
+                    Bukkit.getScheduler().runTask(plugin, player::closeInventory);
+                    player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.gift-deposited", player));
                 }
             }
         }

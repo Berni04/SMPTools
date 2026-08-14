@@ -45,14 +45,16 @@ public class SecretSantaManager {
         config = YamlConfiguration.loadConfiguration(configFile);
     }
 
-    public void saveConfig() {
-        if (configFile == null || config == null) return;
+    public synchronized boolean saveConfig() {
+        if (configFile == null || config == null) return true;
         try {
             config.save(configFile);
+            return true;
         } catch (IOException e) {
             if (plugin != null) {
-                plugin.getLogger().severe("Could not save secretsanta.yml!");
+                plugin.getLogger().severe("Could not save secretsanta.yml: " + e.getMessage());
             }
+            return false;
         }
     }
 
@@ -77,12 +79,14 @@ public class SecretSantaManager {
         return Phase.CELEBRATION;
     }
 
-    public boolean isRegistered(UUID player) {
+    public synchronized boolean isRegistered(UUID player) {
+        if (player == null) return false;
         List<String> participants = config.getStringList("participants");
         return participants.contains(player.toString());
     }
 
-    public void registerPlayer(UUID player) {
+    public synchronized void registerPlayer(UUID player) {
+        if (player == null) return;
         List<String> participants = config.getStringList("participants");
         if (!participants.contains(player.toString())) {
             participants.add(player.toString());
@@ -91,7 +95,7 @@ public class SecretSantaManager {
         }
     }
 
-    public void generateMatches() {
+    public synchronized void generateMatches() {
         List<String> participants = config.getStringList("participants");
         if (participants.size() < 2)
             return;
@@ -118,12 +122,14 @@ public class SecretSantaManager {
         saveConfig();
     }
 
-    public UUID getTarget(UUID santa) {
+    public synchronized UUID getTarget(UUID santa) {
+        if (santa == null) return null;
         String targetStr = config.getString("matches." + santa.toString());
         return targetStr != null ? UUID.fromString(targetStr) : null;
     }
 
-    public void depositGift(UUID target, ItemStack[] items) {
+    public synchronized void depositGift(UUID target, ItemStack[] items) {
+        if (target == null) return;
         List<ItemStack> list = new ArrayList<>();
         if (items != null) {
             for (ItemStack item : items) {
@@ -132,13 +138,18 @@ public class SecretSantaManager {
                 }
             }
         }
-        config.set("gifts." + target.toString(), list);
+        if (list.isEmpty()) {
+            config.set("gifts." + target.toString(), null);
+        } else {
+            config.set("gifts." + target.toString(), list);
+        }
         saveConfig();
     }
 
-    public ItemStack[] getGift(UUID recipient) {
+    public synchronized ItemStack[] getGift(UUID recipient) {
+        if (recipient == null) return null;
         List<?> list = config.getList("gifts." + recipient.toString());
-        if (list == null)
+        if (list == null || list.isEmpty())
             return null;
 
         List<ItemStack> items = new ArrayList<>();
@@ -155,20 +166,59 @@ public class SecretSantaManager {
                 }
             }
         }
+        return items.isEmpty() ? null : items.toArray(new ItemStack[0]);
+    }
+
+    public synchronized ItemStack[] claimGift(UUID recipient) {
+        if (recipient == null) return null;
+        String path = "gifts." + recipient.toString();
+        List<?> rawList = config.getList(path);
+        if (rawList == null || rawList.isEmpty()) {
+            return null;
+        }
+
+        List<ItemStack> items = new ArrayList<>();
+        boolean allDeserialized = true;
+        for (Object obj : rawList) {
+            if (obj instanceof ItemStack is) {
+                items.add(is);
+            } else if (obj instanceof java.util.Map<?, ?> map) {
+                try {
+                    items.add(ItemStack.deserialize((java.util.Map<String, Object>) map));
+                } catch (Exception e) {
+                    allDeserialized = false;
+                    if (plugin != null) {
+                        plugin.getLogger().warning("Failed to deserialize Secret Santa gift item for recipient " + recipient + ": " + e.getMessage());
+                    }
+                }
+            } else {
+                allDeserialized = false;
+            }
+        }
+
+        if (items.isEmpty() || !allDeserialized) {
+            if (!allDeserialized && plugin != null) {
+                plugin.getLogger().severe("Aborting claim for recipient " + recipient + " because some items could not be safely deserialized.");
+            }
+            return null;
+        }
+
+        Object rawBackup = config.get(path);
+        config.set(path, null);
+        if (!saveConfig()) {
+            config.set(path, rawBackup);
+            if (plugin != null) {
+                plugin.getLogger().severe("Failed to persist gift claim for recipient " + recipient + "; aborting claim.");
+            }
+            return null;
+        }
+
         return items.toArray(new ItemStack[0]);
     }
 
-    public ItemStack[] claimGift(UUID recipient) {
-        ItemStack[] gift = getGift(recipient);
-        if (gift == null || gift.length == 0) {
-            return null;
-        }
-        config.set("gifts." + recipient.toString(), null);
-        saveConfig();
-        return gift;
-    }
-
-    public boolean hasGiftDeposited(UUID target) {
-        return config.contains("gifts." + target.toString());
+    public synchronized boolean hasGiftDeposited(UUID target) {
+        if (target == null) return false;
+        List<?> list = config.getList("gifts." + target.toString());
+        return list != null && !list.isEmpty();
     }
 }
