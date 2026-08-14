@@ -78,7 +78,9 @@ public class SecretSantaManagerTest {
     }
 
     @Test
-    public void testConcurrentClaimGiftPreventsDuplication() throws Exception {
+    public void testConcurrentClaimsRespectMutualExclusionAndPreventDuplication() throws Exception {
+        // Verifies the synchronized claimGift contract: multiple threads attempting concurrent claims
+        // are mutually excluded and exactly one caller receives the items while all others receive null.
         SecretSantaManager manager = new SecretSantaManager(null);
         UUID recipient = UUID.randomUUID();
 
@@ -113,7 +115,7 @@ public class SecretSantaManagerTest {
         }
         executor.shutdown();
 
-        assertEquals(1, successfulClaims.get(), "Exactly 1 thread must successfully claim the gift in concurrent race");
+        assertEquals(1, successfulClaims.get(), "Exactly 1 thread must successfully claim the gift under concurrent execution");
         assertFalse(manager.hasGiftDeposited(recipient));
     }
 }

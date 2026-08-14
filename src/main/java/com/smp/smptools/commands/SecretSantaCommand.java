@@ -168,7 +168,12 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
                         return;
                     }
                     holder.setConfirmed(true);
-                    manager.depositGift(holder.getTargetUUID(), items.toArray(new ItemStack[0]));
+                    boolean saved = manager.depositGift(holder.getTargetUUID(), items.toArray(new ItemStack[0]));
+                    if (!saved) {
+                        holder.setConfirmed(false);
+                        player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Failed to save gift deposit to disk. Please try again.</red>"));
+                        return;
+                    }
                     inv.clear();
                     Bukkit.getScheduler().runTask(plugin, (Runnable) player::closeInventory);
                     player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.gift-deposited", player));

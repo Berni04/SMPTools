@@ -128,8 +128,8 @@ public class SecretSantaManager {
         return targetStr != null ? UUID.fromString(targetStr) : null;
     }
 
-    public synchronized void depositGift(UUID target, ItemStack[] items) {
-        if (target == null) return;
+    public synchronized boolean depositGift(UUID target, ItemStack[] items) {
+        if (target == null) return false;
         List<ItemStack> list = new ArrayList<>();
         if (items != null) {
             for (ItemStack item : items) {
@@ -143,7 +143,39 @@ public class SecretSantaManager {
         } else {
             config.set("gifts." + target.toString(), list);
         }
-        saveConfig();
+        return saveConfig();
+    }
+
+    private static class DeserializedGiftResult {
+        final List<ItemStack> validItems;
+        final boolean hasMalformedItems;
+
+        DeserializedGiftResult(List<ItemStack> validItems, boolean hasMalformedItems) {
+            this.validItems = validItems;
+            this.hasMalformedItems = hasMalformedItems;
+        }
+    }
+
+    private DeserializedGiftResult parseGiftItems(UUID recipient, List<?> rawList) {
+        List<ItemStack> items = new ArrayList<>();
+        boolean hasMalformed = false;
+        for (Object obj : rawList) {
+            if (obj instanceof ItemStack is) {
+                items.add(is);
+            } else if (obj instanceof java.util.Map<?, ?> map) {
+                try {
+                    items.add(ItemStack.deserialize((java.util.Map<String, Object>) map));
+                } catch (Exception e) {
+                    hasMalformed = true;
+                    if (plugin != null) {
+                        plugin.getLogger().warning("Failed to deserialize Secret Santa gift item for recipient " + recipient + ": " + e.getMessage());
+                    }
+                }
+            } else {
+                hasMalformed = true;
+            }
+        }
+        return new DeserializedGiftResult(items, hasMalformed);
     }
 
     public synchronized ItemStack[] getGift(UUID recipient) {
@@ -152,21 +184,8 @@ public class SecretSantaManager {
         if (list == null || list.isEmpty())
             return null;
 
-        List<ItemStack> items = new ArrayList<>();
-        for (Object obj : list) {
-            if (obj instanceof ItemStack is) {
-                items.add(is);
-            } else if (obj instanceof java.util.Map<?, ?> map) {
-                try {
-                    items.add(ItemStack.deserialize((java.util.Map<String, Object>) map));
-                } catch (Exception e) {
-                    if (plugin != null) {
-                        plugin.getLogger().warning("Failed to deserialize Secret Santa gift item for recipient " + recipient + ": " + e.getMessage());
-                    }
-                }
-            }
-        }
-        return items.isEmpty() ? null : items.toArray(new ItemStack[0]);
+        DeserializedGiftResult result = parseGiftItems(recipient, list);
+        return result.validItems.isEmpty() ? null : result.validItems.toArray(new ItemStack[0]);
     }
 
     public synchronized ItemStack[] claimGift(UUID recipient) {
@@ -177,30 +196,19 @@ public class SecretSantaManager {
             return null;
         }
 
-        List<ItemStack> items = new ArrayList<>();
-        boolean allDeserialized = true;
-        for (Object obj : rawList) {
-            if (obj instanceof ItemStack is) {
-                items.add(is);
-            } else if (obj instanceof java.util.Map<?, ?> map) {
-                try {
-                    items.add(ItemStack.deserialize((java.util.Map<String, Object>) map));
-                } catch (Exception e) {
-                    allDeserialized = false;
-                    if (plugin != null) {
-                        plugin.getLogger().warning("Failed to deserialize Secret Santa gift item for recipient " + recipient + ": " + e.getMessage());
-                    }
-                }
-            } else {
-                allDeserialized = false;
-            }
-        }
-
-        if (items.isEmpty() || !allDeserialized) {
-            if (!allDeserialized && plugin != null) {
-                plugin.getLogger().severe("Aborting claim for recipient " + recipient + " because some items could not be safely deserialized.");
+        DeserializedGiftResult result = parseGiftItems(recipient, rawList);
+        if (result.validItems.isEmpty()) {
+            // No valid items found; clear corrupted entry to avoid permanent blockage
+            config.set(path, null);
+            saveConfig();
+            if (plugin != null) {
+                plugin.getLogger().warning("Cleared corrupted empty gift entry for recipient " + recipient);
             }
             return null;
+        }
+
+        if (result.hasMalformedItems && plugin != null) {
+            plugin.getLogger().warning("Delivering partially recoverable gift to recipient " + recipient + " while dropping malformed entries.");
         }
 
         Object rawBackup = config.get(path);
@@ -213,7 +221,7 @@ public class SecretSantaManager {
             return null;
         }
 
-        return items.toArray(new ItemStack[0]);
+        return result.validItems.toArray(new ItemStack[0]);
     }
 
     public synchronized boolean hasGiftDeposited(UUID target) {
