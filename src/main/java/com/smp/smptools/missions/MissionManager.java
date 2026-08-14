@@ -134,6 +134,8 @@ public class MissionManager {
         }
     }
 
+    private static final java.util.regex.Pattern RETRY_PATTERN = java.util.regex.Pattern.compile("^(.*)#retry:(\\d+)$");
+
     public synchronized void claimPendingMissionRewards(Player player) {
         if (player == null || !player.isOnline()) return;
         PlayerMissionData data = getPlayerData(player);
@@ -144,14 +146,20 @@ public class MissionManager {
 
         for (String reward : pending) {
             List<String> snapshotBefore = new ArrayList<>(data.getPendingRewards());
-            String baseReward = reward;
+            String baseReward = reward != null ? reward.trim() : "";
             int retryCount = 0;
-            int retryIndex = reward.lastIndexOf("#retry:");
-            if (retryIndex != -1) {
-                try {
-                    retryCount = Integer.parseInt(reward.substring(retryIndex + 7));
-                    baseReward = reward.substring(0, retryIndex);
-                } catch (NumberFormatException ignored) {
+            if (reward != null) {
+                java.util.regex.Matcher matcher = RETRY_PATTERN.matcher(reward.trim());
+                if (matcher.matches()) {
+                    try {
+                        retryCount = Integer.parseInt(matcher.group(2).trim());
+                        if (retryCount < 0) {
+                            retryCount = 3;
+                        }
+                        baseReward = matcher.group(1).trim();
+                    } catch (NumberFormatException e) {
+                        retryCount = 3;
+                    }
                 }
             }
 
@@ -205,6 +213,8 @@ public class MissionManager {
                         if (plugin != null) {
                             plugin.getLogger().severe("Failed to persist retry state for pending mission reward for " + player.getName() + ", aborting remaining queue.");
                         }
+                        data.getPendingRewards().clear();
+                        data.getPendingRewards().addAll(snapshotBefore);
                         break;
                     }
                 }
