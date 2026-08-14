@@ -36,6 +36,9 @@ public class SeasonalManager {
     private File playerDataFile;
     private FileConfiguration playerDataConfig;
 
+    private ZoneId cachedZoneId = ZoneId.of("Europe/Paris");
+    private final Map<SeasonType, MonthDay[]> cachedDateRanges = new EnumMap<>(SeasonType.class);
+
     public SeasonalManager(SMPTools plugin) {
         this.plugin = plugin;
         loadConfigurations();
@@ -61,6 +64,35 @@ public class SeasonalManager {
             }
         }
         playerDataConfig = YamlConfiguration.loadConfiguration(playerDataFile);
+
+        // Cache timezone
+        String tzStr = plugin.getSeasonalConfig().getString("seasonal.timezone", "Europe/Paris");
+        try {
+            cachedZoneId = ZoneId.of(tzStr);
+        } catch (Exception e) {
+            plugin.getLogger().warning("Invalid seasonal.timezone '" + tzStr + "', defaulting to Europe/Paris");
+            cachedZoneId = ZoneId.of("Europe/Paris");
+        }
+
+        // Cache date ranges
+        FileConfiguration cfg = plugin.getSeasonalConfig();
+        cacheDateRange(SeasonType.HALLOWEEN, cfg.getString("seasonal.dates.halloween.start", "10-15"), cfg.getString("seasonal.dates.halloween.end", "11-02"));
+        cacheDateRange(SeasonType.BLACK_FRIDAY, cfg.getString("seasonal.dates.black_friday.start", "11-20"), cfg.getString("seasonal.dates.black_friday.end", "11-30"));
+        cacheDateRange(SeasonType.CHRISTMAS, cfg.getString("seasonal.dates.christmas.start", "12-01"), cfg.getString("seasonal.dates.christmas.end", "01-06"));
+        cacheDateRange(SeasonType.EASTER, cfg.getString("seasonal.dates.easter.start", "03-25"), cfg.getString("seasonal.dates.easter.end", "04-25"));
+        cacheDateRange(SeasonType.SUMMER, cfg.getString("seasonal.dates.summer.start", "07-01"), cfg.getString("seasonal.dates.summer.end", "08-31"));
+    }
+
+    private void cacheDateRange(SeasonType season, String startStr, String endStr) {
+        try {
+            String[] startParts = startStr.split("-");
+            String[] endParts = endStr.split("-");
+            MonthDay start = MonthDay.of(Integer.parseInt(startParts[0]), Integer.parseInt(startParts[1]));
+            MonthDay end = MonthDay.of(Integer.parseInt(endParts[0]), Integer.parseInt(endParts[1]));
+            cachedDateRanges.put(season, new MonthDay[]{start, end});
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to parse seasonal date range for " + season + " [" + startStr + " - " + endStr + "]: " + e.getMessage());
+        }
     }
 
     public boolean saveLocations() {
@@ -91,74 +123,25 @@ public class SeasonalManager {
             return forcedSeason;
         }
 
-        String tzStr = plugin.getSeasonalConfig().getString("seasonal.timezone", "Europe/Paris");
-        ZoneId zone;
-        try {
-            zone = ZoneId.of(tzStr);
-        } catch (Exception e) {
-            plugin.getLogger().warning("Invalid seasonal.timezone '" + tzStr + "', defaulting to Europe/Paris");
-            zone = ZoneId.of("Europe/Paris");
-        }
-
-        ZonedDateTime now = ZonedDateTime.now(zone);
+        ZonedDateTime now = ZonedDateTime.now(cachedZoneId);
         MonthDay currentDay = MonthDay.from(now);
 
-        FileConfiguration cfg = plugin.getSeasonalConfig();
-
-        // Halloween
-        String hwStart = cfg.getString("seasonal.dates.halloween.start", "10-15");
-        String hwEnd = cfg.getString("seasonal.dates.halloween.end", "11-02");
-        if (isDateInRange(currentDay, hwStart, hwEnd)) {
-            return SeasonType.HALLOWEEN;
-        }
-
-        // Black Friday
-        String bfStart = cfg.getString("seasonal.dates.black_friday.start", "11-20");
-        String bfEnd = cfg.getString("seasonal.dates.black_friday.end", "11-30");
-        if (isDateInRange(currentDay, bfStart, bfEnd)) {
-            return SeasonType.BLACK_FRIDAY;
-        }
-
-        // Christmas
-        String xmasStart = cfg.getString("seasonal.dates.christmas.start", "12-01");
-        String xmasEnd = cfg.getString("seasonal.dates.christmas.end", "01-06");
-        if (isDateInRange(currentDay, xmasStart, xmasEnd)) {
-            return SeasonType.CHRISTMAS;
-        }
-
-        // Easter
-        String easterStart = cfg.getString("seasonal.dates.easter.start", "03-25");
-        String easterEnd = cfg.getString("seasonal.dates.easter.end", "04-25");
-        if (isDateInRange(currentDay, easterStart, easterEnd)) {
-            return SeasonType.EASTER;
-        }
-
-        // Summer
-        String sumStart = cfg.getString("seasonal.dates.summer.start", "07-01");
-        String sumEnd = cfg.getString("seasonal.dates.summer.end", "08-31");
-        if (isDateInRange(currentDay, sumStart, sumEnd)) {
-            return SeasonType.SUMMER;
+        for (SeasonType season : new SeasonType[]{SeasonType.HALLOWEEN, SeasonType.BLACK_FRIDAY, SeasonType.CHRISTMAS, SeasonType.EASTER, SeasonType.SUMMER}) {
+            MonthDay[] range = cachedDateRanges.get(season);
+            if (range != null && isDateInRange(currentDay, range[0], range[1])) {
+                return season;
+            }
         }
 
         return SeasonType.NONE;
     }
 
-    private boolean isDateInRange(MonthDay current, String startStr, String endStr) {
-        try {
-            String[] startParts = startStr.split("-");
-            String[] endParts = endStr.split("-");
-            MonthDay start = MonthDay.of(Integer.parseInt(startParts[0]), Integer.parseInt(startParts[1]));
-            MonthDay end = MonthDay.of(Integer.parseInt(endParts[0]), Integer.parseInt(endParts[1]));
-
-            if (start.isAfter(end)) {
-                // Cross-year date range (e.g. Dec 1 to Jan 6)
-                return !current.isBefore(start) || !current.isAfter(end);
-            } else {
-                return !current.isBefore(start) && !current.isAfter(end);
-            }
-        } catch (Exception e) {
-            plugin.getLogger().warning("Failed to parse seasonal date range [" + startStr + " - " + endStr + "]: " + e.getMessage());
-            return false;
+    private boolean isDateInRange(MonthDay current, MonthDay start, MonthDay end) {
+        if (start.isAfter(end)) {
+            // Cross-year date range (e.g. Dec 1 to Jan 6)
+            return !current.isBefore(start) || !current.isAfter(end);
+        } else {
+            return !current.isBefore(start) && !current.isAfter(end);
         }
     }
 
@@ -196,9 +179,11 @@ public class SeasonalManager {
             return false;
         }
 
+        List<Integer> backup = new ArrayList<>(found);
         found.add(pumpkinId);
         playerDataConfig.set("players." + uuid + ".halloween.found", found);
         if (!savePlayerData()) {
+            playerDataConfig.set("players." + uuid + ".halloween.found", backup);
             player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to save pumpkin discovery! Please try again.</red>"));
             return false;
         }
@@ -247,20 +232,28 @@ public class SeasonalManager {
 
         playerDataConfig.set("players." + uuid + ".halloween.claimed_grand", true);
         if (!savePlayerData()) {
+            playerDataConfig.set("players." + uuid + ".halloween.claimed_grand", false);
             player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to save reward claim status! Please contact an administrator.</red>"));
             return false;
         }
 
-        // Award Jack's Pumpkin Helmet Artifact
-        if (plugin.getArtifactManager() != null && plugin.getConfig().getBoolean("features.artifacts.enabled", true)) {
+        boolean artifactsEnabled = plugin.getArtifactManager() != null && plugin.getConfig().getBoolean("features.artifacts.enabled", true);
+
+        // Award Jack's Pumpkin Helmet Artifact or extra diamonds
+        if (artifactsEnabled) {
             ItemStack helmet = plugin.getArtifactManager().createArtifact(ArtifactType.JACKS_PUMPKIN_HELMET);
             Map<Integer, ItemStack> helmetLeftover = player.getInventory().addItem(helmet);
             for (ItemStack drop : helmetLeftover.values()) {
                 player.getWorld().dropItemNaturally(player.getLocation(), drop);
             }
+        } else {
+            Map<Integer, ItemStack> extraDia = player.getInventory().addItem(new ItemStack(Material.DIAMOND, 16));
+            for (ItemStack drop : extraDia.values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), drop);
+            }
         }
 
-        // Award Diamonds & Sound
+        // Award Base Diamonds & Sound
         Map<Integer, ItemStack> diaLeftover = player.getInventory().addItem(new ItemStack(Material.DIAMOND, 16));
         for (ItemStack drop : diaLeftover.values()) {
             player.getWorld().dropItemNaturally(player.getLocation(), drop);
@@ -270,9 +263,15 @@ public class SeasonalManager {
         player.getWorld().spawnParticle(Particle.FIREWORK, player.getLocation().add(0, 1, 0), 50, 0.5, 1.0, 0.5, 0.2);
 
         // Global Announcement
-        Bukkit.broadcast(MiniMessage.miniMessage().deserialize(
-                "<gold><b>🎃 [HALLOWEEN]</b></gold> <yellow><b>" + player.getName() + "</b> has found all 20 hidden Spooky Pumpkins and unlocked <b>Jack's Pumpkin Helmet</b>!</yellow>"
-        ));
+        if (artifactsEnabled) {
+            Bukkit.broadcast(MiniMessage.miniMessage().deserialize(
+                    "<gold><b>🎃 [HALLOWEEN]</b></gold> <yellow><b>" + player.getName() + "</b> has found all 20 hidden Spooky Pumpkins and unlocked <b>Jack's Pumpkin Helmet</b>!</yellow>"
+            ));
+        } else {
+            Bukkit.broadcast(MiniMessage.miniMessage().deserialize(
+                    "<gold><b>🎃 [HALLOWEEN]</b></gold> <yellow><b>" + player.getName() + "</b> has found all 20 hidden Spooky Pumpkins and unlocked the <b>Halloween Grand Reward</b>!</yellow>"
+            ));
+        }
 
         return true;
     }
@@ -303,9 +302,11 @@ public class SeasonalManager {
             return false;
         }
 
+        List<Integer> backup = new ArrayList<>(found);
         found.add(eggId);
         playerDataConfig.set("players." + uuid + ".easter.found", found);
         if (!savePlayerData()) {
+            playerDataConfig.set("players." + uuid + ".easter.found", backup);
             player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to save Easter egg discovery! Please try again.</red>"));
             return false;
         }
@@ -362,15 +363,23 @@ public class SeasonalManager {
 
         playerDataConfig.set("players." + uuid + ".easter.claimed_grand", true);
         if (!savePlayerData()) {
+            playerDataConfig.set("players." + uuid + ".easter.claimed_grand", false);
             player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to save reward claim status! Please contact an administrator.</red>"));
             return false;
         }
 
-        // Award Chlorophyll Band Artifact if artifacts enabled
-        if (plugin.getArtifactManager() != null && plugin.getConfig().getBoolean("features.artifacts.enabled", true)) {
+        boolean artifactsEnabled = plugin.getArtifactManager() != null && plugin.getConfig().getBoolean("features.artifacts.enabled", true);
+
+        // Award Chlorophyll Band Artifact if artifacts enabled, else extra diamonds
+        if (artifactsEnabled) {
             ItemStack band = plugin.getArtifactManager().createArtifact(ArtifactType.CHLOROPHYLL_BAND);
             Map<Integer, ItemStack> bandLeft = player.getInventory().addItem(band);
             for (ItemStack drop : bandLeft.values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), drop);
+            }
+        } else {
+            Map<Integer, ItemStack> extraDia = player.getInventory().addItem(new ItemStack(Material.DIAMOND, 12));
+            for (ItemStack drop : extraDia.values()) {
                 player.getWorld().dropItemNaturally(player.getLocation(), drop);
             }
         }
@@ -390,9 +399,15 @@ public class SeasonalManager {
         player.getWorld().spawnParticle(Particle.FIREWORK, player.getLocation().add(0, 1, 0), 50, 0.5, 1.0, 0.5, 0.2);
 
         // Global Announcement
-        Bukkit.broadcast(MiniMessage.miniMessage().deserialize(
-                "<green><b>🐣 [EASTER]</b></green> <yellow><b>" + player.getName() + "</b> has found all 15 hidden Easter Eggs and claimed the <b>Chlorophyll Band</b>!</yellow>"
-        ));
+        if (artifactsEnabled) {
+            Bukkit.broadcast(MiniMessage.miniMessage().deserialize(
+                    "<green><b>🐣 [EASTER]</b></green> <yellow><b>" + player.getName() + "</b> has found all 15 hidden Easter Eggs and claimed the <b>Chlorophyll Band</b>!</yellow>"
+            ));
+        } else {
+            Bukkit.broadcast(MiniMessage.miniMessage().deserialize(
+                    "<green><b>🐣 [EASTER]</b></green> <yellow><b>" + player.getName() + "</b> has found all 15 hidden Easter Eggs and claimed the <b>Easter Grand Reward</b>!</yellow>"
+            ));
+        }
 
         return true;
     }
@@ -462,6 +477,16 @@ public class SeasonalManager {
         locationsConfig.set(path + ".y", loc.getBlockY());
         locationsConfig.set(path + ".z", loc.getBlockZ());
         locationsConfig.set(path + ".hint", hint);
+        saveLocations();
+    }
+
+    public void removePumpkinLocation(int id) {
+        locationsConfig.set("halloween_pumpkins." + id, null);
+        saveLocations();
+    }
+
+    public void removeEggLocation(int id) {
+        locationsConfig.set("easter_eggs." + id, null);
         saveLocations();
     }
 

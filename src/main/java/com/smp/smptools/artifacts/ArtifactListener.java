@@ -31,7 +31,8 @@ public class ArtifactListener implements Listener {
     private final ArtifactManager artifactManager;
     private final Map<UUID, Map<ArtifactType, Long>> cooldowns = new HashMap<>();
     private final Set<UUID> fallImmune = new HashSet<>();
-    private final Map<UUID, Integer> homingCompassTargetMode = new HashMap<>(); // 0: Nearest Player, 1: World Spawn, 2: Bed/Respawn Anchor
+    private final Map<UUID, Integer> homingCompassTargetMode = new HashMap<>(); // 0: Nearest Player, 1: Nearest Boss, 2: Grave/Death
+    private final Set<Block> currentlyFelling = Collections.synchronizedSet(new HashSet<>());
     private final Random random = new Random();
 
     public ArtifactListener(SMPTools plugin, ArtifactManager artifactManager) {
@@ -108,7 +109,7 @@ public class ArtifactListener implements Listener {
                     if (player.isSneaking()) {
                         int mode = (homingCompassTargetMode.getOrDefault(player.getUniqueId(), 0) + 1) % 3;
                         homingCompassTargetMode.put(player.getUniqueId(), mode);
-                        String modeName = mode == 0 ? "Nearest Player" : (mode == 1 ? "World Spawn" : "Bed / Anchor");
+                        String modeName = mode == 0 ? "Nearest Player" : (mode == 1 ? "Nearest Boss" : "Death Location / Grave");
                         player.sendActionBar(MiniMessage.miniMessage().deserialize("<gold>🧭 Homing Compass Target: <yellow>" + modeName + "</yellow></gold>"));
                         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, 1.4f);
                         event.setCancelled(true);
@@ -195,8 +196,10 @@ public class ArtifactListener implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onFish(PlayerFishEvent event) {
+        if (event.isCancelled()) return;
+
         Player player = event.getPlayer();
         ItemStack main = player.getInventory().getItemInMainHand();
 
@@ -233,12 +236,14 @@ public class ArtifactListener implements Listener {
                 return;
             }
 
-            // Void Saver Charm Check on void damage
-            if (event.getCause() == EntityDamageEvent.DamageCause.VOID) {
+            // Void Saver Charm Check on void damage or lethal lava damage
+            if (event.getCause() == EntityDamageEvent.DamageCause.VOID || 
+               (event.getCause() == EntityDamageEvent.DamageCause.LAVA && player.getHealth() - event.getFinalDamage() <= 0)) {
                 if (artifactManager.hasEquippedArtifact(player, ArtifactType.VOID_SAVER_CHARM)) {
                     event.setCancelled(true);
                     Location safe = player.getWorld().getSpawnLocation();
                     player.teleport(safe);
+                    player.setFireTicks(0);
                     player.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 400, 2));
                     player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 200, 1));
                     player.getWorld().spawnParticle(Particle.PORTAL, safe, 40, 0.5, 1.0, 0.5, 0.1);
@@ -303,6 +308,8 @@ public class ArtifactListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
+        if (currentlyFelling.contains(event.getBlock())) return;
+
         Player player = event.getPlayer();
         ItemStack main = player.getInventory().getItemInMainHand();
 
@@ -318,33 +325,36 @@ public class ArtifactListener implements Listener {
         Queue<Block> queue = new LinkedList<>();
         Set<Block> visited = new HashSet<>();
         queue.add(start);
+        visited.add(start);
 
         int maxLogs = 64;
         int count = 0;
 
         while (!queue.isEmpty() && count < maxLogs) {
             Block current = queue.poll();
-            if (visited.contains(current)) continue;
-            visited.add(current);
 
-            if (current.getType().name().contains("LOG")) {
-                if (!current.equals(start)) {
+            if (!current.equals(start) && current.getType().name().contains("LOG")) {
+                currentlyFelling.add(current);
+                try {
                     BlockBreakEvent subEvent = new BlockBreakEvent(current, player);
                     Bukkit.getPluginManager().callEvent(subEvent);
                     if (subEvent.isCancelled()) {
                         continue;
                     }
                     current.breakNaturally(tool);
+                    count++;
+                } finally {
+                    currentlyFelling.remove(current);
                 }
-                count++;
+            }
 
-                for (int x = -1; x <= 1; x++) {
-                    for (int y = -1; y <= 1; y++) {
-                        for (int z = -1; z <= 1; z++) {
-                            Block neighbor = current.getRelative(x, y, z);
-                            if (!visited.contains(neighbor)) {
-                                queue.add(neighbor);
-                            }
+            for (int x = -1; x <= 1; x++) {
+                for (int y = -1; y <= 1; y++) {
+                    for (int z = -1; z <= 1; z++) {
+                        Block neighbor = current.getRelative(x, y, z);
+                        if (!visited.contains(neighbor) && neighbor.getType().name().contains("LOG")) {
+                            visited.add(neighbor);
+                            queue.add(neighbor);
                         }
                     }
                 }
@@ -374,11 +384,18 @@ public class ArtifactListener implements Listener {
     public void onMove(PlayerMoveEvent event) {
         Player player = event.getPlayer();
 
-        // Leap Frog Boots flight enable check
+        // Leap Frog Boots flight enable/disable check
         if (artifactManager.hasEquippedArtifact(player, ArtifactType.LEAP_FROG_BOOTS)) {
             if (player.getGameMode() != GameMode.CREATIVE && player.getGameMode() != GameMode.SPECTATOR) {
                 if (player.getLocation().subtract(0, 0.1, 0).getBlock().getType().isSolid()) {
                     player.setAllowFlight(true);
+                }
+            }
+        } else {
+            if (player.getGameMode() != GameMode.CREATIVE && player.getGameMode() != GameMode.SPECTATOR) {
+                if (player.getAllowFlight()) {
+                    player.setAllowFlight(false);
+                    player.setFlying(false);
                 }
             }
         }
@@ -464,30 +481,37 @@ public class ArtifactListener implements Listener {
                         player.getWorld().spawnParticle(Particle.FLAME, player.getLocation().add(0, 1.0, 0), 2, 0.2, 0.2, 0.2, 0.01);
                     }
 
-                    // Ore Radar Scanner (every 2 seconds)
+                    // Ore Radar Scanner (optimized 9x9x9 scan with chunk-loaded check)
                     if (ticks % 2 == 0 && artifactManager.hasEquippedArtifact(player, ArtifactType.ORE_RADAR_SCANNER)) {
                         Location loc = player.getLocation();
-                        boolean oreFound = false;
-                        int minDistanceSq = Integer.MAX_VALUE;
+                        World world = loc.getWorld();
+                        if (world != null) {
+                            boolean oreFound = false;
+                            int minDistanceSq = Integer.MAX_VALUE;
 
-                        for (int x = -8; x <= 8; x++) {
-                            for (int y = -8; y <= 8; y++) {
-                                for (int z = -8; z <= 8; z++) {
-                                    Material mat = loc.getBlock().getRelative(x, y, z).getType();
-                                    if (mat == Material.DIAMOND_ORE || mat == Material.DEEPSLATE_DIAMOND_ORE || mat == Material.ANCIENT_DEBRIS) {
-                                        oreFound = true;
-                                        int distSq = x * x + y * y + z * z;
-                                        if (distSq < minDistanceSq) {
-                                            minDistanceSq = distSq;
+                            for (int x = -4; x <= 4; x++) {
+                                for (int y = -4; y <= 4; y++) {
+                                    for (int z = -4; z <= 4; z++) {
+                                        int targetX = loc.getBlockX() + x;
+                                        int targetZ = loc.getBlockZ() + z;
+                                        if (world.isChunkLoaded(targetX >> 4, targetZ >> 4)) {
+                                            Material mat = world.getBlockAt(targetX, loc.getBlockY() + y, targetZ).getType();
+                                            if (mat == Material.DIAMOND_ORE || mat == Material.DEEPSLATE_DIAMOND_ORE || mat == Material.ANCIENT_DEBRIS) {
+                                                oreFound = true;
+                                                int distSq = x * x + y * y + z * z;
+                                                if (distSq < minDistanceSq) {
+                                                    minDistanceSq = distSq;
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
 
-                        if (oreFound) {
-                            float pitch = 1.0f + (float) Math.max(0.0, 1.0 - (Math.sqrt(minDistanceSq) / 12.0));
-                            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.4f, pitch);
+                            if (oreFound) {
+                                float pitch = 1.0f + (float) Math.max(0.0, 1.0 - (Math.sqrt(minDistanceSq) / 8.0));
+                                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.4f, pitch);
+                            }
                         }
                     }
 
@@ -497,6 +521,7 @@ public class ArtifactListener implements Listener {
                         int mode = homingCompassTargetMode.getOrDefault(player.getUniqueId(), 0);
                         Location targetLoc = null;
                         if (mode == 0) {
+                            // Nearest Player
                             double closestDist = Double.MAX_VALUE;
                             for (Player other : player.getWorld().getPlayers()) {
                                 if (!other.equals(player)) {
@@ -508,12 +533,27 @@ public class ArtifactListener implements Listener {
                                 }
                             }
                         } else if (mode == 1) {
-                            targetLoc = player.getWorld().getSpawnLocation();
+                            // Nearest Boss
+                            double closestDist = Double.MAX_VALUE;
+                            for (Entity entity : player.getWorld().getEntities()) {
+                                if (entity instanceof Boss || entity instanceof Warden || entity instanceof Wither || 
+                                    entity instanceof EnderDragon || entity instanceof ElderGuardian) {
+                                    double d = player.getLocation().distanceSquared(entity.getLocation());
+                                    if (d < closestDist) {
+                                        closestDist = d;
+                                        targetLoc = entity.getLocation();
+                                    }
+                                }
+                            }
                         } else if (mode == 2) {
-                            targetLoc = player.getRespawnLocation() != null ? player.getRespawnLocation() : player.getWorld().getSpawnLocation();
+                            // Last Death Location / Grave
+                            targetLoc = player.getLastDeathLocation();
                         }
+
                         if (targetLoc != null) {
                             player.setCompassTarget(targetLoc);
+                        } else {
+                            player.setCompassTarget(player.getWorld().getSpawnLocation());
                         }
                     }
                 }

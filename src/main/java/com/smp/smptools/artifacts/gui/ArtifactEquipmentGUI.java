@@ -124,6 +124,19 @@ public class ArtifactEquipmentGUI implements Listener {
                 }
             }
 
+            // Offhand 'F' swap into pouch slot
+            if (event.getClick() == org.bukkit.event.inventory.ClickType.SWAP_OFFHAND && player != null) {
+                ItemStack offhandItem = player.getInventory().getItemInOffHand();
+                if (offhandItem != null && !offhandItem.getType().isAir()) {
+                    ArtifactType type = artifactManager.getArtifactType(offhandItem);
+                    if (type == null || type.getSlotType() != ArtifactType.ArtifactSlotType.PASSIVE) {
+                        event.setCancelled(true);
+                        player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Only Passive Custom Artifacts can be equipped in the Pouch!</red>"));
+                        return;
+                    }
+                }
+            }
+
             // Verify if placed item on cursor is a valid PASSIVE artifact
             ItemStack cursor = event.getCursor();
             if (cursor != null && !cursor.getType().isAir()) {

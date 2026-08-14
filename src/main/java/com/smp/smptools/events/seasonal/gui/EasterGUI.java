@@ -85,9 +85,9 @@ public class EasterGUI implements Listener {
             gui.setItem(22, createItem(Material.BARRIER, "<green><b>Grand Reward Claimed</b></green>", rewardLore, false));
         } else if (foundList.size() >= total) {
             if (artifactsEnabled) {
-                rewardLore.add("<gold><b>🎉 Click to claim Chlorophyll Band & 12 Diamonds!</b></gold>");
+                rewardLore.add("<gold><b>🎉 Click to claim Chlorophyll Band, 12 Diamonds & 32 Golden Carrots!</b></gold>");
             } else {
-                rewardLore.add("<gold><b>🎉 Click to claim 12 Diamonds & 32 Golden Carrots!</b></gold>");
+                rewardLore.add("<gold><b>🎉 Click to claim 24 Diamonds & 32 Golden Carrots!</b></gold>");
             }
             gui.setItem(22, createItem(Material.NETHER_STAR, "<gold><b>🏆 CLAIM GRAND REWARD!</b></gold>", rewardLore, true));
         } else {

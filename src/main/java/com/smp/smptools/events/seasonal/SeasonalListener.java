@@ -3,14 +3,15 @@ package com.smp.smptools.events.seasonal;
 import com.smp.smptools.SMPTools;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.*;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
@@ -18,10 +19,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Handles in-world discovery of hidden seasonal targets, protection of targets, Trick-or-Treating, and Summer buffs.
@@ -73,11 +71,62 @@ public class SeasonalListener implements Listener {
         if (pumpkinId != null || eggId != null) {
             Player player = event.getPlayer();
             if (player.hasPermission("smptools.seasonal.admin") && player.getGameMode() == GameMode.CREATIVE) {
-                player.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>You broke a registered seasonal target.</yellow>"));
+                if (pumpkinId != null) {
+                    seasonalManager.removePumpkinLocation(pumpkinId);
+                    player.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>Removed Pumpkin #" + pumpkinId + " from registered seasonal locations.</yellow>"));
+                }
+                if (eggId != null) {
+                    seasonalManager.removeEggLocation(eggId);
+                    player.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>Removed Easter Egg #" + eggId + " from registered seasonal locations.</yellow>"));
+                }
             } else {
                 event.setCancelled(true);
                 player.sendMessage(MiniMessage.miniMessage().deserialize("<red>You cannot break seasonal scavenger hunt targets!</red>"));
             }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onEntityExplode(EntityExplodeEvent event) {
+        event.blockList().removeIf(b -> seasonalManager.getPumpkinIdAt(b.getLocation()) != null || seasonalManager.getEggIdAt(b.getLocation()) != null);
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onBlockExplode(BlockExplodeEvent event) {
+        event.blockList().removeIf(b -> seasonalManager.getPumpkinIdAt(b.getLocation()) != null || seasonalManager.getEggIdAt(b.getLocation()) != null);
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onPistonExtend(BlockPistonExtendEvent event) {
+        for (Block b : event.getBlocks()) {
+            if (seasonalManager.getPumpkinIdAt(b.getLocation()) != null || seasonalManager.getEggIdAt(b.getLocation()) != null) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onPistonRetract(BlockPistonRetractEvent event) {
+        for (Block b : event.getBlocks()) {
+            if (seasonalManager.getPumpkinIdAt(b.getLocation()) != null || seasonalManager.getEggIdAt(b.getLocation()) != null) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onBlockBurn(BlockBurnEvent event) {
+        if (seasonalManager.getPumpkinIdAt(event.getBlock().getLocation()) != null || seasonalManager.getEggIdAt(event.getBlock().getLocation()) != null) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onBlockFade(BlockFadeEvent event) {
+        if (seasonalManager.getPumpkinIdAt(event.getBlock().getLocation()) != null || seasonalManager.getEggIdAt(event.getBlock().getLocation()) != null) {
+            event.setCancelled(true);
         }
     }
 

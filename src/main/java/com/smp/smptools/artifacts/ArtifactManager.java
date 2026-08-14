@@ -99,20 +99,6 @@ public class ArtifactManager {
         return equippedPouchMap.computeIfAbsent(uuid, k -> new HashMap<>());
     }
 
-    public void setEquippedSlot(UUID uuid, int slot, ItemStack item) {
-        Map<Integer, ItemStack> pouch = getEquippedPouch(uuid);
-        if (item == null || item.getType().isAir()) {
-            pouch.remove(slot);
-        } else {
-            ArtifactType type = getArtifactType(item);
-            if (type != null && type.getSlotType() == ArtifactType.ArtifactSlotType.PASSIVE) {
-                pouch.put(slot, item);
-            } else {
-                return;
-            }
-        }
-        savePouchData();
-    }
 
     public void setEquippedPouch(UUID uuid, Map<Integer, ItemStack> slots) {
         Map<Integer, ItemStack> pouch = getEquippedPouch(uuid);

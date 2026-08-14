@@ -87,8 +87,9 @@ public class SeasonalGUI implements Listener {
 
         // Slot 16: Black Friday Card
         boolean bfEnabled = plugin.getConfig().getBoolean("features.blackfriday.enabled", true);
-        boolean isBfActive = seasonalManager.isSeasonActive(SeasonType.BLACK_FRIDAY);
-        List<String> bfLore = bfEnabled ? List.of(
+        boolean isBfEnabledInManager = plugin.getBlackFridayManager() != null && plugin.getBlackFridayManager().isEnabled();
+        boolean isBfActive = bfEnabled && isBfEnabledInManager && seasonalManager.isSeasonActive(SeasonType.BLACK_FRIDAY);
+        List<String> bfLore = (bfEnabled && isBfEnabledInManager) ? List.of(
                 "<gray>Dates: Late November</gray>",
                 "<gray>Features: 90% Villager Discounts</gray>",
                 "<gray>Status: " + (isBfActive ? "<green>ACTIVE</green>" : "<red>INACTIVE</red>") + "</gray>",
@@ -98,7 +99,7 @@ public class SeasonalGUI implements Listener {
                 "<gray>Dates: Late November</gray>",
                 "<red>Black Friday features are currently disabled in config.</red>"
         );
-        gui.setItem(16, createItem(bfEnabled ? Material.EMERALD : Material.GRAY_DYE, "<green><b>🛍️ Black Friday Sale</b></green>", bfLore));
+        gui.setItem(16, createItem((bfEnabled && isBfEnabledInManager) ? Material.EMERALD : Material.GRAY_DYE, "<green><b>🛍️ Black Friday Sale</b></green>", bfLore));
 
         player.openInventory(gui);
     }
@@ -138,7 +139,9 @@ public class SeasonalGUI implements Listener {
                     player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Christmas features are disabled.</red>"));
                 }
             } else if (slot == 16) {
-                if (plugin.getConfig().getBoolean("features.blackfriday.enabled", true)) {
+                boolean bfEnabled = plugin.getConfig().getBoolean("features.blackfriday.enabled", true);
+                boolean isBfEnabledInManager = plugin.getBlackFridayManager() != null && plugin.getBlackFridayManager().isEnabled();
+                if (bfEnabled && isBfEnabledInManager) {
                     boolean active = seasonalManager.isSeasonActive(SeasonType.BLACK_FRIDAY);
                     player.sendMessage(MiniMessage.miniMessage().deserialize(
                             "<green>🛍️ <b>Black Friday Event:</b> Villagers offer up to 90% trade discounts! Active: " +

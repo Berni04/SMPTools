@@ -13,15 +13,14 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.scheduler.BukkitTask;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * 27-Slot GUI for displaying active event status, live top 5 leaderboard, and personal stats.
@@ -31,20 +30,41 @@ public class EventGUI implements Listener {
     private static final Component TITLE = Component.text("🏆 Server Events Dashboard", NamedTextColor.GOLD, TextDecoration.BOLD);
     private final SMPTools plugin;
     private final EventManager eventManager;
+    private final Set<UUID> openViewers = new HashSet<>();
+    private BukkitTask refreshTask = null;
 
     public EventGUI(SMPTools plugin, EventManager eventManager) {
         this.plugin = plugin;
         this.eventManager = eventManager;
         Bukkit.getPluginManager().registerEvents(this, plugin);
-        startLiveRefreshTask();
     }
 
-    private void startLiveRefreshTask() {
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                if (player.getOpenInventory().title().equals(TITLE)) {
+    private void ensureRefreshTask() {
+        if (refreshTask != null && !refreshTask.isCancelled()) return;
+
+        refreshTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (openViewers.isEmpty()) {
+                if (refreshTask != null) {
+                    refreshTask.cancel();
+                    refreshTask = null;
+                }
+                return;
+            }
+
+            Iterator<UUID> it = openViewers.iterator();
+            while (it.hasNext()) {
+                UUID uuid = it.next();
+                Player player = Bukkit.getPlayer(uuid);
+                if (player == null || !player.isOnline() || !player.getOpenInventory().title().equals(TITLE)) {
+                    it.remove();
+                } else {
                     updateInventoryContents(player, player.getOpenInventory().getTopInventory());
                 }
+            }
+
+            if (openViewers.isEmpty() && refreshTask != null) {
+                refreshTask.cancel();
+                refreshTask = null;
             }
         }, 20L, 20L);
     }
@@ -53,6 +73,8 @@ public class EventGUI implements Listener {
         Inventory gui = Bukkit.createInventory(null, 27, TITLE);
         updateInventoryContents(player, gui);
         player.openInventory(gui);
+        openViewers.add(player.getUniqueId());
+        ensureRefreshTask();
     }
 
     private void updateInventoryContents(Player player, Inventory gui) {
@@ -107,7 +129,7 @@ public class EventGUI implements Listener {
         // Slot 15: Personal Stats Card
         List<String> statsLore = new ArrayList<>();
         statsLore.add("<gray>View live active mini-event status.</gray>");
-        statsLore.add("<gray>Updates automatically every second.</gray>");
+        statsLore.add("<gray>Updates automatically every second while open.</gray>");
         ItemStack infoItem = createItem(Material.BOOK, "<cyan><b>Event Info & Rules</b></cyan>", statsLore);
         gui.setItem(15, infoItem);
     }
@@ -140,6 +162,17 @@ public class EventGUI implements Listener {
     public void onInventoryDrag(InventoryDragEvent event) {
         if (event.getView().title().equals(TITLE)) {
             event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent event) {
+        if (event.getView().title().equals(TITLE)) {
+            openViewers.remove(event.getPlayer().getUniqueId());
+            if (openViewers.isEmpty() && refreshTask != null) {
+                refreshTask.cancel();
+                refreshTask = null;
+            }
         }
     }
 }

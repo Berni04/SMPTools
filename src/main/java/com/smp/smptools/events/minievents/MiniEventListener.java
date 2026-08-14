@@ -13,6 +13,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.player.PlayerFishEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -21,7 +22,7 @@ import java.util.Random;
 import java.util.Set;
 
 /**
- * Listens to player interactions and awards points and buffs to active mini-event sessions.
+ * Listens to player interactions and awards points, buffs, and offline rewards to active mini-event sessions.
  */
 public class MiniEventListener implements Listener {
 
@@ -44,6 +45,11 @@ public class MiniEventListener implements Listener {
     public MiniEventListener(SMPTools plugin, EventManager eventManager) {
         this.plugin = plugin;
         this.eventManager = eventManager;
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        eventManager.claimOfflineRewards(event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -136,8 +142,8 @@ public class MiniEventListener implements Listener {
             if (pts > 0) {
                 activeSession.addPoints(player, pts, name);
 
-                // Double Ore Drops Buff
-                if (cfg.getBoolean("events.types.ore_rush.buffs.double-ore-drops", true)) {
+                // Double Ore Drops Buff (only if block drops items)
+                if (event.isDropItems() && cfg.getBoolean("events.types.ore_rush.buffs.double-ore-drops", true)) {
                     for (ItemStack drop : event.getBlock().getDrops(player.getInventory().getItemInMainHand())) {
                         event.getBlock().getWorld().dropItemNaturally(event.getBlock().getLocation(), drop);
                     }

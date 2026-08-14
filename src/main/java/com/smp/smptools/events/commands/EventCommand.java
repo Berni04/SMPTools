@@ -62,7 +62,7 @@ public class EventCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            int duration = plugin.getEventsConfig().getInt("events.types." + type.getConfigKey() + ".duration-minutes", 15);
+            int duration = Math.max(1, plugin.getEventsConfig().getInt("events.types." + type.getConfigKey() + ".duration-minutes", 15));
             if (args.length >= 3) {
                 try {
                     duration = Integer.parseInt(args[2]);

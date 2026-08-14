@@ -4,15 +4,24 @@ import com.smp.smptools.SMPTools;
 import com.smp.smptools.events.minievents.MiniEventListener;
 import com.smp.smptools.events.minievents.MiniEventSession;
 import com.smp.smptools.events.minievents.MiniEventType;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.util.Random;
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.logging.Level;
 
 /**
  * Core event management engine for SMPTools.
- * Manages automated event timers, active event state, and event listeners.
+ * Manages automated event timers, active event state, event listeners, and offline reward delivery.
  */
 public class EventManager {
 
@@ -21,8 +30,80 @@ public class EventManager {
     private BukkitTask autoScheduleTask;
     private final Random random = new Random();
 
+    private File dataFile;
+    private FileConfiguration dataConfig;
+
     public EventManager(SMPTools plugin) {
         this.plugin = plugin;
+        loadData();
+    }
+
+    private void loadData() {
+        dataFile = new File(plugin.getDataFolder(), "events_data.yml");
+        if (!dataFile.exists()) {
+            try {
+                dataFile.createNewFile();
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.SEVERE, "Could not create events_data.yml", e);
+            }
+        }
+        dataConfig = YamlConfiguration.loadConfiguration(dataFile);
+    }
+
+    private synchronized void saveData() {
+        if (dataConfig == null) return;
+        try {
+            dataConfig.save(dataFile);
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.SEVERE, "Could not save events_data.yml", e);
+        }
+    }
+
+    public synchronized void queueOfflineReward(UUID uuid, String rewardStr) {
+        List<String> list = dataConfig.getStringList("pending_rewards." + uuid.toString());
+        list.add(rewardStr);
+        dataConfig.set("pending_rewards." + uuid.toString(), list);
+        saveData();
+    }
+
+    public synchronized void claimOfflineRewards(Player player) {
+        String path = "pending_rewards." + player.getUniqueId().toString();
+        List<String> pending = dataConfig.getStringList(path);
+        if (!pending.isEmpty()) {
+            dataConfig.set(path, null);
+            saveData();
+
+            player.sendMessage(MiniMessage.miniMessage().deserialize("<gold><b>[EVENT]</b></gold> <yellow>You received event rewards earned while offline!</yellow>"));
+            for (String reward : pending) {
+                executeReward(player, reward);
+            }
+        }
+    }
+
+    public void executeReward(Player player, String rewardStr) {
+        try {
+            if (rewardStr.startsWith("cmd:")) {
+                String cmd = rewardStr.substring(4).replace("%player%", player.getName());
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+            } else if (rewardStr.startsWith("item:")) {
+                String[] parts = rewardStr.substring(5).trim().split("\\s+");
+                Material mat = Material.matchMaterial(parts[0].toUpperCase());
+                int amount = 1;
+                if (parts.length > 1) {
+                    try {
+                        amount = Math.max(1, Integer.parseInt(parts[1]));
+                    } catch (NumberFormatException ignored) {}
+                }
+                if (mat != null) {
+                    Map<Integer, ItemStack> leftover = player.getInventory().addItem(new ItemStack(mat, amount));
+                    for (ItemStack drop : leftover.values()) {
+                        player.getWorld().dropItemNaturally(player.getLocation(), drop);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Error delivering reward '" + rewardStr + "' to " + player.getName() + ": " + e.getMessage());
+        }
     }
 
     public void initialize() {
@@ -46,7 +127,7 @@ public class EventManager {
                         }
                         if (!enabledTypes.isEmpty()) {
                             MiniEventType randomType = enabledTypes.get(random.nextInt(enabledTypes.size()));
-                            int duration = plugin.getEventsConfig().getInt("events.types." + randomType.getConfigKey() + ".duration-minutes", 15);
+                            int duration = Math.max(1, plugin.getEventsConfig().getInt("events.types." + randomType.getConfigKey() + ".duration-minutes", 15));
                             startEvent(randomType, duration);
                         }
                     }
@@ -60,7 +141,7 @@ public class EventManager {
             return false;
         }
 
-        activeSession = new MiniEventSession(plugin, type, durationMinutes);
+        activeSession = new MiniEventSession(plugin, this, type, durationMinutes);
         activeSession.start();
         return true;
     }
