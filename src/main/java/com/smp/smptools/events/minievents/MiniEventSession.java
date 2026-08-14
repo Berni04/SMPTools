@@ -281,7 +281,10 @@ public class MiniEventSession {
             List<String> rewards = cfg.getStringList("events.rewards." + keys[i]);
             for (String reward : rewards) {
                 if (winner != null && winner.isOnline()) {
-                    eventManager.executeReward(winner, reward);
+                    boolean ok = eventManager.executeReward(winner, reward);
+                    if (!ok) {
+                        plugin.getLogger().warning("Failed to deliver live event reward '" + reward + "' to " + winner.getName());
+                    }
                 } else {
                     offlineQueue.computeIfAbsent(winnerUuid, k -> new ArrayList<>()).add(reward);
                 }
@@ -296,7 +299,10 @@ public class MiniEventSession {
                     Player p = Bukkit.getPlayer(uuid);
                     for (String reward : partRewards) {
                         if (p != null && p.isOnline()) {
-                            eventManager.executeReward(p, reward);
+                            boolean ok = eventManager.executeReward(p, reward);
+                            if (!ok) {
+                                plugin.getLogger().warning("Failed to deliver live participation reward '" + reward + "' to " + p.getName());
+                            }
                         } else {
                             offlineQueue.computeIfAbsent(uuid, k -> new ArrayList<>()).add(reward);
                         }

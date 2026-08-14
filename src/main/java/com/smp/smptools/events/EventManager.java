@@ -84,14 +84,18 @@ public class EventManager {
             if (ok) {
                 anyDelivered = true;
                 remaining.remove(reward);
-                if (remaining.isEmpty()) {
-                    dataConfig.set(path, null);
-                } else {
-                    dataConfig.set(path, remaining);
-                }
-                saveData();
+            } else {
+                plugin.getLogger().warning("Dropped unexecutable offline reward '" + reward + "' for " + player.getName());
+                remaining.remove(reward);
             }
         }
+
+        if (remaining.isEmpty()) {
+            dataConfig.set(path, null);
+        } else {
+            dataConfig.set(path, remaining);
+        }
+        saveData();
 
         if (anyDelivered) {
             player.sendMessage(MiniMessage.miniMessage().deserialize("<gold><b>[EVENT]</b></gold> <yellow>You received event rewards earned while offline!</yellow>"));
