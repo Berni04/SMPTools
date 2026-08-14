@@ -35,7 +35,7 @@ public class KrampusManager {
     private final Map<UUID, Location> kidnappedPlayers = new ConcurrentHashMap<>();
     private final Map<UUID, Location> playerCages = new ConcurrentHashMap<>();
     private final Map<UUID, Set<UUID>> playerGuards = new ConcurrentHashMap<>();
-    private final Map<UUID, Map<Location, org.bukkit.block.data.BlockData>> originalCageBlocks = new ConcurrentHashMap<>();
+    private final Map<UUID, Map<Location, org.bukkit.block.BlockState>> originalCageBlocks = new ConcurrentHashMap<>();
     public final NamespacedKey krampusKey;
 
     public KrampusManager(SMPTools plugin) {
@@ -85,11 +85,11 @@ public class KrampusManager {
         // Save location
         kidnappedPlayers.put(player.getUniqueId(), player.getLocation());
 
-        // Cage Location (High up)
-        Location cageLoc = player.getLocation().clone().add(0, 50, 0);
+        // Find non-overlapping Cage Location (High up)
+        Location cageLoc = findNonOverlappingCageLocation(player.getLocation());
         playerCages.put(player.getUniqueId(), cageLoc);
 
-        // Build Cage with original block snapshot
+        // Build Cage with original block state snapshot
         buildCage(player.getUniqueId(), cageLoc);
 
         // Teleport
@@ -106,6 +106,28 @@ public class KrampusManager {
             guards.add(guard.getUniqueId());
         }
         playerGuards.put(player.getUniqueId(), guards);
+    }
+
+    private Location findNonOverlappingCageLocation(Location baseLoc) {
+        Location cageLoc = baseLoc.clone().add(0, 50, 0);
+        int maxAttempts = 10;
+        while (isCageOverlapping(cageLoc) && maxAttempts-- > 0) {
+            cageLoc.add(0, 15, 0);
+        }
+        return cageLoc;
+    }
+
+    private boolean isCageOverlapping(Location candidate) {
+        for (Location existing : playerCages.values()) {
+            if (candidate.getWorld() != null && candidate.getWorld().equals(existing.getWorld())) {
+                if (Math.abs(candidate.getBlockX() - existing.getBlockX()) <= 8 &&
+                    Math.abs(candidate.getBlockZ() - existing.getBlockZ()) <= 8 &&
+                    Math.abs(candidate.getBlockY() - existing.getBlockY()) <= 8) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public void checkGuardDeath(Player player, UUID guardId) {
@@ -160,10 +182,10 @@ public class KrampusManager {
     }
 
     private void removeCage(UUID uuid, Location center) {
-        Map<Location, org.bukkit.block.data.BlockData> original = originalCageBlocks.remove(uuid);
+        Map<Location, org.bukkit.block.BlockState> original = originalCageBlocks.remove(uuid);
         if (original != null) {
-            for (Map.Entry<Location, org.bukkit.block.data.BlockData> entry : original.entrySet()) {
-                entry.getKey().getBlock().setBlockData(entry.getValue(), false);
+            for (org.bukkit.block.BlockState state : original.values()) {
+                state.update(true, false);
             }
             return;
         }
@@ -189,14 +211,14 @@ public class KrampusManager {
 
     private void buildCage(UUID uuid, Location center) {
         if (center == null || center.getWorld() == null) return;
-        Map<Location, org.bukkit.block.data.BlockData> snapshot = new HashMap<>();
+        Map<Location, org.bukkit.block.BlockState> snapshot = new HashMap<>();
 
-        // Snapshot original blocks
+        // Snapshot original block states (preserves TileEntity metadata & data)
         for (int x = -4; x <= 4; x++) {
             for (int y = 0; y <= 5; y++) {
                 for (int z = -4; z <= 4; z++) {
                     Location loc = center.clone().add(x, y, z);
-                    snapshot.put(loc, loc.getBlock().getBlockData().clone());
+                    snapshot.put(loc, loc.getBlock().getState());
                 }
             }
         }
