@@ -20,21 +20,14 @@ public class RewardManagerTest {
         assertEquals(org.bukkit.Material.DIAMOND, valid.material);
         assertEquals(5, valid.amount);
 
-        // Fallback / clamped amount
         RewardManager.ParsedItemReward defaultAmount = RewardManager.parseItemReward("item:EMERALD");
         assertNotNull(defaultAmount);
         assertEquals(org.bukkit.Material.EMERALD, defaultAmount.material);
         assertEquals(1, defaultAmount.amount);
 
-        RewardManager.ParsedItemReward invalidNumber = RewardManager.parseItemReward("item:GOLD_INGOT abc");
-        assertNotNull(invalidNumber);
-        assertEquals(org.bukkit.Material.GOLD_INGOT, invalidNumber.material);
-        assertEquals(1, invalidNumber.amount);
-
-        RewardManager.ParsedItemReward negativeClamped = RewardManager.parseItemReward("item:IRON_INGOT -5");
-        assertNotNull(negativeClamped);
-        assertEquals(org.bukkit.Material.IRON_INGOT, negativeClamped.material);
-        assertEquals(1, negativeClamped.amount);
+        assertNull(RewardManager.parseItemReward("item:GOLD_INGOT abc"));
+        assertNull(RewardManager.parseItemReward("item:IRON_INGOT -5"));
+        assertNull(RewardManager.parseItemReward("item:DIAMOND 0"));
     }
 
     @Test

@@ -52,7 +52,6 @@ public class CropAccelerator extends BukkitRunnable {
 
         for (World world : Bukkit.getWorlds()) {
             int minHeight = world.getMinHeight();
-            int heightRange = Math.max(1, world.getMaxHeight() - minHeight);
 
             for (Chunk chunk : world.getLoadedChunks()) {
                 int chunkBaseX = chunk.getX() << 4;

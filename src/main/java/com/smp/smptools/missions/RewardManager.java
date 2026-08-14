@@ -42,9 +42,10 @@ public class RewardManager {
         int amount = 1;
         if (parts.length > 1) {
             try {
-                amount = Math.max(1, Integer.parseInt(parts[1]));
+                amount = Integer.parseInt(parts[1]);
+                if (amount <= 0) return null;
             } catch (NumberFormatException e) {
-                amount = 1;
+                return null;
             }
         }
         return new ParsedItemReward(material, amount);

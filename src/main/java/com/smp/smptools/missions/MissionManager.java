@@ -140,26 +140,57 @@ public class MissionManager {
         if (data.getPendingRewards().isEmpty()) return;
 
         List<String> pending = new ArrayList<>(data.getPendingRewards());
-        List<String> remaining = new ArrayList<>(pending);
+        List<String> remaining = new ArrayList<>();
         boolean anyDelivered = false;
+        boolean modified = false;
 
         for (String reward : pending) {
-            try {
-                if (RewardManager.giveReward(player, reward)) {
-                    remaining.remove(reward);
-                    anyDelivered = true;
+            String baseReward = reward;
+            int retryCount = 0;
+            int retryIndex = reward.lastIndexOf("#retry:");
+            if (retryIndex != -1) {
+                try {
+                    retryCount = Integer.parseInt(reward.substring(retryIndex + 7));
+                    baseReward = reward.substring(0, retryIndex);
+                } catch (NumberFormatException ignored) {
                 }
+            }
+
+            boolean delivered = false;
+            try {
+                delivered = RewardManager.giveReward(player, baseReward);
             } catch (Exception e) {
                 if (plugin != null) {
                     plugin.getLogger().warning("Failed to deliver pending mission reward '" + reward + "' to " + player.getName() + ": " + e.getMessage());
                 }
             }
+
+            if (delivered) {
+                anyDelivered = true;
+                modified = true;
+            } else {
+                int nextRetry = retryCount + 1;
+                modified = true;
+                if (nextRetry >= 3) {
+                    if (plugin != null) {
+                        plugin.getLogger().severe("Permanently dropping unexecutable pending mission reward '" + baseReward + "' for " + player.getName() + " after 3 failed attempts.");
+                    }
+                } else {
+                    remaining.add(baseReward + "#retry:" + nextRetry);
+                    if (plugin != null) {
+                        plugin.getLogger().warning("Transient delivery failure for pending mission reward '" + baseReward + "' for " + player.getName() + " (attempt " + nextRetry + "/3), retaining for retry.");
+                    }
+                }
+            }
         }
 
-        if (anyDelivered) {
+        if (modified) {
             data.getPendingRewards().clear();
             data.getPendingRewards().addAll(remaining);
             saveSinglePlayerData(player.getUniqueId());
+        }
+
+        if (anyDelivered) {
             player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
                     .deserialize("<gold><b>[MISSIONS]</b></gold> <green>You received pending mission rewards!</green>"));
         }
