@@ -164,7 +164,7 @@ public class EventManager {
                 remaining.remove(reward);
                 dataConfig.set(path, remaining.isEmpty() ? null : remaining);
                 if (!saveData()) {
-                    dataConfig.set(path, snapshotBefore.isEmpty() ? null : snapshotBefore);
+                    dataConfig.set(path, snapshotBefore);
                     break;
                 }
                 continue;
@@ -175,7 +175,7 @@ public class EventManager {
             dataConfig.set(path, remaining.isEmpty() ? null : remaining);
             if (!saveData()) {
                 plugin.getLogger().severe("Failed to persist offline reward removal for " + player.getName() + ", aborting claim execution.");
-                dataConfig.set(path, snapshotBefore.isEmpty() ? null : snapshotBefore);
+                dataConfig.set(path, snapshotBefore);
                 break;
             }
 
