@@ -55,11 +55,19 @@ public class CropAccelerator extends BukkitRunnable {
             int heightRange = Math.max(1, world.getMaxHeight() - minHeight);
 
             for (Chunk chunk : world.getLoadedChunks()) {
+                int chunkBaseX = chunk.getX() << 4;
+                int chunkBaseZ = chunk.getZ() << 4;
+
                 // Apply random ticks based on multiplier
                 for (int i = 0; i < clampedMultiplier; i++) {
                     int x = random.nextInt(16);
                     int z = random.nextInt(16);
-                    int y = minHeight + random.nextInt(heightRange);
+                    int highestY = world.getHighestBlockYAt(chunkBaseX + x, chunkBaseZ + z);
+                    if (highestY < minHeight) continue;
+
+                    int minY = Math.max(minHeight, highestY - 32);
+                    int maxY = Math.min(world.getMaxHeight() - 1, highestY + 1);
+                    int y = minY + (maxY > minY ? random.nextInt(maxY - minY + 1) : 0);
 
                     Block block = chunk.getBlock(x, y, z);
                     BlockData blockData = block.getBlockData();
