@@ -42,6 +42,8 @@ public class ArtifactListener implements Listener {
         return block != null && currentlyFelling.contains(block);
     }
 
+    public static final NamespacedKey PHOENIX_COOLDOWN_KEY = new NamespacedKey("smptools", "phoenix_cooldown");
+
     public ArtifactListener(SMPTools plugin, ArtifactManager artifactManager) {
         this.plugin = plugin;
         this.artifactManager = artifactManager;
@@ -87,7 +89,6 @@ public class ArtifactListener implements Listener {
                 player.setFlying(false);
             }
         }
-        cooldowns.remove(uuid);
         fallImmune.remove(uuid);
         homingCompassTargetMode.remove(uuid);
     }
@@ -297,8 +298,15 @@ public class ArtifactListener implements Listener {
                 if (artifactManager.hasEquippedArtifact(player, ArtifactType.PHOENIX_FEATHER)) {
                     long now = System.currentTimeMillis();
                     long last = getCooldown(player.getUniqueId(), ArtifactType.PHOENIX_FEATHER);
+                    if (player.getPersistentDataContainer().has(PHOENIX_COOLDOWN_KEY, PersistentDataType.LONG)) {
+                        Long pdcTime = player.getPersistentDataContainer().get(PHOENIX_COOLDOWN_KEY, PersistentDataType.LONG);
+                        if (pdcTime != null && pdcTime > last) {
+                            last = pdcTime;
+                        }
+                    }
                     if (now - last >= 60000L) {
                         setCooldown(player.getUniqueId(), ArtifactType.PHOENIX_FEATHER, now);
+                        player.getPersistentDataContainer().set(PHOENIX_COOLDOWN_KEY, PersistentDataType.LONG, now);
                         event.setCancelled(true);
                         player.setHealth(player.getMaxHealth() * 0.5);
                         player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 4));
@@ -636,10 +644,20 @@ public class ArtifactListener implements Listener {
     }
 
     private boolean isHostileTarget(LivingEntity target, Player player) {
+        if (target == null || target.isDead()) return false;
         if (target instanceof Player) return false;
         if (target instanceof org.bukkit.entity.Tameable tameable && tameable.isTamed()) return false;
         if (target instanceof org.bukkit.entity.Villager || target instanceof org.bukkit.entity.WanderingTrader) return false;
         if (target instanceof org.bukkit.entity.ArmorStand) return false;
-        return true;
+        if (target instanceof org.bukkit.entity.Animals || target instanceof org.bukkit.entity.WaterMob || 
+            target instanceof org.bukkit.entity.Golem || target instanceof org.bukkit.entity.Ambient) {
+            return false;
+        }
+        return target instanceof org.bukkit.entity.Monster || target instanceof org.bukkit.entity.Boss || 
+               target instanceof org.bukkit.entity.Slime || target instanceof org.bukkit.entity.Phantom || 
+               target instanceof org.bukkit.entity.Hoglin || target instanceof org.bukkit.entity.Zoglin || 
+               target instanceof org.bukkit.entity.Shulker || target instanceof org.bukkit.entity.Ghast || 
+               target instanceof org.bukkit.entity.EnderDragon || target instanceof org.bukkit.entity.Wither || 
+               target instanceof org.bukkit.entity.Warden || target instanceof org.bukkit.entity.Enemy;
     }
 }
