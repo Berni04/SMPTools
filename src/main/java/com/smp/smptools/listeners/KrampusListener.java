@@ -108,4 +108,11 @@ public class KrampusListener implements Listener {
             }
         }
     }
+
+    @EventHandler
+    public void onPlayerQuit(org.bukkit.event.player.PlayerQuitEvent event) {
+        if (krampusManager.isKidnapped(event.getPlayer())) {
+            krampusManager.releasePlayer(event.getPlayer());
+        }
+    }
 }

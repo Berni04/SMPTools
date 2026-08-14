@@ -4,6 +4,7 @@ import com.smp.smptools.SMPTools;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
@@ -31,6 +32,7 @@ public class KrampusManager {
     private final SMPTools plugin;
     private FileConfiguration christmasConfig;
     private final Map<UUID, Location> kidnappedPlayers = new ConcurrentHashMap<>();
+    private final Map<UUID, Location> playerCages = new ConcurrentHashMap<>();
     private final Map<UUID, Set<UUID>> playerGuards = new ConcurrentHashMap<>();
     public final NamespacedKey krampusKey;
 
@@ -83,6 +85,7 @@ public class KrampusManager {
 
         // Cage Location (High up)
         Location cageLoc = player.getLocation().clone().add(0, 50, 0);
+        playerCages.put(player.getUniqueId(), cageLoc);
 
         // Build Cage
         buildCage(cageLoc);
@@ -119,18 +122,59 @@ public class KrampusManager {
     }
 
     public void releasePlayer(Player player) {
-        if (!kidnappedPlayers.containsKey(player.getUniqueId()))
+        if (player == null) return;
+        releasePlayer(player.getUniqueId());
+    }
+
+    public void releasePlayer(UUID uuid) {
+        if (!kidnappedPlayers.containsKey(uuid) && !playerCages.containsKey(uuid))
             return;
 
-        Location originalLoc = kidnappedPlayers.remove(player.getUniqueId());
-        player.teleport(originalLoc);
-        player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("krampus.escaped"));
+        Location cageLoc = playerCages.remove(uuid);
+        Location originalLoc = kidnappedPlayers.remove(uuid);
+        despawnGuards(uuid);
 
-        // Cleanup cage (optional, simple removal)
-        Location cageLoc = player.getLocation().clone().add(0, 50, 0); // Logic needs to track cage loc if moving, but
-                                                                       // simple relative works for now if static
-        // For now, we won't auto-remove to avoid complex block tracking, or we could
-        // just remove the glass around the player's previous pos
+        if (cageLoc != null) {
+            removeCage(cageLoc);
+        }
+
+        Player player = Bukkit.getPlayer(uuid);
+        if (player != null && player.isOnline() && originalLoc != null) {
+            player.teleport(originalLoc);
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("krampus.escaped"));
+        }
+    }
+
+    private void despawnGuards(UUID uuid) {
+        Set<UUID> guards = playerGuards.remove(uuid);
+        if (guards != null) {
+            for (UUID guardId : guards) {
+                org.bukkit.entity.Entity entity = Bukkit.getEntity(guardId);
+                if (entity != null) {
+                    entity.remove();
+                }
+            }
+        }
+    }
+
+    private void removeCage(Location center) {
+        if (center == null || center.getWorld() == null) return;
+        for (int x = -4; x <= 4; x++) {
+            for (int y = 0; y <= 5; y++) {
+                for (int z = -4; z <= 4; z++) {
+                    org.bukkit.block.Block block = center.clone().add(x, y, z).getBlock();
+                    if (block.getType() == Material.IRON_BARS || block.getType() == Material.BEDROCK) {
+                        block.setType(Material.AIR);
+                    }
+                }
+            }
+        }
+    }
+
+    public void cleanupAll() {
+        for (UUID uuid : new HashSet<>(playerCages.keySet())) {
+            releasePlayer(uuid);
+        }
     }
 
     private void buildCage(Location center) {
@@ -155,6 +199,6 @@ public class KrampusManager {
     }
 
     public boolean isKidnapped(Player player) {
-        return kidnappedPlayers.containsKey(player.getUniqueId());
+        return player != null && kidnappedPlayers.containsKey(player.getUniqueId());
     }
 }
