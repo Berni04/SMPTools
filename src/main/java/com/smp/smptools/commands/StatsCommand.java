@@ -153,11 +153,11 @@ public class StatsCommand extends AbstractPlayerCommand {
         Map<?, ?> death = deathInfo.get(deathIndex);
         String time = (String) death.get("time");
         String cause = (String) death.get("cause");
-        Map<?, ?> location = (Map<?, ?>) death.get("location");
-        String world = location != null ? (String) location.get("world") : "Unknown";
-        double x = location != null ? ((Number) location.get("x")).doubleValue() : 0;
-        double y = location != null ? ((Number) location.get("y")).doubleValue() : 0;
-        double z = location != null ? ((Number) location.get("z")).doubleValue() : 0;
+        Map<?, ?> location = death.get("location") instanceof Map<?, ?> locMap ? locMap : null;
+        String world = death.get("world") instanceof String w ? w : (location != null && location.get("world") instanceof String w ? w : "Unknown");
+        double x = death.get("x") instanceof Number num ? num.doubleValue() : (location != null && location.get("x") instanceof Number num ? num.doubleValue() : 0);
+        double y = death.get("y") instanceof Number num ? num.doubleValue() : (location != null && location.get("y") instanceof Number num ? num.doubleValue() : 0);
+        double z = death.get("z") instanceof Number num ? num.doubleValue() : (location != null && location.get("z") instanceof Number num ? num.doubleValue() : 0);
 
         Inventory detailedDeathInfoGUI = Bukkit.createInventory(null, 54,
                 Component.text(target.getName() + "'s Death #" + (deathIndex + 1), TextColor.fromHexString("#8B0000")));

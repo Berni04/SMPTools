@@ -52,6 +52,7 @@ public class StatsListener implements Listener {
         List<Map<?, ?>> deathInfo = plugin.getStatsConfig().getMapList("stats." + uuid + ".deaths_info");
         Map<String, Object> death = new HashMap<>();
         death.put("time", java.time.LocalDateTime.now().toString());
+        death.put("world", player.getWorld().getName());
         death.put("x", player.getLocation().getBlockX());
         death.put("y", player.getLocation().getBlockY());
         death.put("z", player.getLocation().getBlockZ());
