@@ -35,8 +35,12 @@ public class ArtifactListener implements Listener {
     private final Set<UUID> fallImmune = new HashSet<>();
     private final Set<UUID> bootsFlightGranted = new HashSet<>();
     private final Map<UUID, Integer> homingCompassTargetMode = new HashMap<>(); // 0: Nearest Player, 1: Nearest Boss, 2: Grave/Death
-    private final Set<Block> currentlyFelling = Collections.synchronizedSet(new HashSet<>());
+    private static final Set<Block> currentlyFelling = Collections.synchronizedSet(new HashSet<>());
     private final Random random = new Random();
+
+    public static boolean isFelling(Block block) {
+        return block != null && currentlyFelling.contains(block);
+    }
 
     public ArtifactListener(SMPTools plugin, ArtifactManager artifactManager) {
         this.plugin = plugin;
@@ -397,6 +401,26 @@ public class ArtifactListener implements Listener {
                             queue.add(neighbor);
                         }
                     }
+                }
+            }
+        }
+
+        if (count > 0 && (player.getGameMode() == GameMode.SURVIVAL || player.getGameMode() == GameMode.ADVENTURE)) {
+            if (tool != null && tool.getItemMeta() instanceof org.bukkit.inventory.meta.Damageable damageable) {
+                int unbreaking = tool.getEnchantmentLevel(org.bukkit.enchantments.Enchantment.UNBREAKING);
+                int damageToApply = 0;
+                for (int i = 0; i < count; i++) {
+                    if (unbreaking <= 0 || random.nextInt(unbreaking + 1) == 0) {
+                        damageToApply++;
+                    }
+                }
+                int newDamage = damageable.getDamage() + damageToApply;
+                if (newDamage >= tool.getType().getMaxDurability()) {
+                    player.getInventory().setItemInMainHand(null);
+                    player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
+                } else {
+                    damageable.setDamage(newDamage);
+                    tool.setItemMeta(damageable);
                 }
             }
         }

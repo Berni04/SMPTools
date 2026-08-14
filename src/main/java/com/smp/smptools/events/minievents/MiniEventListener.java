@@ -99,6 +99,10 @@ public class MiniEventListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
+        if (com.smp.smptools.artifacts.ArtifactListener.isFelling(event.getBlock())) {
+            return;
+        }
+
         MiniEventSession activeSession = eventManager.getActiveSession();
         if (activeSession == null || !activeSession.isActive()) {
             return;

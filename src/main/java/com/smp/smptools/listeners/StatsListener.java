@@ -124,6 +124,10 @@ public class StatsListener implements Listener {
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
+        if (com.smp.smptools.artifacts.ArtifactListener.isFelling(event.getBlock())) {
+            return;
+        }
+
         Player player = event.getPlayer();
         Material blockType = event.getBlock().getType();
 
