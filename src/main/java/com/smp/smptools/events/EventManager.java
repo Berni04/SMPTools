@@ -191,7 +191,10 @@ public class EventManager {
                     remaining.add(baseCommandOrItem + "#retry:" + nextRetry);
                     plugin.getLogger().warning("Transient delivery failure for offline reward '" + reward + "' for " + player.getName() + " (attempt " + nextRetry + "/3), retaining for retry.");
                     dataConfig.set(path, remaining.isEmpty() ? null : remaining);
-                    saveData();
+                    if (!saveData()) {
+                        plugin.getLogger().severe("Failed to persist retry state for offline reward for " + player.getName() + ", aborting remaining queue.");
+                        break;
+                    }
                 }
             }
         }
