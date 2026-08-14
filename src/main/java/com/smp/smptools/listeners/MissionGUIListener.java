@@ -221,12 +221,14 @@ public class MissionGUIListener implements Listener {
 
                 // 2. Deliver queued rewards via the transactional pending rewards processor
                 MissionManager.ClaimResult result = missionManager.claimPendingMissionRewards(player);
-                if (result == MissionManager.ClaimResult.ALL_DELIVERED) {
-                    player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-claimed", player));
+                if (result == MissionManager.ClaimResult.PARTIALLY_PENDING_AND_DROPPED) {
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<yellow>Some rewards were saved for retry, but others could not be delivered and had to be dropped. Please contact an admin.</yellow>"));
                 } else if (result == MissionManager.ClaimResult.PARTIALLY_PENDING) {
                     player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<yellow>Some rewards could not be delivered immediately and have been saved to your pending rewards queue for retry.</yellow>"));
                 } else if (result == MissionManager.ClaimResult.DROPPED_UNEXECUTABLE) {
                     player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Some rewards could not be delivered and had to be dropped. Please contact an admin.</red>"));
+                } else {
+                    player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-claimed", player));
                 }
 
                 // Re-open the GUI to update the item state
@@ -324,12 +326,14 @@ public class MissionGUIListener implements Listener {
 
         player.closeInventory();
         MissionManager.ClaimResult result = missionManager.claimPendingMissionRewards(player);
-        if (result == MissionManager.ClaimResult.ALL_DELIVERED) {
-            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-claimed", player));
+        if (result == MissionManager.ClaimResult.PARTIALLY_PENDING_AND_DROPPED) {
+            player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<yellow>Some rewards were saved for retry, but others could not be delivered and had to be dropped. Please contact an admin.</yellow>"));
         } else if (result == MissionManager.ClaimResult.PARTIALLY_PENDING) {
             player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<yellow>Some rewards could not be delivered immediately and have been saved to your pending rewards queue for retry.</yellow>"));
         } else if (result == MissionManager.ClaimResult.DROPPED_UNEXECUTABLE) {
             player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Some rewards could not be delivered and had to be dropped. Please contact an admin.</red>"));
+        } else {
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-claimed", player));
         }
     }
 
