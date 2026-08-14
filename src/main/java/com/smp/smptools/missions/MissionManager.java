@@ -87,21 +87,23 @@ public class MissionManager {
         playerMissionsConfig = YamlConfiguration.loadConfiguration(playerMissionsFile);
     }
 
+    private void serializePlayerMissionData(UUID uuid, PlayerMissionData data) {
+        String path = "players." + uuid.toString();
+        playerMissionsConfig.set(path + ".selectedQuestline", data.getSelectedQuestline());
+        playerMissionsConfig.set(path + ".completed", data.getCompletedMissions());
+        playerMissionsConfig.set(path + ".active", data.getActiveMissions());
+        playerMissionsConfig.set(path + ".claimed", data.getClaimedMissions());
+
+        // Save progress map
+        ConfigurationSection progressSection = playerMissionsConfig.createSection(path + ".progress");
+        for (Map.Entry<String, Integer> progressEntry : data.getMissionProgress().entrySet()) {
+            progressSection.set(progressEntry.getKey(), progressEntry.getValue());
+        }
+    }
+
     public synchronized boolean savePlayerData() {
         for (Map.Entry<UUID, PlayerMissionData> entry : playerData.entrySet()) {
-            String path = "players." + entry.getKey().toString();
-            PlayerMissionData data = entry.getValue();
-
-            playerMissionsConfig.set(path + ".selectedQuestline", data.getSelectedQuestline());
-            playerMissionsConfig.set(path + ".completed", data.getCompletedMissions());
-            playerMissionsConfig.set(path + ".active", data.getActiveMissions());
-            playerMissionsConfig.set(path + ".claimed", data.getClaimedMissions());
-
-            // Save progress map
-            ConfigurationSection progressSection = playerMissionsConfig.createSection(path + ".progress");
-            for (Map.Entry<String, Integer> progressEntry : data.getMissionProgress().entrySet()) {
-                progressSection.set(progressEntry.getKey(), progressEntry.getValue());
-            }
+            serializePlayerMissionData(entry.getKey(), entry.getValue());
         }
 
         try {
@@ -119,15 +121,7 @@ public class MissionManager {
         if (uuid == null) return false;
         PlayerMissionData data = playerData.get(uuid);
         if (data == null) return false;
-        String path = "players." + uuid.toString();
-        playerMissionsConfig.set(path + ".selectedQuestline", data.getSelectedQuestline());
-        playerMissionsConfig.set(path + ".completed", data.getCompletedMissions());
-        playerMissionsConfig.set(path + ".active", data.getActiveMissions());
-        playerMissionsConfig.set(path + ".claimed", data.getClaimedMissions());
-        ConfigurationSection progressSection = playerMissionsConfig.createSection(path + ".progress");
-        for (Map.Entry<String, Integer> progressEntry : data.getMissionProgress().entrySet()) {
-            progressSection.set(progressEntry.getKey(), progressEntry.getValue());
-        }
+        serializePlayerMissionData(uuid, data);
         try {
             playerMissionsConfig.save(playerMissionsFile);
             return true;

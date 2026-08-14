@@ -38,7 +38,7 @@ public class RewardManagerTest {
     }
 
     @Test
-    public void testGiveRewardReturnsFalseOnNullPlayerOrInvalid() {
+    public void testGiveRewardReturnsFalseOnNullPlayer() {
         assertFalse(RewardManager.giveReward(null, "item:DIAMOND 5"));
         assertFalse(RewardManager.giveReward(null, "item:INVALID_XYZ 5"));
         assertFalse(RewardManager.giveReward(null, "item:"));
