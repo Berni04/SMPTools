@@ -35,9 +35,13 @@ public class ChunkLoaderManager {
     public ChunkLoaderManager(SMPTools plugin) {
         this.plugin = plugin;
         staticPluginInstance = plugin;
-        setupChunkLoadersConfig();
-        loadChunkLoaders();
-        cacheConfigValues();
+        if (plugin != null) {
+            setupChunkLoadersConfig();
+            loadChunkLoaders();
+            cacheConfigValues();
+        } else {
+            this.chunkLoadersConfig = new YamlConfiguration();
+        }
     }
 
     private void cacheConfigValues() {
@@ -72,10 +76,16 @@ public class ChunkLoaderManager {
         if (chunkLoadersConfig.contains("loaders")) {
             List<String> loaderStrings = chunkLoadersConfig.getStringList("loaders");
             for (String loaderString : loaderStrings) {
-                Location loc = deserializeLocation(loaderString);
-                if (loc != null) {
-                    activeChunkLoaders.add(loc);
-                    forceLoadChunk(loc);
+                try {
+                    Location loc = deserializeLocation(loaderString);
+                    if (loc != null) {
+                        activeChunkLoaders.add(loc);
+                        forceLoadChunk(loc);
+                    } else {
+                        plugin.getLogger().warning("Skipping invalid chunk loader entry: '" + loaderString + "'");
+                    }
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Failed to load chunk loader entry '" + loaderString + "': " + e.getMessage());
                 }
             }
         }
@@ -138,15 +148,24 @@ public class ChunkLoaderManager {
         return Objects.requireNonNull(loc.getWorld()).getName() + ";" + loc.getBlockX() + ";" + loc.getBlockY() + ";" + loc.getBlockZ();
     }
 
-    private Location deserializeLocation(String s) {
+    Location deserializeLocation(String s) {
+        if (s == null || s.isBlank()) return null;
         String[] parts = s.split(";");
         if (parts.length == 4) {
+            if (Bukkit.getServer() == null) return null;
             World world = Bukkit.getWorld(parts[0]);
             if (world == null) return null;
-            int x = Integer.parseInt(parts[1]);
-            int y = Integer.parseInt(parts[2]);
-            int z = Integer.parseInt(parts[3]);
-            return new Location(world, x, y, z);
+            try {
+                int x = Integer.parseInt(parts[1]);
+                int y = Integer.parseInt(parts[2]);
+                int z = Integer.parseInt(parts[3]);
+                return new Location(world, x, y, z);
+            } catch (NumberFormatException e) {
+                if (plugin != null) {
+                    plugin.getLogger().warning("Failed to parse chunk loader coordinates in line '" + s + "': " + e.getMessage());
+                }
+                return null;
+            }
         }
         return null;
     }
