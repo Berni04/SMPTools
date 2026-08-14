@@ -156,17 +156,17 @@ public class SecretSantaManager {
 
     private static class DeserializedGiftResult {
         final List<ItemStack> validItems;
-        final boolean hasMalformedItems;
+        final List<Object> malformedEntries;
 
-        DeserializedGiftResult(List<ItemStack> validItems, boolean hasMalformedItems) {
+        DeserializedGiftResult(List<ItemStack> validItems, List<Object> malformedEntries) {
             this.validItems = validItems;
-            this.hasMalformedItems = hasMalformedItems;
+            this.malformedEntries = malformedEntries;
         }
     }
 
     private DeserializedGiftResult parseGiftItems(UUID recipient, List<?> rawList) {
         List<ItemStack> items = new ArrayList<>();
-        boolean hasMalformed = false;
+        List<Object> malformed = new ArrayList<>();
         for (Object obj : rawList) {
             if (obj instanceof ItemStack is) {
                 items.add(is);
@@ -174,16 +174,16 @@ public class SecretSantaManager {
                 try {
                     items.add(ItemStack.deserialize((java.util.Map<String, Object>) map));
                 } catch (Exception e) {
-                    hasMalformed = true;
+                    malformed.add(obj);
                     if (plugin != null) {
                         plugin.getLogger().warning("Failed to deserialize Secret Santa gift item for recipient " + recipient + ": " + e.getMessage());
                     }
                 }
             } else {
-                hasMalformed = true;
+                malformed.add(obj);
             }
         }
-        return new DeserializedGiftResult(items, hasMalformed);
+        return new DeserializedGiftResult(items, malformed);
     }
 
     public synchronized ItemStack[] getGift(UUID recipient) {
@@ -220,16 +220,22 @@ public class SecretSantaManager {
             return null;
         }
 
-        if (result.hasMalformedItems && plugin != null) {
-            String quarantinePath = "quarantine.gifts." + recipient.toString() + "." + System.currentTimeMillis();
-            config.set(quarantinePath, rawList);
-            plugin.getLogger().warning("Delivering partially recoverable gift to recipient " + recipient + " while quarantining malformed entries under " + quarantinePath);
+        String quarantinePath = null;
+        if (!result.malformedEntries.isEmpty()) {
+            quarantinePath = "quarantine.gifts." + recipient.toString() + "." + System.currentTimeMillis();
+            config.set(quarantinePath, result.malformedEntries);
+            if (plugin != null) {
+                plugin.getLogger().warning("Delivering partially recoverable gift to recipient " + recipient + " while quarantining malformed entries under " + quarantinePath);
+            }
         }
 
         Object rawBackup = config.get(path);
         config.set(path, null);
         if (!saveConfig()) {
             config.set(path, rawBackup);
+            if (quarantinePath != null) {
+                config.set(quarantinePath, null);
+            }
             if (plugin != null) {
                 plugin.getLogger().severe("Failed to persist gift claim for recipient " + recipient + "; aborting claim.");
             }

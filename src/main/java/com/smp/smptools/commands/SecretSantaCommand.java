@@ -88,9 +88,14 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
                     player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.registration-closed"));
                     return true;
                 }
-                ItemStack[] gift = manager.claimGift(player.getUniqueId());
-                if (gift == null || gift.length == 0) {
+                if (!manager.hasGiftDeposited(player.getUniqueId())) {
                     player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.no-gift"));
+                    return true;
+                }
+                ItemStack[] gift = manager.claimGift(player.getUniqueId());
+                if (gift == null) {
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                            .deserialize("<red>Failed to process gift claim. Please try again or contact an admin.</red>"));
                     return true;
                 }
                 for (ItemStack item : gift) {
@@ -147,6 +152,15 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
 
         holder.setInventory(gui);
         player.openInventory(gui);
+    }
+
+    @EventHandler
+    public void onInventoryDrag(org.bukkit.event.inventory.InventoryDragEvent event) {
+        if (event.getInventory().getHolder() instanceof com.smp.smptools.christmas.SecretSantaHolder) {
+            if (event.getRawSlots().contains(26)) {
+                event.setCancelled(true);
+            }
+        }
     }
 
     @EventHandler
