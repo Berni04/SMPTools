@@ -87,7 +87,7 @@ public class MissionManager {
         playerMissionsConfig = YamlConfiguration.loadConfiguration(playerMissionsFile);
     }
 
-    public void savePlayerData() {
+    public synchronized boolean savePlayerData() {
         for (Map.Entry<UUID, PlayerMissionData> entry : playerData.entrySet()) {
             String path = "players." + entry.getKey().toString();
             PlayerMissionData data = entry.getValue();
@@ -106,8 +106,36 @@ public class MissionManager {
 
         try {
             playerMissionsConfig.save(playerMissionsFile);
+            return true;
         } catch (IOException e) {
-            plugin.getLogger().severe("Could not save player_missions.yml!");
+            if (plugin != null) {
+                plugin.getLogger().severe("Could not save player_missions.yml: " + e.getMessage());
+            }
+            return false;
+        }
+    }
+
+    public synchronized boolean saveSinglePlayerData(UUID uuid) {
+        if (uuid == null) return false;
+        PlayerMissionData data = playerData.get(uuid);
+        if (data == null) return false;
+        String path = "players." + uuid.toString();
+        playerMissionsConfig.set(path + ".selectedQuestline", data.getSelectedQuestline());
+        playerMissionsConfig.set(path + ".completed", data.getCompletedMissions());
+        playerMissionsConfig.set(path + ".active", data.getActiveMissions());
+        playerMissionsConfig.set(path + ".claimed", data.getClaimedMissions());
+        ConfigurationSection progressSection = playerMissionsConfig.createSection(path + ".progress");
+        for (Map.Entry<String, Integer> progressEntry : data.getMissionProgress().entrySet()) {
+            progressSection.set(progressEntry.getKey(), progressEntry.getValue());
+        }
+        try {
+            playerMissionsConfig.save(playerMissionsFile);
+            return true;
+        } catch (IOException e) {
+            if (plugin != null) {
+                plugin.getLogger().severe("Could not save player_missions.yml for " + uuid + ": " + e.getMessage());
+            }
+            return false;
         }
     }
 

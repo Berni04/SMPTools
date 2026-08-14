@@ -193,18 +193,31 @@ public class MissionGUIListener implements Listener {
             if (hasChromaticElytra) {
                 openColorSelectionGUI(player, clickedMission.getId());
             } else {
-                playerData.getClaimedMissions().add(clickedMission.getId());
-                missionManager.savePlayerData();
+                boolean allSucceeded = true;
                 for (String reward : clickedMission.getRewards()) {
                     try {
-                        RewardManager.giveReward(player, reward);
+                        if (!RewardManager.giveReward(player, reward)) {
+                            allSucceeded = false;
+                            SMPTools.getInstance().getLogger().warning("Failed to give mission reward '" + reward + "' to " + player.getName());
+                        }
                     } catch (Exception e) {
-                        SMPTools.getInstance().getLogger().warning("Failed to give mission reward '" + reward + "' to " + player.getName() + ": " + e.getMessage());
+                        allSucceeded = false;
+                        SMPTools.getInstance().getLogger().warning("Exception giving mission reward '" + reward + "' to " + player.getName() + ": " + e.getMessage());
                     }
                 }
-                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-claimed", player));
-                // Re-open the GUI to update the item state
-                openCompletedMissionsGUI(player, isNpc);
+                if (allSucceeded) {
+                    playerData.getClaimedMissions().add(clickedMission.getId());
+                    if (!missionManager.saveSinglePlayerData(player.getUniqueId())) {
+                        playerData.getClaimedMissions().remove(clickedMission.getId());
+                        player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Failed to save mission claim. Please try again.</red>"));
+                        return;
+                    }
+                    player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-claimed", player));
+                    // Re-open the GUI to update the item state
+                    openCompletedMissionsGUI(player, isNpc);
+                } else {
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Some rewards could not be delivered. Please contact an admin.</red>"));
+                }
             }
         } else if (playerData.getClaimedMissions().contains(clickedMission.getId())) {
             player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-already-claimed"));

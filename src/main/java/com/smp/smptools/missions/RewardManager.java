@@ -23,143 +23,168 @@ public class RewardManager {
 
     public static final NamespacedKey ELYTRA_TRAIL_KEY = new NamespacedKey("smptools", "elytra_trail_color");
 
-    public static void giveChromaticElytra(Player player, String color) {
-        ItemStack elytra = new ItemStack(Material.ELYTRA);
-        ItemMeta meta = elytra.getItemMeta();
+    public static class ParsedItemReward {
+        public final Material material;
+        public final int amount;
 
-        meta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
-                .deserialize(SMPTools.getInstance().getMessageManager().getRawMessage("missions.chromatic-elytra-name")));
-
-        List<Component> lore = new ArrayList<>();
-        lore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
-                .deserialize(SMPTools.getInstance().getMessageManager().getRawMessage("missions.chromatic-elytra-lore-1")));
-        lore.add(Component.text(""));
-        NamedTextColor trailColor;
-        switch (color.toUpperCase()) {
-            case "RED":
-                trailColor = NamedTextColor.RED;
-                break;
-            case "BLUE":
-                trailColor = NamedTextColor.BLUE;
-                break;
-            case "GREEN":
-                trailColor = NamedTextColor.GREEN;
-                break;
-            case "PURPLE":
-                trailColor = NamedTextColor.DARK_PURPLE;
-                break;
-            case "ORANGE":
-                trailColor = NamedTextColor.GOLD;
-                break;
-            case "YELLOW":
-                trailColor = NamedTextColor.YELLOW;
-                break;
-            case "BLACK":
-                trailColor = NamedTextColor.BLACK;
-                break;
-            case "RAINBOW":
-                trailColor = NamedTextColor.LIGHT_PURPLE;
-                break; // Just for display
-            default:
-                trailColor = NamedTextColor.WHITE;
-                break;
+        public ParsedItemReward(Material material, int amount) {
+            this.material = material;
+            this.amount = amount;
         }
-        // Build the trail color lore line using the static color component for the {color} part
-        String trailLore = SMPTools.getInstance().getMessageManager().getRawMessage("missions.trail-color")
-                .replace("{color}", "<" + trailColor.toString().replace("NamedTextColor", "").toLowerCase() + ">" + color);
-        lore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(trailLore));
-        meta.lore(lore);
-
-        meta.addEnchant(Enchantment.UNBREAKING, 3, true);
-        meta.addEnchant(Enchantment.MENDING, 1, true);
-        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-
-        // Store the color in the Persistent Data Container
-        meta.getPersistentDataContainer().set(ELYTRA_TRAIL_KEY, PersistentDataType.STRING, color);
-
-        elytra.setItemMeta(meta);
-
-        player.getInventory().addItem(elytra);
-        player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.chromatic-elytra-received", player));
     }
 
-    public static void giveReward(Player player, String reward) {
+    public static ParsedItemReward parseItemReward(String reward) {
+        if (reward == null || !reward.startsWith("item:")) return null;
+        String[] parts = reward.substring(5).trim().split("\\s+");
+        if (parts.length == 0 || parts[0].isBlank()) return null;
+        Material material = Material.matchMaterial(parts[0]);
+        if (material == null) return null;
+        int amount = 1;
+        if (parts.length > 1) {
+            try {
+                amount = Math.max(1, Integer.parseInt(parts[1]));
+            } catch (NumberFormatException e) {
+                amount = 1;
+            }
+        }
+        return new ParsedItemReward(material, amount);
+    }
+
+    public static boolean giveChromaticElytra(Player player, String color) {
+        if (player == null) return false;
+        try {
+            ItemStack elytra = new ItemStack(Material.ELYTRA);
+            ItemMeta meta = elytra.getItemMeta();
+
+            if (SMPTools.getInstance() != null && SMPTools.getInstance().getMessageManager() != null) {
+                meta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                        .deserialize(SMPTools.getInstance().getMessageManager().getRawMessage("missions.chromatic-elytra-name")));
+
+                List<Component> lore = new ArrayList<>();
+                lore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                        .deserialize(SMPTools.getInstance().getMessageManager().getRawMessage("missions.chromatic-elytra-lore-1")));
+                lore.add(Component.text(""));
+                NamedTextColor trailColor;
+                switch (color.toUpperCase()) {
+                    case "RED":
+                        trailColor = NamedTextColor.RED;
+                        break;
+                    case "BLUE":
+                        trailColor = NamedTextColor.BLUE;
+                        break;
+                    case "GREEN":
+                        trailColor = NamedTextColor.GREEN;
+                        break;
+                    case "PURPLE":
+                        trailColor = NamedTextColor.DARK_PURPLE;
+                        break;
+                    case "ORANGE":
+                        trailColor = NamedTextColor.GOLD;
+                        break;
+                    case "YELLOW":
+                        trailColor = NamedTextColor.YELLOW;
+                        break;
+                    case "BLACK":
+                        trailColor = NamedTextColor.BLACK;
+                        break;
+                    case "RAINBOW":
+                        trailColor = NamedTextColor.LIGHT_PURPLE;
+                        break;
+                    default:
+                        trailColor = NamedTextColor.WHITE;
+                        break;
+                }
+                String trailLore = SMPTools.getInstance().getMessageManager().getRawMessage("missions.trail-color")
+                        .replace("{color}", "<" + trailColor.toString().replace("NamedTextColor", "").toLowerCase() + ">" + color);
+                lore.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(trailLore));
+                meta.lore(lore);
+            }
+
+            meta.addEnchant(Enchantment.UNBREAKING, 3, true);
+            meta.addEnchant(Enchantment.MENDING, 1, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+
+            meta.getPersistentDataContainer().set(ELYTRA_TRAIL_KEY, PersistentDataType.STRING, color);
+            elytra.setItemMeta(meta);
+
+            Map<Integer, ItemStack> leftover = player.getInventory().addItem(elytra);
+            for (ItemStack drop : leftover.values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), drop);
+            }
+            if (SMPTools.getInstance() != null && SMPTools.getInstance().getMessageManager() != null) {
+                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.chromatic-elytra-received", player));
+            }
+            return true;
+        } catch (Exception e) {
+            if (SMPTools.getInstance() != null) {
+                SMPTools.getInstance().getLogger().warning("Failed to give chromatic elytra to " + player.getName() + ": " + e.getMessage());
+            }
+            return false;
+        }
+    }
+
+    public static boolean giveReward(Player player, String reward) {
         if (player == null || reward == null || reward.isBlank()) {
-            return;
+            return false;
         }
         try {
             if (reward.startsWith("item:")) {
-                String[] parts = reward.substring(5).trim().split("\\s+");
-                if (parts.length == 0 || parts[0].isBlank()) {
+                ParsedItemReward parsed = parseItemReward(reward);
+                if (parsed == null) {
                     if (SMPTools.getInstance() != null) {
-                        SMPTools.getInstance().getLogger().warning("Empty item specification in mission reward: '" + reward + "'");
+                        SMPTools.getInstance().getLogger().warning("Invalid item specification in mission reward: '" + reward + "'");
                     }
-                    return;
-                }
-                Material material = Material.matchMaterial(parts[0]);
-                int amount = 1;
-                if (parts.length > 1) {
-                    try {
-                        amount = Math.max(1, Integer.parseInt(parts[1]));
-                    } catch (NumberFormatException e) {
-                        if (SMPTools.getInstance() != null) {
-                            SMPTools.getInstance().getLogger().warning("Invalid item amount in mission reward '" + reward + "', defaulting to 1");
-                        }
-                        amount = 1;
-                    }
+                    return false;
                 }
 
-                if (material != null) {
-                    ItemStack item = new ItemStack(material, amount);
-                    if (player.getInventory().firstEmpty() != -1) {
-                        player.getInventory().addItem(item);
-                    } else {
-                        player.getWorld().dropItem(player.getLocation(), item);
-                    }
-                    if (SMPTools.getInstance() != null && SMPTools.getInstance().getMessageManager() != null) {
-                        Map<String, String> placeholders = new HashMap<>();
-                        placeholders.put("amount", String.valueOf(amount));
-                        placeholders.put("material", material.name());
-                        player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-received", player, placeholders));
-                    }
-                } else {
-                    if (SMPTools.getInstance() != null) {
-                        SMPTools.getInstance().getLogger().warning("Unknown material in mission reward: '" + parts[0] + "'");
-                    }
+                ItemStack item = new ItemStack(parsed.material, parsed.amount);
+                Map<Integer, ItemStack> leftover = player.getInventory().addItem(item);
+                for (ItemStack drop : leftover.values()) {
+                    player.getWorld().dropItemNaturally(player.getLocation(), drop);
                 }
+                if (SMPTools.getInstance() != null && SMPTools.getInstance().getMessageManager() != null) {
+                    Map<String, String> placeholders = new HashMap<>();
+                    placeholders.put("amount", String.valueOf(parsed.amount));
+                    placeholders.put("material", parsed.material.name());
+                    player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.reward-received", player, placeholders));
+                }
+                return true;
             } else if (reward.startsWith("custom_item:")) {
                 String customItem = reward.substring(12);
                 if (customItem.equalsIgnoreCase("chromatic_elytra")) {
-                    // Handled by GUI for color selection, but if called directly (fallback)
-                    giveChromaticElytra(player, "WHITE");
+                    return giveChromaticElytra(player, "WHITE");
                 }
+                return false;
             } else if (reward.startsWith("command:")) {
                 String command = reward.substring(8).replace("%player%", player.getName());
                 if (CommandBlacklist.isBlocked(command)) {
                     if (SMPTools.getInstance() != null) {
                         SMPTools.getInstance().getLogger().warning("Blocked dangerous command in mission reward: " + command);
                     }
-                    return;
+                    return false;
                 }
                 if (org.bukkit.Bukkit.getServer() != null) {
-                    org.bukkit.Bukkit.dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), command);
+                    return org.bukkit.Bukkit.dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), command);
                 }
+                return false;
             } else {
                 String command = reward.replace("%player%", player.getName());
                 if (CommandBlacklist.isBlocked(command)) {
                     if (SMPTools.getInstance() != null) {
                         SMPTools.getInstance().getLogger().warning("Blocked dangerous command in mission reward: " + command);
                     }
-                    return;
+                    return false;
                 }
                 if (org.bukkit.Bukkit.getServer() != null) {
-                    org.bukkit.Bukkit.dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), command);
+                    return org.bukkit.Bukkit.dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), command);
                 }
+                return false;
             }
         } catch (Exception e) {
             if (SMPTools.getInstance() != null) {
                 SMPTools.getInstance().getLogger().warning("Failed to give mission reward '" + reward + "' to " + player.getName() + ": " + e.getMessage());
             }
+            return false;
         }
     }
 }
