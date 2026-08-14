@@ -587,6 +587,9 @@ public class ArtifactListener implements Listener {
                             int px = loc.getBlockX();
                             int py = loc.getBlockY();
                             int pz = loc.getBlockZ();
+                            boolean oreFound = false;
+                            int minDistanceSq = Integer.MAX_VALUE;
+
                             for (int x = -4; x <= 4; x++) {
                                 for (int y = -4; y <= 4; y++) {
                                     for (int z = -4; z <= 4; z++) {
@@ -599,16 +602,27 @@ public class ArtifactListener implements Listener {
                                                     mat == Material.ANCIENT_DEBRIS || mat == Material.EMERALD_ORE ||
                                                     mat == Material.DEEPSLATE_EMERALD_ORE) {
                                                 player.spawnParticle(Particle.GLOW, b.getLocation().add(0.5, 0.5, 0.5), 1, 0, 0, 0, 0);
+                                                oreFound = true;
+                                                int distSq = x * x + y * y + z * z;
+                                                if (distSq < minDistanceSq) {
+                                                    minDistanceSq = distSq;
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
+
+                            if (oreFound) {
+                                float pitch = 1.0f + (float) Math.max(0.0, 1.0 - (Math.sqrt(minDistanceSq) / 8.0));
+                                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.4f, pitch);
+                            }
                         }
                     }
 
                     // Homing Compass
-                    if (artifactManager.hasEquippedArtifact(player, ArtifactType.HOMING_COMPASS)) {
+                    if (artifactManager.hasEquippedArtifact(player, ArtifactType.HOMING_COMPASS) ||
+                            artifactManager.isArtifact(player.getInventory().getItemInMainHand(), ArtifactType.HOMING_COMPASS)) {
                         int mode = homingCompassTargetMode.getOrDefault(player.getUniqueId(), 0);
                         Location targetLoc = null;
 
@@ -656,29 +670,41 @@ public class ArtifactListener implements Listener {
     private Location findSafeShadowStepDestination(Player player, double maxDist) {
         Location eyeLoc = player.getEyeLocation();
         Vector dir = eyeLoc.getDirection().normalize();
-        Location lastSafe = null;
+        Location target = player.getLocation().add(dir.clone().multiply(maxDist));
 
-        for (double d = 1.0; d <= maxDist; d += 0.5) {
-            Location check = player.getLocation().add(dir.clone().multiply(d));
-            Block feet = check.getBlock();
-            Block head = check.clone().add(0, 1, 0).getBlock();
+        if (isSafePlayerStand(target)) {
+            return target;
+        }
 
-            if (!feet.getType().isSolid() && !head.getType().isSolid() && !feet.isLiquid()) {
-                lastSafe = check;
-            } else {
-                // If obstructed, check if 1-3 blocks above is clear
-                for (int up = 1; up <= 3; up++) {
-                    Block upFeet = feet.getRelative(0, up, 0);
-                    Block upHead = head.getRelative(0, up, 0);
-                    if (!upFeet.getType().isSolid() && !upHead.getType().isSolid() && !upFeet.isLiquid()) {
-                        lastSafe = check.clone().add(0, up, 0);
-                        break;
-                    }
-                }
-                break;
+        for (int dy : new int[]{1, 2, 3, -1, -2}) {
+            Location candidate = target.clone().add(0, dy, 0);
+            if (isSafePlayerStand(candidate)) {
+                return candidate;
             }
         }
-        return lastSafe;
+
+        for (double d = maxDist - 0.5; d >= 1.0; d -= 0.5) {
+            Location fallback = player.getLocation().add(dir.clone().multiply(d));
+            if (isSafePlayerStand(fallback)) {
+                return fallback;
+            }
+        }
+
+        return null;
+    }
+
+    private boolean isSafePlayerStand(Location loc) {
+        if (loc == null || loc.getWorld() == null) return false;
+        Block feet = loc.getBlock();
+        Block head = loc.clone().add(0, 1, 0).getBlock();
+
+        if (feet.getType().isSolid() || head.getType().isSolid()) {
+            return false;
+        }
+        if (feet.isLiquid()) {
+            return false;
+        }
+        return true;
     }
 
     private boolean isHostileTarget(LivingEntity target) {
