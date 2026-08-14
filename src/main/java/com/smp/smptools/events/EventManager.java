@@ -50,12 +50,14 @@ public class EventManager {
         dataConfig = YamlConfiguration.loadConfiguration(dataFile);
     }
 
-    private synchronized void saveData() {
-        if (dataConfig == null) return;
+    private synchronized boolean saveData() {
+        if (dataConfig == null) return false;
         try {
             dataConfig.save(dataFile);
+            return true;
         } catch (IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Could not save events_data.yml", e);
+            return false;
         }
     }
 
@@ -160,7 +162,10 @@ public class EventManager {
                 plugin.getLogger().warning("Discarding unparseable/malformed offline reward '" + reward + "' for " + player.getName());
                 remaining.remove(reward);
                 dataConfig.set(path, remaining.isEmpty() ? null : remaining);
-                saveData();
+                if (!saveData()) {
+                    dataConfig.set(path, pending);
+                    break;
+                }
                 continue;
             }
 
@@ -169,7 +174,10 @@ public class EventManager {
                 anyDelivered = true;
                 remaining.remove(reward);
                 dataConfig.set(path, remaining.isEmpty() ? null : remaining);
-                saveData();
+                if (!saveData()) {
+                    plugin.getLogger().severe("Failed to persist claimed offline reward removal for " + player.getName() + ", aborting remaining queue.");
+                    break;
+                }
             } else {
                 int nextRetry = parsed.getRetryCount() + 1;
                 remaining.remove(reward);
@@ -181,7 +189,10 @@ public class EventManager {
                     plugin.getLogger().warning("Transient delivery failure for offline reward '" + reward + "' for " + player.getName() + " (attempt " + nextRetry + "/3), retaining for retry.");
                 }
                 dataConfig.set(path, remaining.isEmpty() ? null : remaining);
-                saveData();
+                if (!saveData()) {
+                    plugin.getLogger().severe("Failed to persist retry state for offline reward for " + player.getName() + ", aborting remaining queue.");
+                    break;
+                }
             }
         }
 
