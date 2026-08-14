@@ -147,7 +147,11 @@ public class EventManager {
         // Start automated scheduler if enabled
         if (plugin.getEventsConfig().getBoolean("events.enabled", true)) {
             int intervalMinutes = plugin.getEventsConfig().getInt("events.interval-minutes", 120);
-            long periodTicks = intervalMinutes * 60 * 20L;
+            if (intervalMinutes < 1) {
+                plugin.getLogger().warning("Mini-events interval is configured below 1 minute (" + intervalMinutes + "m). Clamping to 1 minute.");
+                intervalMinutes = 1;
+            }
+            long periodTicks = Math.max(1200L, intervalMinutes * 60L * 20L);
 
             autoScheduleTask = new BukkitRunnable() {
                 @Override
