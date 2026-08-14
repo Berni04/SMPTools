@@ -125,7 +125,15 @@ public class SecretSantaManager {
     public synchronized UUID getTarget(UUID santa) {
         if (santa == null) return null;
         String targetStr = config.getString("matches." + santa.toString());
-        return targetStr != null ? UUID.fromString(targetStr) : null;
+        if (targetStr == null) return null;
+        try {
+            return UUID.fromString(targetStr);
+        } catch (IllegalArgumentException e) {
+            if (plugin != null) {
+                plugin.getLogger().warning("Malformed UUID in Secret Santa matches for santa " + santa + ": " + targetStr);
+            }
+            return null;
+        }
     }
 
     public synchronized boolean depositGift(UUID target, ItemStack[] items) {
