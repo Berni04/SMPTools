@@ -294,8 +294,8 @@ public class ArtifactListener implements Listener {
                 }
             }
 
-            // Phoenix Feather Check
-            if (player.getHealth() - event.getFinalDamage() <= 0) {
+            // Phoenix Feather Check (exclude VOID damage since Phoenix Feather does not teleport player out of void)
+            if (event.getCause() != EntityDamageEvent.DamageCause.VOID && player.getHealth() - event.getFinalDamage() <= 0) {
                 if (artifactManager.hasEquippedArtifact(player, ArtifactType.PHOENIX_FEATHER)) {
                     long now = System.currentTimeMillis();
                     long last = getCooldown(player.getUniqueId(), ArtifactType.PHOENIX_FEATHER);
