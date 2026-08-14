@@ -21,21 +21,25 @@ public class ChatListener implements Listener {
     public void onPlayerChat(AsyncChatEvent event) {
         event.setCancelled(true);
         Player player = event.getPlayer();
+        Component rawMessage = event.message();
 
-        Component displayName = plugin.getChatManager().getFormattedDisplayName(player);
-        Component messageContent = event.message().color(NamedTextColor.WHITE);
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            if (!player.isOnline()) return;
 
-        if (TrollGUIListener.isChatScrambled(player)) {
-            String plainMessage = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
-                    .serialize(event.message());
-            List<String> characters = java.util.Arrays.asList(plainMessage.split(""));
-            java.util.Collections.shuffle(characters);
-            String scrambled = String.join("", characters);
-            messageContent = Component.text(scrambled, NamedTextColor.WHITE);
-        }
+            Component displayName = plugin.getChatManager().getFormattedDisplayName(player);
+            Component messageContent = rawMessage.color(NamedTextColor.WHITE);
 
-        Component message = Component.text(": ").append(messageContent);
+            if (TrollGUIListener.isChatScrambled(player)) {
+                String plainMessage = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+                        .serialize(rawMessage);
+                List<String> characters = java.util.Arrays.asList(plainMessage.split(""));
+                java.util.Collections.shuffle(characters);
+                String scrambled = String.join("", characters);
+                messageContent = Component.text(scrambled, NamedTextColor.WHITE);
+            }
 
-        plugin.getServer().broadcast(displayName.append(message));
+            Component message = Component.text(": ").append(messageContent);
+            plugin.getServer().broadcast(displayName.append(message));
+        });
     }
 }
