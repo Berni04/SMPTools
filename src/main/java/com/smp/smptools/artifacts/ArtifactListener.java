@@ -53,11 +53,27 @@ public class ArtifactListener implements Listener {
     }
 
     @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        if (player.getGameMode() != GameMode.CREATIVE && player.getGameMode() != GameMode.SPECTATOR) {
+            if (!artifactManager.hasEquippedArtifact(player, ArtifactType.LEAP_FROG_BOOTS)) {
+                bootsFlightGranted.remove(player.getUniqueId());
+            }
+        }
+    }
+
+    @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        UUID uuid = event.getPlayer().getUniqueId();
+        Player player = event.getPlayer();
+        UUID uuid = player.getUniqueId();
+        if (bootsFlightGranted.remove(uuid)) {
+            if (player.getGameMode() != GameMode.CREATIVE && player.getGameMode() != GameMode.SPECTATOR) {
+                player.setAllowFlight(false);
+                player.setFlying(false);
+            }
+        }
         cooldowns.remove(uuid);
         fallImmune.remove(uuid);
-        bootsFlightGranted.remove(uuid);
         homingCompassTargetMode.remove(uuid);
     }
 
@@ -392,9 +408,11 @@ public class ArtifactListener implements Listener {
         // Leap Frog Boots flight enable/disable scoped check
         if (artifactManager.hasEquippedArtifact(player, ArtifactType.LEAP_FROG_BOOTS)) {
             if (player.getGameMode() != GameMode.CREATIVE && player.getGameMode() != GameMode.SPECTATOR) {
-                if (player.getLocation().subtract(0, 0.1, 0).getBlock().getType().isSolid()) {
-                    player.setAllowFlight(true);
-                    bootsFlightGranted.add(player.getUniqueId());
+                if (!player.getAllowFlight()) {
+                    if (player.getLocation().subtract(0, 0.1, 0).getBlock().getType().isSolid()) {
+                        player.setAllowFlight(true);
+                        bootsFlightGranted.add(player.getUniqueId());
+                    }
                 }
             }
         } else if (bootsFlightGranted.remove(player.getUniqueId())) {

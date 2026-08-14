@@ -71,55 +71,54 @@ public class EventManager {
         saveData();
     }
 
-    public synchronized void queueOfflineReward(UUID uuid, String rewardStr) {
-        List<String> list = dataConfig.getStringList("pending_rewards." + uuid.toString());
-        list.add(rewardStr);
-        dataConfig.set("pending_rewards." + uuid.toString(), list);
-        saveData();
-    }
-
     public synchronized void claimOfflineRewards(Player player) {
         String path = "pending_rewards." + player.getUniqueId().toString();
-        List<String> pending = new ArrayList<>(dataConfig.getStringList(path));
-        if (!pending.isEmpty()) {
-            List<String> remaining = new ArrayList<>();
-            boolean anyDelivered = false;
+        List<String> pending = dataConfig.getStringList(path);
+        if (pending.isEmpty()) return;
 
-            for (String reward : pending) {
-                boolean ok = executeReward(player, reward);
-                if (ok) {
-                    anyDelivered = true;
-                } else {
-                    remaining.add(reward);
-                }
-            }
+        // Clear and save first to prevent double claiming on unexpected crash
+        dataConfig.set(path, null);
+        saveData();
 
-            if (remaining.isEmpty()) {
-                dataConfig.set(path, null);
-            } else {
-                dataConfig.set(path, remaining);
+        player.sendMessage(MiniMessage.miniMessage().deserialize("<gold><b>[EVENT]</b></gold> <yellow>You received event rewards earned while offline!</yellow>"));
+        List<String> failed = new ArrayList<>();
+        for (String reward : pending) {
+            boolean ok = executeReward(player, reward);
+            if (!ok) {
+                failed.add(reward);
             }
+        }
+
+        // Retain unprocessable rewards if any failed
+        if (!failed.isEmpty()) {
+            List<String> current = new ArrayList<>(dataConfig.getStringList(path));
+            current.addAll(failed);
+            dataConfig.set(path, current);
             saveData();
-
-            if (anyDelivered) {
-                player.sendMessage(MiniMessage.miniMessage().deserialize("<gold><b>[EVENT]</b></gold> <yellow>You received event rewards earned while offline!</yellow>"));
-            }
         }
     }
 
     public boolean executeReward(Player player, String rewardStr) {
+        if (player == null || rewardStr == null || rewardStr.isBlank()) return false;
         try {
             if (rewardStr.startsWith("cmd:")) {
                 String cmd = rewardStr.substring(4).replace("%player%", player.getName());
                 return Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
             } else if (rewardStr.startsWith("item:")) {
                 String[] parts = rewardStr.substring(5).trim().split("\\s+");
+                if (parts.length == 0 || parts[0].isBlank()) {
+                    plugin.getLogger().warning("Empty item reward string '" + rewardStr + "' for " + player.getName());
+                    return false;
+                }
                 Material mat = Material.matchMaterial(parts[0].toUpperCase());
                 int amount = 1;
                 if (parts.length > 1) {
                     try {
                         amount = Math.max(1, Integer.parseInt(parts[1]));
-                    } catch (NumberFormatException ignored) {}
+                    } catch (NumberFormatException e) {
+                        plugin.getLogger().warning("Invalid item amount in reward '" + rewardStr + "' for " + player.getName());
+                        return false;
+                    }
                 }
                 if (mat != null) {
                     Map<Integer, ItemStack> leftover = player.getInventory().addItem(new ItemStack(mat, amount));
@@ -131,8 +130,10 @@ public class EventManager {
                     plugin.getLogger().warning("Unknown material in reward '" + rewardStr + "' for " + player.getName());
                     return false;
                 }
+            } else {
+                plugin.getLogger().warning("Unsupported reward format '" + rewardStr + "' for " + player.getName());
+                return false;
             }
-            return true;
         } catch (Exception e) {
             plugin.getLogger().warning("Error delivering reward '" + rewardStr + "' to " + player.getName() + ": " + e.getMessage());
             return false;
