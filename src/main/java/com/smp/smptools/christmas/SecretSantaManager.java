@@ -130,6 +130,9 @@ public class SecretSantaManager {
 
     public synchronized boolean depositGift(UUID target, ItemStack[] items) {
         if (target == null) return false;
+        String path = "gifts." + target.toString();
+        Object previous = config.get(path);
+
         List<ItemStack> list = new ArrayList<>();
         if (items != null) {
             for (ItemStack item : items) {
@@ -139,11 +142,16 @@ public class SecretSantaManager {
             }
         }
         if (list.isEmpty()) {
-            config.set("gifts." + target.toString(), null);
+            config.set(path, null);
         } else {
-            config.set("gifts." + target.toString(), list);
+            config.set(path, list);
         }
-        return saveConfig();
+
+        if (!saveConfig()) {
+            config.set(path, previous);
+            return false;
+        }
+        return true;
     }
 
     private static class DeserializedGiftResult {
@@ -199,8 +207,11 @@ public class SecretSantaManager {
         DeserializedGiftResult result = parseGiftItems(recipient, rawList);
         if (result.validItems.isEmpty()) {
             // No valid items found; clear corrupted entry to avoid permanent blockage
+            Object rawBackup = config.get(path);
             config.set(path, null);
-            saveConfig();
+            if (!saveConfig()) {
+                config.set(path, rawBackup);
+            }
             if (plugin != null) {
                 plugin.getLogger().warning("Cleared corrupted empty gift entry for recipient " + recipient);
             }
@@ -208,7 +219,9 @@ public class SecretSantaManager {
         }
 
         if (result.hasMalformedItems && plugin != null) {
-            plugin.getLogger().warning("Delivering partially recoverable gift to recipient " + recipient + " while dropping malformed entries.");
+            String quarantinePath = "quarantine.gifts." + recipient.toString() + "." + System.currentTimeMillis();
+            config.set(quarantinePath, rawList);
+            plugin.getLogger().warning("Delivering partially recoverable gift to recipient " + recipient + " while quarantining malformed entries under " + quarantinePath);
         }
 
         Object rawBackup = config.get(path);

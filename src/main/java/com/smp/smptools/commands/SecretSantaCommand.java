@@ -171,7 +171,7 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
                     boolean saved = manager.depositGift(holder.getTargetUUID(), items.toArray(new ItemStack[0]));
                     if (!saved) {
                         holder.setConfirmed(false);
-                        player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Failed to save gift deposit to disk. Please try again.</red>"));
+                        player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.deposit-save-failed", player));
                         return;
                     }
                     inv.clear();
