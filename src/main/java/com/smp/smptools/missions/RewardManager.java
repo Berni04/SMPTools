@@ -126,8 +126,14 @@ public class RewardManager {
             for (ItemStack drop : leftover.values()) {
                 player.getWorld().dropItemNaturally(player.getLocation(), drop);
             }
-            if (SMPTools.getInstance() != null && SMPTools.getInstance().getMessageManager() != null) {
-                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.chromatic-elytra-received", player));
+            try {
+                if (SMPTools.getInstance() != null && SMPTools.getInstance().getMessageManager() != null) {
+                    player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("missions.chromatic-elytra-received", player));
+                }
+            } catch (Exception ex) {
+                if (SMPTools.getInstance() != null) {
+                    SMPTools.getInstance().getLogger().warning("Failed to send chromatic elytra received message to " + player.getName() + ": " + ex.getMessage());
+                }
             }
             return true;
         } catch (Exception e) {
