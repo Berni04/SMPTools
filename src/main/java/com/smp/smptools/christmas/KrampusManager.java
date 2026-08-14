@@ -34,6 +34,7 @@ public class KrampusManager {
     private final Map<UUID, Location> kidnappedPlayers = new ConcurrentHashMap<>();
     private final Map<UUID, Location> playerCages = new ConcurrentHashMap<>();
     private final Map<UUID, Set<UUID>> playerGuards = new ConcurrentHashMap<>();
+    private final Map<UUID, Map<Location, org.bukkit.block.data.BlockData>> originalCageBlocks = new ConcurrentHashMap<>();
     public final NamespacedKey krampusKey;
 
     public KrampusManager(SMPTools plugin) {
@@ -87,8 +88,8 @@ public class KrampusManager {
         Location cageLoc = player.getLocation().clone().add(0, 50, 0);
         playerCages.put(player.getUniqueId(), cageLoc);
 
-        // Build Cage
-        buildCage(cageLoc);
+        // Build Cage with original block snapshot
+        buildCage(player.getUniqueId(), cageLoc);
 
         // Teleport
         player.teleport(cageLoc.clone().add(0.5, 1, 0.5));
@@ -135,7 +136,7 @@ public class KrampusManager {
         despawnGuards(uuid);
 
         if (cageLoc != null) {
-            removeCage(cageLoc);
+            removeCage(uuid, cageLoc);
         }
 
         Player player = Bukkit.getPlayer(uuid);
@@ -157,7 +158,15 @@ public class KrampusManager {
         }
     }
 
-    private void removeCage(Location center) {
+    private void removeCage(UUID uuid, Location center) {
+        Map<Location, org.bukkit.block.data.BlockData> original = originalCageBlocks.remove(uuid);
+        if (original != null) {
+            for (Map.Entry<Location, org.bukkit.block.data.BlockData> entry : original.entrySet()) {
+                entry.getKey().getBlock().setBlockData(entry.getValue(), false);
+            }
+            return;
+        }
+
         if (center == null || center.getWorld() == null) return;
         for (int x = -4; x <= 4; x++) {
             for (int y = 0; y <= 5; y++) {
@@ -177,7 +186,21 @@ public class KrampusManager {
         }
     }
 
-    private void buildCage(Location center) {
+    private void buildCage(UUID uuid, Location center) {
+        if (center == null || center.getWorld() == null) return;
+        Map<Location, org.bukkit.block.data.BlockData> snapshot = new HashMap<>();
+
+        // Snapshot original blocks
+        for (int x = -4; x <= 4; x++) {
+            for (int y = 0; y <= 5; y++) {
+                for (int z = -4; z <= 4; z++) {
+                    Location loc = center.clone().add(x, y, z);
+                    snapshot.put(loc, loc.getBlock().getBlockData().clone());
+                }
+            }
+        }
+        originalCageBlocks.put(uuid, snapshot);
+
         // 9x9 Cage (Radius 4)
         for (int x = -4; x <= 4; x++) {
             for (int y = 0; y <= 5; y++) {
