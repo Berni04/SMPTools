@@ -110,6 +110,7 @@ commands:
   sudo:
     description: Force a player to execute a command or chat message.
     usage: /sudo <player> <command>
+    permission: smptools.sudo
   customitem:
     description: Gives a custom item with specified CustomModelData.
     permission: smptools.customitem
