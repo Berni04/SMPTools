@@ -101,7 +101,7 @@ public final class AsyncConfigHelper {
         try {
             getExecutor().submit(() -> {
                 try {
-                    Files.write(file.toPath(), data.getBytes(StandardCharsets.UTF_8));
+                    AtomicFileWriter.write(file.toPath(), data.getBytes(StandardCharsets.UTF_8));
                 } catch (IOException e) {
                     if (plugin != null) {
                         plugin.getLogger().log(Level.SEVERE, "Could not save " + name + "!", e);
@@ -113,7 +113,7 @@ public final class AsyncConfigHelper {
             waitForDraining();
             // Fallback synchronous write if executor is already shut down
             try {
-                Files.write(file.toPath(), data.getBytes(StandardCharsets.UTF_8));
+                AtomicFileWriter.write(file.toPath(), data.getBytes(StandardCharsets.UTF_8));
             } catch (IOException ex) {
                 if (plugin != null) {
                     plugin.getLogger().log(Level.SEVERE, "Could not save " + name + "!", ex);

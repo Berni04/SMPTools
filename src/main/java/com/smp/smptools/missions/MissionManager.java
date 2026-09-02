@@ -108,7 +108,7 @@ public class MissionManager {
         }
 
         try {
-            playerMissionsConfig.save(playerMissionsFile);
+            com.smp.smptools.utils.AtomicFileWriter.save(playerMissionsConfig, playerMissionsFile);
             return true;
         } catch (IOException e) {
             if (plugin != null) {
@@ -124,7 +124,7 @@ public class MissionManager {
         if (data == null) return false;
         serializePlayerMissionData(uuid, data);
         try {
-            playerMissionsConfig.save(playerMissionsFile);
+            com.smp.smptools.utils.AtomicFileWriter.save(playerMissionsConfig, playerMissionsFile);
             return true;
         } catch (IOException e) {
             if (plugin != null) {

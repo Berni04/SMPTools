@@ -248,7 +248,7 @@ public class GraveManager implements Listener {
         gravesConfig.set("graves", gravesList);
 
         try {
-            gravesConfig.save(gravesFile);
+            com.smp.smptools.utils.AtomicFileWriter.save(gravesConfig, gravesFile);
         } catch (IOException e) {
             plugin.getLogger().severe("Could not save graves.yml!");
         }

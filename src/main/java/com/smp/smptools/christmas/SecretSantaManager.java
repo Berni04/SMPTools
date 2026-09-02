@@ -48,7 +48,7 @@ public class SecretSantaManager {
     public synchronized boolean saveConfig() {
         if (configFile == null || config == null) return true;
         try {
-            config.save(configFile);
+            com.smp.smptools.utils.AtomicFileWriter.save(config, configFile);
             return true;
         } catch (IOException e) {
             if (plugin != null) {

@@ -99,7 +99,7 @@ public class ChunkLoaderManager {
         }
         chunkLoadersConfig.set("loaders", loaderStrings);
         try {
-            chunkLoadersConfig.save(chunkLoadersFile);
+            com.smp.smptools.utils.AtomicFileWriter.save(chunkLoadersConfig, chunkLoadersFile);
         } catch (IOException e) {
             plugin.getLogger().severe("Could not save chunkloaders.yml file!");
         }

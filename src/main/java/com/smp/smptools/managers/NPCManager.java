@@ -60,7 +60,7 @@ public class NPCManager {
 
     public void saveConfig() {
         try {
-            npcsConfig.save(npcsFile);
+            com.smp.smptools.utils.AtomicFileWriter.save(npcsConfig, npcsFile);
         } catch (IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Could not save npcs.yml", e);
         }

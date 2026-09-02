@@ -35,7 +35,7 @@ public class BlackFridayManager {
 
     public void saveConfig() {
         try {
-            config.save(configFile);
+            com.smp.smptools.utils.AtomicFileWriter.save(config, configFile);
         } catch (IOException e) {
             plugin.getLogger().severe("Could not save blackfriday.yml: " + e.getMessage());
         }

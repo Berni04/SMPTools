@@ -85,7 +85,7 @@ public class LockManager {
             AsyncConfigHelper.saveConfigAsync(plugin, config, locksFile, "locks.yml");
         } else {
             try {
-                config.save(locksFile);
+                com.smp.smptools.utils.AtomicFileWriter.save(config, locksFile);
             } catch (IOException e) {
                 // Ignore in unit tests
             }

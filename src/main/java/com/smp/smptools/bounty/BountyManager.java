@@ -205,7 +205,7 @@ public class BountyManager {
             }
 
             try {
-                config.save(bountiesFile);
+                com.smp.smptools.utils.AtomicFileWriter.save(config, bountiesFile);
                 return true;
             } catch (IOException e) {
                 if (plugin != null) {
