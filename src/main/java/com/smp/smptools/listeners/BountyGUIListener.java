@@ -54,7 +54,9 @@ public class BountyGUIListener implements Listener {
             returnItemsFromGUI(placer, oldSession.inventory());
         }
 
-        Inventory inv = Bukkit.createInventory(null, 27, MiniMessage.miniMessage().deserialize("<gold>Deposit Bounty: " + target.getName() + "</gold>"));
+        com.smp.smptools.gui.GuiHolder holder = new com.smp.smptools.gui.GuiHolder(com.smp.smptools.gui.GuiHolder.MenuType.BOUNTY_DEPOSIT, placer.getUniqueId());
+        Inventory inv = Bukkit.createInventory(holder, 27, MiniMessage.miniMessage().deserialize("<gold>Deposit Bounty: " + target.getName() + "</gold>"));
+        holder.setInventory(inv);
         activePlaceSessions.put(placer.getUniqueId(), new DepositSession(inv, target.getUniqueId()));
 
         // Fill row 3 control border
@@ -111,7 +113,9 @@ public class BountyGUIListener implements Listener {
 
         listPageMap.put(player.getUniqueId(), page);
 
-        Inventory inv = Bukkit.createInventory(null, 54, MiniMessage.miniMessage().deserialize("<gold>Active Player Bounties</gold>"));
+        com.smp.smptools.gui.GuiHolder holder = new com.smp.smptools.gui.GuiHolder(com.smp.smptools.gui.GuiHolder.MenuType.BOUNTY_LIST, player.getUniqueId());
+        Inventory inv = Bukkit.createInventory(holder, 54, MiniMessage.miniMessage().deserialize("<gold>Active Player Bounties</gold>"));
+        holder.setInventory(inv);
 
         int startIndex = page * 45;
         int endIndex = Math.min(startIndex + 45, totalEntries);
@@ -193,7 +197,9 @@ public class BountyGUIListener implements Listener {
     public void openBountyDetailsGUI(Player player, UUID targetUuid) {
         OfflinePlayer target = Bukkit.getOfflinePlayer(targetUuid);
         String targetName = target.getName() != null ? target.getName() : "Unknown";
-        Inventory inv = Bukkit.createInventory(null, 54, MiniMessage.miniMessage().deserialize("<gold>Bounty on " + targetName + "</gold>"));
+        com.smp.smptools.gui.GuiHolder holder = new com.smp.smptools.gui.GuiHolder(com.smp.smptools.gui.GuiHolder.MenuType.BOUNTY_DETAILS, player.getUniqueId());
+        Inventory inv = Bukkit.createInventory(holder, 54, MiniMessage.miniMessage().deserialize("<gold>Bounty on " + targetName + "</gold>"));
+        holder.setInventory(inv);
 
         List<Bounty> active = bountyManager.getActiveBountiesForTarget(targetUuid);
         int slot = 0;
@@ -234,7 +240,9 @@ public class BountyGUIListener implements Listener {
     }
 
     public void openClaimGUI(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 54, MiniMessage.miniMessage().deserialize("<gold>Claim Bounties & Refunds</gold>"));
+        com.smp.smptools.gui.GuiHolder holder = new com.smp.smptools.gui.GuiHolder(com.smp.smptools.gui.GuiHolder.MenuType.BOUNTY_CLAIM, player.getUniqueId());
+        Inventory inv = Bukkit.createInventory(holder, 54, MiniMessage.miniMessage().deserialize("<gold>Claim Bounties & Refunds</gold>"));
+        holder.setInventory(inv);
         List<Bounty> claimable = bountyManager.getClaimableBountiesForPlayer(player);
 
         Map<Integer, Bounty> slotToBounty = new HashMap<>();
@@ -283,9 +291,18 @@ public class BountyGUIListener implements Listener {
         claimMap.put(player.getUniqueId(), slotToBounty); // Installed AFTER openInventory (Issue 8)
     }
 
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
+
+        if (!(event.getView().getTopInventory().getHolder() instanceof com.smp.smptools.gui.GuiHolder holder)) {
+            return;
+        }
+
+        if (holder.getType().isTopOnly() && event.getClickedInventory() != event.getView().getTopInventory()) {
+            event.setCancelled(true);
+            return;
+        }
 
         String title = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
 

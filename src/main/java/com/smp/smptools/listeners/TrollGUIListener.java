@@ -85,7 +85,9 @@ public class TrollGUIListener implements Listener {
     }
 
     public static void openTrollGUI(Player opener, Player target) {
-        Inventory gui = Bukkit.createInventory(null, 54, GUI_TITLE + " - " + target.getName());
+        com.smp.smptools.gui.GuiHolder holder = new com.smp.smptools.gui.GuiHolder(com.smp.smptools.gui.GuiHolder.MenuType.TROLL, opener.getUniqueId());
+        Inventory gui = Bukkit.createInventory(holder, 54, GUI_TITLE + " - " + target.getName());
+        holder.setInventory(gui);
 
         // Troll Options (10-15 items)
         // Row 1
@@ -161,19 +163,22 @@ public class TrollGUIListener implements Listener {
         return item;
     }
 
-    @EventHandler
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
     public void onInventoryClick(InventoryClickEvent event) {
-        // Get the plain text title of the inventory
-        String clickedTitle = event.getView().getTitle();
-
-        // Check if it's our Troll Menu
-        if (!clickedTitle.startsWith(GUI_TITLE + " - ")) {
+        if (!(event.getView().getTopInventory().getHolder() instanceof com.smp.smptools.gui.GuiHolder holder) ||
+                holder.getType() != com.smp.smptools.gui.GuiHolder.MenuType.TROLL) {
             return;
         }
 
         event.setCancelled(true);
 
         Player opener = (Player) event.getWhoClicked();
+        if (!opener.hasPermission("smptools.troll")) {
+            opener.closeInventory();
+            return;
+        }
+
+        String clickedTitle = event.getView().getTitle();
         ItemStack clickedItem = event.getCurrentItem();
 
         if (clickedItem == null || !clickedItem.hasItemMeta() || !clickedItem.getItemMeta().hasCustomModelData()) {
