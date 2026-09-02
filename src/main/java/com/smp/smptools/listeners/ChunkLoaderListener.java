@@ -2,14 +2,21 @@ package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.chunkloaders.ChunkLoaderManager;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.EntityChangeBlockEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.inventory.ItemStack;
+
+import java.util.UUID;
 
 public class ChunkLoaderListener implements Listener {
 
@@ -21,7 +28,7 @@ public class ChunkLoaderListener implements Listener {
         this.chunkLoaderManager = plugin.getChunkLoaderManager();
     }
 
-    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
         if (!plugin.getConfig().getBoolean("features.chunk-loaders.enabled", true)) {
             return;
@@ -32,24 +39,67 @@ public class ChunkLoaderListener implements Listener {
 
         if (ChunkLoaderManager.isChunkLoaderItem(itemInHand)) {
             Block placedBlock = event.getBlockPlaced();
-            chunkLoaderManager.addChunkLoader(placedBlock.getLocation());
-            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("chunk-loader.placed", player));
+            boolean added = chunkLoaderManager.addChunkLoader(placedBlock.getLocation(), player.getUniqueId(), player);
+            if (added) {
+                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("chunk-loader.placed", player));
+            } else {
+                event.setCancelled(true);
+            }
         }
     }
 
-    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         if (!plugin.getConfig().getBoolean("features.chunk-loaders.enabled", true)) {
             return;
         }
 
         Block brokenBlock = event.getBlock();
-        if (chunkLoaderManager.isChunkLoader(brokenBlock.getLocation())) {
-            chunkLoaderManager.removeChunkLoader(brokenBlock.getLocation());
-            event.getPlayer().sendMessage(SMPTools.getInstance().getMessageManager().getMessage("chunk-loader.removed", event.getPlayer()));
-            // Optionally, drop the item back
-            event.setDropItems(false); // Prevent default drop
-            event.getBlock().getWorld().dropItemNaturally(brokenBlock.getLocation().add(0.5, 0.5, 0.5), ChunkLoaderManager.getChunkLoaderItem());
+        Location loc = brokenBlock.getLocation();
+        if (chunkLoaderManager.isChunkLoader(loc)) {
+            Player player = event.getPlayer();
+            UUID owner = chunkLoaderManager.getOwner(loc);
+            if (owner != null && !owner.equals(player.getUniqueId()) && !player.hasPermission("smptools.chunkloaders.admin")) {
+                event.setCancelled(true);
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>🔒 You cannot break someone else's chunk loader!</red>"));
+                return;
+            }
+
+            chunkLoaderManager.removeChunkLoader(loc);
+            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("chunk-loader.removed", player));
+            event.setDropItems(false); // Prevent default block drop
+            brokenBlock.getWorld().dropItemNaturally(loc.add(0.5, 0.5, 0.5), ChunkLoaderManager.getChunkLoaderItem());
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onBlockExplode(BlockExplodeEvent event) {
+        for (Block block : event.blockList()) {
+            Location loc = block.getLocation();
+            if (chunkLoaderManager.isChunkLoader(loc)) {
+                chunkLoaderManager.removeChunkLoader(loc);
+                loc.getWorld().dropItemNaturally(loc.clone().add(0.5, 0.5, 0.5), ChunkLoaderManager.getChunkLoaderItem());
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onEntityExplode(EntityExplodeEvent event) {
+        for (Block block : event.blockList()) {
+            Location loc = block.getLocation();
+            if (chunkLoaderManager.isChunkLoader(loc)) {
+                chunkLoaderManager.removeChunkLoader(loc);
+                loc.getWorld().dropItemNaturally(loc.clone().add(0.5, 0.5, 0.5), ChunkLoaderManager.getChunkLoaderItem());
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onEntityChangeBlock(EntityChangeBlockEvent event) {
+        Location loc = event.getBlock().getLocation();
+        if (chunkLoaderManager.isChunkLoader(loc)) {
+            chunkLoaderManager.removeChunkLoader(loc);
+            loc.getWorld().dropItemNaturally(loc.clone().add(0.5, 0.5, 0.5), ChunkLoaderManager.getChunkLoaderItem());
         }
     }
 }
