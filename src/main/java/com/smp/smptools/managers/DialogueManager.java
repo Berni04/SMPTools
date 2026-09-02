@@ -14,6 +14,9 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Transformation;
 import org.joml.AxisAngle4f;
@@ -24,7 +27,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class DialogueManager {
+public class DialogueManager implements Listener {
 
     private final SMPTools plugin;
     private FileConfiguration dialogueConfig;
@@ -35,6 +38,7 @@ public class DialogueManager {
 
     public DialogueManager(SMPTools plugin) {
         this.plugin = plugin;
+        Bukkit.getPluginManager().registerEvents(this, plugin);
         loadDialogues();
     }
 
@@ -218,12 +222,6 @@ public class DialogueManager {
         display.setSeeThrough(false);
         display.setShadowed(true);
 
-        // Make it visible to everyone or just player? User said "shows over the player
-        // head", implying others might see it,
-        // but the system is currently per-player (using setVisibleByDefault(false) and
-        // player.showEntity).
-        // For consistency with the current system, let's keep it private to the player
-        // for now.
         display.setVisibleByDefault(false);
         player.showEntity(plugin, display);
 
@@ -239,7 +237,13 @@ public class DialogueManager {
                 new AxisAngle4f()));
     }
 
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        stopDialogue(event.getPlayer());
+    }
+
     public void stopDialogue(Player player) {
+        if (player == null) return;
         playerCurrentDialogue.remove(player.getUniqueId());
         playerCurrentLine.remove(player.getUniqueId());
         playerNPC.remove(player.getUniqueId());
@@ -247,6 +251,7 @@ public class DialogueManager {
     }
 
     private void removeTextDisplay(Player player) {
+        if (player == null) return;
         UUID displayUUID = activeTextDisplays.remove(player.getUniqueId());
         if (displayUUID != null) {
             Entity entity = Bukkit.getEntity(displayUUID);
@@ -256,7 +261,20 @@ public class DialogueManager {
         }
     }
 
+    public void cleanupAll() {
+        for (UUID displayUUID : activeTextDisplays.values()) {
+            Entity entity = Bukkit.getEntity(displayUUID);
+            if (entity != null) {
+                entity.remove();
+            }
+        }
+        activeTextDisplays.clear();
+        playerCurrentDialogue.clear();
+        playerCurrentLine.clear();
+        playerNPC.clear();
+    }
+
     public boolean isInDialogue(Player player) {
-        return playerCurrentDialogue.containsKey(player.getUniqueId());
+        return player != null && playerCurrentDialogue.containsKey(player.getUniqueId());
     }
 }

@@ -371,6 +371,9 @@ public class SMPTools extends JavaPlugin {
         if (npcManager != null) {
             npcManager.removeAllNPCs();
         }
+        if (dialogueManager != null) {
+            dialogueManager.cleanupAll();
+        }
         if (eventManager != null) {
             eventManager.shutdown();
         }
