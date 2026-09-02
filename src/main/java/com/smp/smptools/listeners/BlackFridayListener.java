@@ -2,6 +2,7 @@ package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.managers.BlackFridayManager;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.AbstractVillager;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -30,12 +31,19 @@ public class BlackFridayListener implements Listener {
         this.manager = manager;
     }
 
+    public void restoreAllActive() {
+        for (Map.Entry<UUID, List<MerchantRecipe>> entry : new java.util.HashMap<>(originalRecipes).entrySet()) {
+            org.bukkit.entity.Entity entity = Bukkit.getEntity(entry.getKey());
+            if (entity instanceof Merchant merchant) {
+                restoreOriginalRecipes(merchant, entry.getValue());
+            }
+        }
+        originalRecipes.clear();
+        activeViewers.clear();
+    }
+
     @EventHandler
     public void onInventoryOpen(InventoryOpenEvent event) {
-        if (!manager.isEnabled() || event.isCancelled()) {
-            return;
-        }
-
         if (!(event.getPlayer() instanceof Player player)) {
             return;
         }
@@ -52,6 +60,14 @@ public class BlackFridayListener implements Listener {
         Merchant merchant = (Merchant) villager;
         UUID villagerUUID = villager.getUniqueId();
         UUID playerUUID = player.getUniqueId();
+
+        if (!manager.isEnabled() || event.isCancelled()) {
+            List<MerchantRecipe> original = originalRecipes.remove(villagerUUID);
+            if (original != null) {
+                restoreOriginalRecipes(merchant, original);
+            }
+            return;
+        }
 
         java.util.Set<UUID> viewers = activeViewers.computeIfAbsent(villagerUUID, k -> ConcurrentHashMap.newKeySet());
         boolean isFirstViewer = viewers.isEmpty();
