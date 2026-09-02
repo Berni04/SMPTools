@@ -4,7 +4,6 @@ import com.smp.smptools.SMPTools;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
@@ -34,6 +33,12 @@ public class SleepManager {
             return;
         }
 
+        World world = player.getWorld();
+        if (world.getEnvironment() != World.Environment.NORMAL) {
+            player.sendMessage(plugin.getMessageManager().getMessage("sleep.not-overworld"));
+            return;
+        }
+
         voteInProgress = true;
         voteInitiator = player;
         yesVotes.clear();
@@ -42,9 +47,9 @@ public class SleepManager {
         // The initiator automatically votes yes
         yesVotes.add(player.getUniqueId());
 
-        // AFK players automatically vote yes
-        if (plugin.getAFKManager() != null && plugin.getConfig().getBoolean("features.afk.auto-vote-sleep", true)) {
-            for (Player p : player.getWorld().getPlayers()) {
+        // AFK players automatically vote yes only if explicitly configured
+        if (plugin.getAFKManager() != null && plugin.getConfig().getBoolean("features.afk.auto-vote-sleep", false)) {
+            for (Player p : world.getPlayers()) {
                 if (plugin.getAFKManager().isAFK(p)) {
                     yesVotes.add(p.getUniqueId());
                 }
@@ -57,11 +62,13 @@ public class SleepManager {
                 .clickEvent(ClickEvent.runCommand("/sleepvote deny"));
 
         Component voteMessage = plugin.getMessageManager().getMessage("sleep.vote-started", player);
-        Bukkit.broadcast(voteMessage
+        Component broadcastMsg = voteMessage
                 .append(Component.text(" "))
                 .append(acceptButton)
                 .append(Component.text(" "))
-                .append(denyButton));
+                .append(denyButton);
+
+        world.sendMessage(broadcastMsg);
         
         checkVoteStatus();
     }
@@ -72,18 +79,24 @@ public class SleepManager {
             return;
         }
 
+        if (voteInitiator == null || !player.getWorld().equals(voteInitiator.getWorld())) {
+            player.sendMessage(plugin.getMessageManager().getMessage("sleep.wrong-world"));
+            return;
+        }
+
         UUID playerUUID = player.getUniqueId();
         if (yesVotes.contains(playerUUID) || noVotes.contains(playerUUID)) {
             player.sendMessage(plugin.getMessageManager().getMessage("sleep.already-voted"));
             return;
         }
 
+        World world = player.getWorld();
         if (vote) {
             yesVotes.add(playerUUID);
-            Bukkit.broadcast(plugin.getMessageManager().getMessage("sleep.voted-yes", player));
+            world.sendMessage(plugin.getMessageManager().getMessage("sleep.voted-yes", player));
         } else {
             noVotes.add(playerUUID);
-            Bukkit.broadcast(plugin.getMessageManager().getMessage("sleep.voted-no", player));
+            world.sendMessage(plugin.getMessageManager().getMessage("sleep.voted-no", player));
         }
 
         checkVoteStatus();
@@ -100,13 +113,13 @@ public class SleepManager {
         int requiredVotes = (int) Math.ceil(onlinePlayers / 2.0);
 
         if (yesVotes.size() >= requiredVotes) {
-            Bukkit.broadcast(plugin.getMessageManager().getMessage("sleep.vote-accepted"));
+            world.sendMessage(plugin.getMessageManager().getMessage("sleep.vote-accepted"));
             world.setTime(0);
             world.setThundering(false);
             world.setStorm(false);
             endVote();
         } else if (noVotes.size() >= (onlinePlayers - requiredVotes + 1)) {
-            Bukkit.broadcast(plugin.getMessageManager().getMessage("sleep.vote-failed"));
+            world.sendMessage(plugin.getMessageManager().getMessage("sleep.vote-failed"));
             endVote();
         }
     }
