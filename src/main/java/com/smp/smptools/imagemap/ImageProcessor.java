@@ -14,14 +14,33 @@ public class ImageProcessor {
 
     private static final Logger logger = Logger.getLogger(ImageProcessor.class.getName());
 
+    public static final int MAX_DIMENSION = 4096;
+    public static final long MAX_PIXELS = 4096L * 4096L;
+
     public static BufferedImage getImage(InputStream inputStream, int width, int height) {
-        try {
-            BufferedImage downloadedImage = ImageIO.read(inputStream);
-            if (downloadedImage == null) {
-                return null;
+        if (inputStream == null) return null;
+        try (javax.imageio.stream.ImageInputStream iin = ImageIO.createImageInputStream(inputStream)) {
+            if (iin == null) return null;
+            java.util.Iterator<javax.imageio.ImageReader> readers = ImageIO.getImageReaders(iin);
+            if (!readers.hasNext()) return null;
+            javax.imageio.ImageReader reader = readers.next();
+            try {
+                reader.setInput(iin, true, true);
+                int pw = reader.getWidth(0);
+                int ph = reader.getHeight(0);
+                if (pw <= 0 || ph <= 0 || pw > MAX_DIMENSION || ph > MAX_DIMENSION || ((long) pw * ph) > MAX_PIXELS) {
+                    logger.warning("Image dimensions exceeded limits (" + pw + "x" + ph + ")");
+                    return null;
+                }
+                BufferedImage downloadedImage = reader.read(0);
+                if (downloadedImage == null) {
+                    return null;
+                }
+                BufferedImage resizedImage = resizeImage(downloadedImage, width, height);
+                return ditherImage(resizedImage);
+            } finally {
+                reader.dispose();
             }
-            BufferedImage resizedImage = resizeImage(downloadedImage, width, height);
-            return ditherImage(resizedImage);
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Failed to process image from input stream", e);
             return null;
