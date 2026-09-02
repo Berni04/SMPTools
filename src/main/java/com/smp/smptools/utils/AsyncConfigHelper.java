@@ -95,6 +95,22 @@ public final class AsyncConfigHelper {
      * @param name the name of the configuration (for error messages)
      */
     public static void saveConfigAsync(Plugin plugin, FileConfiguration config, File file, String name) {
+        saveConfigAsync(plugin, config, file, name, null, null);
+    }
+
+    /**
+     * Saves a configuration file asynchronously on a single background thread with completion callbacks.
+     * Serializes the config to a String on the main thread to create a
+     * deep snapshot, preventing race conditions with mutable collections.
+     *
+     * @param plugin the plugin instance (used for logging/enabled status)
+     * @param config the FileConfiguration to save
+     * @param file the File to save to
+     * @param name the name of the configuration (for error messages)
+     * @param onSuccess callback invoked on the main thread after successful save
+     * @param onError callback invoked on the main thread if save fails
+     */
+    public static void saveConfigAsync(Plugin plugin, FileConfiguration config, File file, String name, Runnable onSuccess, java.util.function.Consumer<Exception> onError) {
         // Serialize to string on main thread - this creates a deep snapshot
         String data = config.saveToString();
 
@@ -102,9 +118,23 @@ public final class AsyncConfigHelper {
             getExecutor().submit(() -> {
                 try {
                     AtomicFileWriter.write(file.toPath(), data.getBytes(StandardCharsets.UTF_8));
+                    if (onSuccess != null) {
+                        if (plugin != null && plugin.isEnabled()) {
+                            org.bukkit.Bukkit.getScheduler().runTask(plugin, onSuccess);
+                        } else {
+                            onSuccess.run();
+                        }
+                    }
                 } catch (IOException e) {
                     if (plugin != null) {
                         plugin.getLogger().log(Level.SEVERE, "Could not save " + name + "!", e);
+                    }
+                    if (onError != null) {
+                        if (plugin != null && plugin.isEnabled()) {
+                            org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> onError.accept(e));
+                        } else {
+                            onError.accept(e);
+                        }
                     }
                 }
             });
@@ -114,9 +144,15 @@ public final class AsyncConfigHelper {
             // Fallback synchronous write if executor is already shut down
             try {
                 AtomicFileWriter.write(file.toPath(), data.getBytes(StandardCharsets.UTF_8));
+                if (onSuccess != null) {
+                    onSuccess.run();
+                }
             } catch (IOException ex) {
                 if (plugin != null) {
                     plugin.getLogger().log(Level.SEVERE, "Could not save " + name + "!", ex);
+                }
+                if (onError != null) {
+                    onError.accept(ex);
                 }
             }
         }

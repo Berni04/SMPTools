@@ -202,7 +202,25 @@ public final class URLValidator {
                 }
             }
 
-            conn = (HttpURLConnection) currentUrl.openConnection(java.net.Proxy.NO_PROXY);
+            InetAddress chosenAddress = addresses[0];
+            String hostHeader = host + (currentUrl.getPort() != -1 ? ":" + currentUrl.getPort() : "");
+
+            if ("https".equalsIgnoreCase(currentUrl.getProtocol())) {
+                conn = (HttpURLConnection) currentUrl.openConnection(java.net.Proxy.NO_PROXY);
+                conn.setRequestProperty("Host", hostHeader);
+                if (conn instanceof javax.net.ssl.HttpsURLConnection httpsConn) {
+                    httpsConn.setSSLSocketFactory(new PinningSSLSocketFactory((javax.net.ssl.SSLSocketFactory) javax.net.ssl.SSLSocketFactory.getDefault(), chosenAddress));
+                }
+            } else {
+                String ipString = chosenAddress.getHostAddress();
+                if (chosenAddress instanceof java.net.Inet6Address) {
+                    ipString = "[" + ipString + "]";
+                }
+                int port = currentUrl.getPort() != -1 ? currentUrl.getPort() : currentUrl.getDefaultPort();
+                URL pinnedUrl = new URL(currentUrl.getProtocol(), ipString, port, currentUrl.getFile());
+                conn = (HttpURLConnection) pinnedUrl.openConnection(java.net.Proxy.NO_PROXY);
+                conn.setRequestProperty("Host", hostHeader);
+            }
             conn.setConnectTimeout(Constants.URL_CONNECT_TIMEOUT_MS);
             conn.setReadTimeout(Constants.URL_READ_TIMEOUT_MS);
             conn.setInstanceFollowRedirects(false);
@@ -238,5 +256,54 @@ public final class URLValidator {
         }
 
         return conn;
+    }
+
+    private static class PinningSSLSocketFactory extends javax.net.ssl.SSLSocketFactory {
+        private final javax.net.ssl.SSLSocketFactory delegate;
+        private final InetAddress pinnedAddress;
+
+        public PinningSSLSocketFactory(javax.net.ssl.SSLSocketFactory delegate, InetAddress pinnedAddress) {
+            this.delegate = delegate;
+            this.pinnedAddress = pinnedAddress;
+        }
+
+        @Override
+        public String[] getDefaultCipherSuites() {
+            return delegate.getDefaultCipherSuites();
+        }
+
+        @Override
+        public String[] getSupportedCipherSuites() {
+            return delegate.getSupportedCipherSuites();
+        }
+
+        @Override
+        public java.net.Socket createSocket(String host, int port) throws IOException {
+            java.net.Socket socket = new java.net.Socket(pinnedAddress, port);
+            return delegate.createSocket(socket, host, port, true);
+        }
+
+        @Override
+        public java.net.Socket createSocket(String host, int port, InetAddress localHost, int localPort) throws IOException {
+            java.net.Socket socket = new java.net.Socket(pinnedAddress, port, localHost, localPort);
+            return delegate.createSocket(socket, host, port, true);
+        }
+
+        @Override
+        public java.net.Socket createSocket(InetAddress host, int port) throws IOException {
+            java.net.Socket socket = new java.net.Socket(pinnedAddress, port);
+            return delegate.createSocket(socket, host.getHostName(), port, true);
+        }
+
+        @Override
+        public java.net.Socket createSocket(InetAddress address, int port, InetAddress localAddress, int localPort) throws IOException {
+            java.net.Socket socket = new java.net.Socket(pinnedAddress, port, localAddress, localPort);
+            return delegate.createSocket(socket, address.getHostName(), port, true);
+        }
+
+        @Override
+        public java.net.Socket createSocket(java.net.Socket s, String host, int port, boolean autoClose) throws IOException {
+            return delegate.createSocket(s, host, port, autoClose);
+        }
     }
 }

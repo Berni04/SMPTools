@@ -93,31 +93,33 @@ public class ChristmasWorldListener implements Listener {
     public void onEntityDamage(EntityDamageEvent event) {
         if (event.getEntity().getWorld().getName().equalsIgnoreCase(WORLD_NAME)) {
             if (event.getEntity() instanceof Player player) {
+                event.setCancelled(true);
                 if (event.getCause() == EntityDamageEvent.DamageCause.VOID) {
                     Location spawn = player.getWorld().getSpawnLocation();
                     java.util.Optional<Location> safeSpawn = com.smp.smptools.teleport.SafeLocationFinder.findSafeLocation(spawn);
                     if (safeSpawn.isPresent()) {
-                        event.setCancelled(true);
                         player.teleport(safeSpawn.get());
                         player.setFallDistance(0);
                         return;
                     }
 
-                    World normalWorld = Bukkit.getWorlds().stream()
-                            .filter(w -> w.getEnvironment() == World.Environment.NORMAL && !w.getName().equalsIgnoreCase(WORLD_NAME))
-                            .findFirst()
-                            .orElse(null);
-                    if (normalWorld != null) {
-                        java.util.Optional<Location> mainSafe = com.smp.smptools.teleport.SafeLocationFinder.findSafeLocation(normalWorld.getSpawnLocation());
-                        if (mainSafe.isPresent()) {
-                            event.setCancelled(true);
-                            player.teleport(mainSafe.get());
-                            player.setFallDistance(0);
-                            return;
+                    for (World w : Bukkit.getWorlds()) {
+                        if (w.getEnvironment() == World.Environment.NORMAL && !w.getName().equalsIgnoreCase(WORLD_NAME)) {
+                            java.util.Optional<Location> normalSafe = com.smp.smptools.teleport.SafeLocationFinder.findSafeLocation(w.getSpawnLocation());
+                            if (normalSafe.isPresent()) {
+                                player.teleport(normalSafe.get());
+                                player.setFallDistance(0);
+                                return;
+                            }
                         }
                     }
-                } else {
-                    event.setCancelled(true);
+
+                    World primaryWorld = Bukkit.getWorlds().stream()
+                            .filter(w -> w.getEnvironment() == World.Environment.NORMAL && !w.getName().equalsIgnoreCase(WORLD_NAME))
+                            .findFirst()
+                            .orElse(Bukkit.getWorlds().get(0));
+                    player.teleport(primaryWorld.getSpawnLocation());
+                    player.setFallDistance(0);
                 }
             }
         }

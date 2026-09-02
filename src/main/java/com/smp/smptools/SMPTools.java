@@ -727,4 +727,8 @@ public class SMPTools extends JavaPlugin {
     public SeasonalManager getSeasonalManager() {
         return seasonalManager;
     }
+
+    public com.smp.smptools.christmas.KrampusManager getKrampusManager() {
+        return krampusManager;
+    }
 }

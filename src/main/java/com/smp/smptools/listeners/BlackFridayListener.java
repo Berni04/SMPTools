@@ -2,6 +2,7 @@ package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.managers.BlackFridayManager;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.AbstractVillager;
 import org.bukkit.entity.Player;
@@ -66,12 +67,16 @@ public class BlackFridayListener implements Listener {
 
         if (!manager.isEnabled()) {
             java.util.Set<UUID> viewers = activeViewers.get(villagerUUID);
-            if (viewers == null || viewers.isEmpty()) {
-                List<MerchantRecipe> original = originalRecipes.remove(villagerUUID);
-                if (original != null) {
-                    restoreOriginalRecipes(merchant, original);
-                }
+            if (viewers != null && !viewers.isEmpty()) {
+                event.setCancelled(true);
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>This merchant's special sale has ended.</red>"));
+                return;
             }
+            List<MerchantRecipe> original = originalRecipes.remove(villagerUUID);
+            if (original != null) {
+                restoreOriginalRecipes(merchant, original);
+            }
+            activeViewers.remove(villagerUUID);
             return;
         }
 

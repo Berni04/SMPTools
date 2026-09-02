@@ -155,8 +155,8 @@ public class MusicCommand extends AbstractPlayerCommand implements org.bukkit.ev
                     }
 
                     Bukkit.getScheduler().runTask(plugin, () -> {
-                        if (!player.isOnline()) {
-                            return; // Broadcaster/player left during download
+                        if (!subCommand.equals("broadcast") && !player.isOnline()) {
+                            return; // Personal playback requires player to be online
                         }
 
                         if (!java.util.Objects.equals(activeRequestGen.get(requestKey), requestId)) {

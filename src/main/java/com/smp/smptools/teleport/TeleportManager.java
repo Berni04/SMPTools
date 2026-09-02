@@ -57,9 +57,9 @@ public class TeleportManager {
                         return;
                     }
                     teleportingSafely.add(player.getUniqueId());
-                    player.teleport(safe.get());
+                    boolean success = player.teleport(safe.get());
                     teleportingSafely.remove(player.getUniqueId());
-                    if (player.isOnline()) {
+                    if (success && player.isOnline()) {
                         player.sendMessage(plugin.getMessageManager().getMessage("teleport.successful"));
                     }
                     finishTeleport(player);
