@@ -221,10 +221,6 @@ public class ChunkLoaderManager {
         }
 
         ItemMeta meta = item.getItemMeta();
-        if (meta.getPersistentDataContainer().has(CHUNK_LOADER_KEY, org.bukkit.persistence.PersistentDataType.BYTE)) {
-            return true;
-        }
-
-        return Objects.equals(meta.displayName(), cachedName) && Objects.equals(meta.lore(), cachedLore);
+        return meta.getPersistentDataContainer().has(CHUNK_LOADER_KEY, org.bukkit.persistence.PersistentDataType.BYTE);
     }
 }
