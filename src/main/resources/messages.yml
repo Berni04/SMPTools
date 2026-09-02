@@ -51,6 +51,7 @@ homes:
   limit-reached: "<red>You have reached your home limit of {limit} homes.</red>"
   invalid-name: "<red>Invalid home name. Use only letters, numbers, _ and - (max {max} characters).</red>"
   world-not-found: "<red>Error: Home world not found.</red>"
+  caged: "<red>You cannot teleport while trapped in Krampus's cage!</red>"
   gui-title: "Your Homes"
   delete-confirm-title: "Delete home '{name}'?"
   confirm: "<green>Confirm</green>"
@@ -78,6 +79,8 @@ tpa:
   already-pending: "<gold>{target} already has a pending teleport request.</gold>"
   self-request: "<red>You cannot send a teleport request to yourself.</red>"
   target-toggled-off: "<red>{target} is not accepting teleport requests at this time.</red>"
+  caged: "<red>You cannot teleport while trapped in Krampus's cage!</red>"
+  target-caged: "<red>The player cannot teleport while trapped in Krampus's cage!</red>"
   expired-other: "<red>Teleport request from {target} has expired.</red>"
 
 # Teleport
@@ -87,6 +90,7 @@ teleport:
   successful: "<green>Teleport successful!</green>"
   cancelled: "<red>Teleport cancelled: {reason}</red>"
   already-teleporting: "<red>You are already teleporting.</red>"
+  unsafe: "<red>Teleport destination is unsafe or obstructed!</red>"
 
 # Fly
 fly:
@@ -251,6 +255,7 @@ daily:
   disabled: "<red>The daily reward system is currently disabled.</red>"
   cooldown: "<red>You have already claimed your daily reward. Please wait {hours}h {minutes}m.</red>"
   claimed: "<green>You have successfully claimed your daily reward!</green>"
+  corrupted: "<red>Could not verify daily reward status due to data corruption. Timestamp has been reset.</red>"
 
 # Private Vault
 vault:
@@ -389,6 +394,7 @@ blackfriday:
   enabled: "<green>Black Friday event has been enabled!</green>"
   disabled: "<red>Black Friday event has been disabled!</red>"
   reloaded: "<green>Black Friday configuration reloaded!</green>"
+  sale-ended: "<red>This merchant's special sale has ended.</red>"
   status-header: "<gold>=== Black Friday Status ===</gold>"
   status-enabled: "<yellow>Enabled: </yellow>{status}"
   status-enabled-yes: "<green>YES</green>"

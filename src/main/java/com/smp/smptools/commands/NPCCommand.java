@@ -33,8 +33,15 @@ public class NPCCommand extends AbstractPlayerCommand {
                     return true;
                 }
                 String id = args[1];
+                if (!id.matches("^[a-zA-Z0-9_-]+$")) {
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Invalid NPC ID. Use letters, numbers, hyphens, and underscores only.</red>"));
+                    return true;
+                }
                 String type = args.length > 2 ? args[2].toUpperCase() : "DIALOGUE";
                 String skin = args.length > 3 ? args[3] : "Steve";
+                if (!skin.matches("^[a-zA-Z0-9_-]+$")) {
+                    skin = "Steve";
+                }
                 String name = null;
                 if (args.length > 4) {
                     StringBuilder nameBuilder = new StringBuilder();

@@ -33,8 +33,8 @@ public class SleepListener implements Listener {
             return; // It's not night
         }
 
-        // Prevent starting a vote if one is already in progress by another player
-        if (sleepManager.isVoteInProgress()) {
+        // Prevent starting a vote if one is already in progress in this world
+        if (sleepManager.isVoteInProgress(player.getWorld())) {
             player.sendMessage(plugin.getMessageManager().getMessage("sleep.already-voting"));
             return;
         }
@@ -58,9 +58,13 @@ public class SleepListener implements Listener {
     }
 
     private void handleInitiatorLeave(Player player) {
-        if (sleepManager.isVoteInProgress() && player.equals(sleepManager.getVoteInitiator())) {
-            sleepManager.endVote();
-            org.bukkit.Bukkit.broadcast(plugin.getMessageManager().getMessage("sleep.vote-cancelled-initiator-left"));
+        org.bukkit.World world = player.getWorld();
+        if (world != null && sleepManager.isVoteInProgress(world)) {
+            Player initiator = sleepManager.getVoteInitiator(world);
+            if (player.equals(initiator)) {
+                sleepManager.endVote(world);
+                world.sendMessage(plugin.getMessageManager().getMessage("sleep.vote-cancelled-initiator-left"));
+            }
         }
     }
 }

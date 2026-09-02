@@ -60,7 +60,7 @@ public class PresentManager {
 
     public void savePresentsConfig() {
         try {
-            presentsConfig.save(presentsFile);
+            com.smp.smptools.utils.AtomicFileWriter.save(presentsConfig, presentsFile);
         } catch (IOException e) {
             plugin.getLogger().severe("Could not save presents.yml!");
         }

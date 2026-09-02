@@ -28,6 +28,13 @@ public class ChatManager {
         return lastMessengers.get(recipient);
     }
 
+    public void removePlayer(UUID uuid) {
+        if (uuid != null) {
+            lastMessengers.remove(uuid);
+            lastMessengers.values().removeIf(v -> v.equals(uuid));
+        }
+    }
+
     public synchronized Component getFormattedDisplayName(Player player) {
         if (player == null) return Component.empty();
         try {
@@ -47,7 +54,8 @@ public class ChatManager {
             }
 
             // 2. Get prefix and tag strings
-            String tagTitle = plugin.getTagManager() != null ? plugin.getTagManager().getTagTitle(player) : null;
+            String rawTagTitle = plugin.getTagManager() != null ? plugin.getTagManager().getTagTitle(player) : null;
+            String tagTitle = rawTagTitle != null ? InputValidator.sanitizeMiniMessage(rawTagTitle) : null;
 
             // 3. Build a single MiniMessage string
             StringBuilder mmString = new StringBuilder();
@@ -60,7 +68,7 @@ public class ChatManager {
             mmString.append(player.getName());
 
             if (tagTitle != null && !tagTitle.isEmpty()) {
-                String tagDescription = plugin.getTagManager().getTagDescription(tagTitle);
+                String tagDescription = plugin.getTagManager().getTagDescription(rawTagTitle);
                 if (tagDescription != null && !tagDescription.isEmpty()) {
                     String sanitizedDescription = InputValidator.sanitizeMiniMessage(tagDescription)
                             .replace("'", "\\'");

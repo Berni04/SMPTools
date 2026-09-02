@@ -1,5 +1,5 @@
 name: SMPTools
-version: 1.1.1
+version: 1.1.2
 main: com.smp.smptools.SMPTools
 api-version: '1.21'
 author: berni
@@ -63,6 +63,7 @@ commands:
   rename:
     description: Rename the item in your hand with MiniMessage formatting.
     usage: /rename <name>
+    permission: smptools.rename
   daily:
     description: Claim your daily reward.
   skills:
@@ -109,6 +110,7 @@ commands:
   sudo:
     description: Force a player to execute a command or chat message.
     usage: /sudo <player> <command>
+    permission: smptools.sudo
   customitem:
     description: Gives a custom item with specified CustomModelData.
     permission: smptools.customitem
@@ -211,4 +213,10 @@ permissions:
     default: op
   smptools.sudo:
     description: Allows access to the /sudo command.
+    default: op
+  smptools.rename:
+    description: Allows renaming held items via /rename.
+    default: true
+  smptools.admin:
+    description: Full administrative access for SMPTools commands.
     default: op

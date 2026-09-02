@@ -2,16 +2,17 @@ package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.commands.PrivateVaultCommand;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.TextColor;
-import org.bukkit.configuration.file.FileConfiguration;
+import com.smp.smptools.utils.AtomicFileWriter;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 
-import java.util.Map;
+import java.io.File;
+import java.io.IOException;
 
 public class VaultListener implements Listener {
 
@@ -23,18 +24,34 @@ public class VaultListener implements Listener {
 
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
-        if (event.getInventory().getHolder() instanceof PrivateVaultHolder) {
+        if (event.getInventory().getHolder() instanceof PrivateVaultHolder holder) {
             Player player = (Player) event.getPlayer();
             Inventory inventory = event.getInventory();
-            FileConfiguration config = plugin.getConfig();
+
+            if (holder.isDecodeFailed() || PrivateVaultCommand.isVaultsConfigLoadFailed()) {
+                plugin.getLogger().warning("Aborted vault save for " + player.getName() + " due to previous decode or config load failure.");
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>🔒 Vault save aborted to protect existing data from decode errors. Contact an admin.</red>"));
+                return;
+            }
 
             try {
                 String encodedInventory = PrivateVaultCommand.encodeInventory(inventory.getContents());
-                config.set("privatevaults." + player.getUniqueId().toString(), encodedInventory);
-                plugin.saveConfig();
-                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("vault.saved", player));
+                File vaultsFile = PrivateVaultCommand.getVaultsFile(plugin);
+                YamlConfiguration vaultsConfig = PrivateVaultCommand.getVaultsConfig(plugin);
+                vaultsConfig.set("vaults." + player.getUniqueId(), encodedInventory);
+                com.smp.smptools.utils.AsyncConfigHelper.saveConfigAsync(plugin, vaultsConfig, vaultsFile, "vaults.yml",
+                        () -> {
+                            if (player.isOnline()) {
+                                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("vault.saved", player));
+                            }
+                        },
+                        ex -> {
+                            if (player.isOnline()) {
+                                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("vault.save-failed", player));
+                            }
+                        });
             } catch (IllegalStateException e) {
-                plugin.getLogger().warning("Failed to encode inventory for player " + player.getName() + ": " + e.getMessage());
+                plugin.getLogger().warning("Failed to save vault for player " + player.getName() + ": " + e.getMessage());
                 player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("vault.save-failed", player));
             }
         }

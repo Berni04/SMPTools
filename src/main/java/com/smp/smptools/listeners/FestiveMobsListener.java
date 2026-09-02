@@ -47,33 +47,46 @@ public class FestiveMobsListener implements Listener {
         }
     }
 
-    @EventHandler
-    public void onEntitySpawn(EntitySpawnEvent event) {
-        if (christmasConfig == null || !christmasConfig.getBoolean("festive-mobs.enabled"))
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
+    public void onCreatureSpawn(org.bukkit.event.entity.CreatureSpawnEvent event) {
+        if (christmasConfig == null || !christmasConfig.getBoolean("festive-mobs.enabled", false))
             return;
 
-        if (event.getEntity() instanceof Zombie) {
-            Zombie zombie = (Zombie) event.getEntity();
+        // Limit to NATURAL spawns or christmas world
+        String worldName = event.getEntity().getWorld().getName();
+        boolean isChristmasWorld = "christmas".equalsIgnoreCase(worldName);
+        if (event.getSpawnReason() != org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.NATURAL && !isChristmasWorld) {
+            return;
+        }
+
+        if (event.getEntity() instanceof Zombie zombie) {
             ItemStack helmet = new ItemStack(Material.LEATHER_HELMET);
             LeatherArmorMeta meta = (LeatherArmorMeta) helmet.getItemMeta();
-            meta.setColor(Color.RED);
-            meta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
-                    .deserialize(SMPTools.getInstance().getMessageManager().getRawMessage("christmas.santa-hat")));
-            helmet.setItemMeta(meta);
-            zombie.getEquipment().setHelmet(helmet);
-        } else if (event.getEntity() instanceof Skeleton) {
-            Skeleton skeleton = (Skeleton) event.getEntity();
+            if (meta != null) {
+                meta.setColor(Color.RED);
+                meta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                        .deserialize(SMPTools.getInstance().getMessageManager().getRawMessage("christmas.santa-hat")));
+                helmet.setItemMeta(meta);
+                zombie.getEquipment().setHelmet(helmet);
+                zombie.getEquipment().setHelmetDropChance(0.0f);
+            }
+        } else if (event.getEntity() instanceof Skeleton skeleton) {
             ItemStack helmet = new ItemStack(Material.LEATHER_HELMET);
             LeatherArmorMeta meta = (LeatherArmorMeta) helmet.getItemMeta();
-            meta.setColor(Color.GREEN);
-            meta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
-                    .deserialize(SMPTools.getInstance().getMessageManager().getRawMessage("christmas.elf-hat")));
-            helmet.setItemMeta(meta);
-            skeleton.getEquipment().setHelmet(helmet);
+            if (meta != null) {
+                meta.setColor(Color.GREEN);
+                meta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                        .deserialize(SMPTools.getInstance().getMessageManager().getRawMessage("christmas.elf-hat")));
+                helmet.setItemMeta(meta);
+                skeleton.getEquipment().setHelmet(helmet);
+                skeleton.getEquipment().setHelmetDropChance(0.0f);
+            }
         }
     }
 
-    @EventHandler
+    public static final org.bukkit.NamespacedKey CANDY_CANE_KEY = new org.bukkit.NamespacedKey(SMPTools.getInstance(), "candy_cane");
+
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
     public void onEntityDeath(EntityDeathEvent event) {
         if (christmasConfig == null || !christmasConfig.getBoolean("festive-mobs.enabled"))
             return;
@@ -84,13 +97,14 @@ public class FestiveMobsListener implements Listener {
             if (random.nextDouble() < chance) {
                 ItemStack candyCane = new ItemStack(Material.SUGAR);
                 net.kyori.adventure.text.Component name = Component.text("Candy Cane", NamedTextColor.RED);
-                candyCane.getItemMeta().displayName(name); // Note: This won't work directly, need to set meta back
 
-                // Fix meta setting
                 org.bukkit.inventory.meta.ItemMeta meta = candyCane.getItemMeta();
-                meta.displayName(name);
-                meta.lore(java.util.List.of(Component.text("Sweet and speedy!", NamedTextColor.GRAY)));
-                candyCane.setItemMeta(meta);
+                if (meta != null) {
+                    meta.displayName(name);
+                    meta.lore(java.util.List.of(Component.text("Sweet and speedy!", NamedTextColor.GRAY)));
+                    meta.getPersistentDataContainer().set(CANDY_CANE_KEY, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+                    candyCane.setItemMeta(meta);
+                }
 
                 entity.getWorld().dropItemNaturally(entity.getLocation(), candyCane);
             }
@@ -123,8 +137,12 @@ public class FestiveMobsListener implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
     public void onPlayerInteract(org.bukkit.event.player.PlayerInteractEvent event) {
+        if (event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND) {
+            return;
+        }
+
         if (christmasConfig == null || !christmasConfig.getBoolean("festive-mobs.enabled"))
             return;
 
@@ -132,17 +150,14 @@ public class FestiveMobsListener implements Listener {
                 || event.getAction() == org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) {
             ItemStack item = event.getItem();
             if (item != null && item.getType() == Material.SUGAR && item.hasItemMeta()) {
-                Component displayName = item.getItemMeta().displayName();
-                if (displayName != null
-                        && "Candy Cane".equals(((net.kyori.adventure.text.TextComponent) displayName).content())) {
+                if (item.getItemMeta().getPersistentDataContainer().has(CANDY_CANE_KEY, org.bukkit.persistence.PersistentDataType.BYTE)) {
                     event.setCancelled(true); // Prevent normal interaction if any
 
                     // Consume item
                     item.setAmount(item.getAmount() - 1);
 
                     // Apply effects
-                    event.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 200, 1)); // Speed II for
-                                                                                                         // 10 seconds
+                    event.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 200, 1)); // Speed II for 10 seconds
                     event.getPlayer().getWorld().playSound(event.getPlayer().getLocation(),
                             org.bukkit.Sound.ENTITY_PLAYER_BURP, 1f, 1f);
                     event.getPlayer().sendMessage(SMPTools.getInstance().getMessageManager().getMessage("christmas.sweet"));

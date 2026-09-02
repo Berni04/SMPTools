@@ -115,8 +115,26 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
                     return true;
                 }
                 if (args.length > 1 && args[1].equalsIgnoreCase("start")) {
+                    if (manager.hasAnyGiftsDeposited()) {
+                        player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Cannot start Secret Santa: deposited gifts already exist from a previous round! Run <yellow>/secretsanta admin clear</yellow> first.</red>"));
+                        return true;
+                    }
                     manager.generateMatches();
                     player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.matches-generated"));
+                } else if (args.length > 1 && args[1].equalsIgnoreCase("clear")) {
+                    for (Player online : Bukkit.getOnlinePlayers()) {
+                        if (online.getOpenInventory().getTopInventory().getHolder() instanceof com.smp.smptools.christmas.SecretSantaHolder) {
+                            online.closeInventory();
+                        }
+                    }
+                    boolean cleared = manager.clearAllData();
+                    if (cleared) {
+                        player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<green>Cleared all Secret Santa participants, matches, and gifts.</green>"));
+                    } else {
+                        player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Failed to clear Secret Santa data from disk.</red>"));
+                    }
+                } else {
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<yellow>Usage: /secretsanta admin <start|clear></yellow>"));
                 }
                 break;
 
@@ -181,6 +199,10 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
                             items.add(item.clone());
                         }
                     }
+                    ItemStack cursorItem = event.getCursor() != null ? event.getCursor().clone() : null;
+                    if (cursorItem != null && cursorItem.getType() != Material.AIR) {
+                        items.add(cursorItem);
+                    }
                     if (items.isEmpty()) {
                         player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.empty-deposit", player));
                         return;
@@ -192,6 +214,7 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
                         player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.deposit-save-failed", player));
                         return;
                     }
+                    event.getWhoClicked().setItemOnCursor(null);
                     inv.clear();
                     Bukkit.getScheduler().runTask(plugin, (Runnable) player::closeInventory);
                     player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.gift-deposited", player));

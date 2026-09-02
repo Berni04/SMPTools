@@ -48,7 +48,7 @@ public class SecretSantaManager {
     public synchronized boolean saveConfig() {
         if (configFile == null || config == null) return true;
         try {
-            config.save(configFile);
+            com.smp.smptools.utils.AtomicFileWriter.save(config, configFile);
             return true;
         } catch (IOException e) {
             if (plugin != null) {
@@ -65,12 +65,14 @@ public class SecretSantaManager {
     }
 
     public Phase getCurrentPhase() {
+        boolean allowAnyMonth = plugin != null && plugin.getConfig().getBoolean("features.secret-santa.allow-any-month", false);
+
         ZonedDateTime now = ZonedDateTime.now(CET);
         int day = now.getDayOfMonth();
         int month = now.getMonthValue();
 
-        if (month != 12)
-            return Phase.REGISTRATION; // Default/Fallback
+        if (month != 12 && !allowAnyMonth)
+            return Phase.REGISTRATION;
 
         if (day <= 15)
             return Phase.REGISTRATION;
@@ -257,5 +259,33 @@ public class SecretSantaManager {
         if (target == null) return false;
         List<?> list = config.getList("gifts." + target.toString());
         return list != null && !list.isEmpty();
+    }
+
+    public synchronized boolean hasAnyGiftsDeposited() {
+        org.bukkit.configuration.ConfigurationSection gifts = config.getConfigurationSection("gifts");
+        if (gifts == null) return false;
+        for (String key : gifts.getKeys(false)) {
+            List<?> list = config.getList("gifts." + key);
+            if (list != null && !list.isEmpty()) return true;
+        }
+        return false;
+    }
+
+    public synchronized boolean clearAllData() {
+        Object oldParticipants = config.get("participants");
+        Object oldMatches = config.get("matches");
+        Object oldGifts = config.get("gifts");
+
+        config.set("participants", null);
+        config.set("matches", null);
+        config.set("gifts", null);
+
+        if (!saveConfig()) {
+            config.set("participants", oldParticipants);
+            config.set("matches", oldMatches);
+            config.set("gifts", oldGifts);
+            return false;
+        }
+        return true;
     }
 }

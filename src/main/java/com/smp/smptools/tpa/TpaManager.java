@@ -55,6 +55,15 @@ public class TpaManager {
      * @param target the player to teleport to
      */
     public void sendTeleportRequest(@NotNull Player requester, @NotNull Player target) {
+        if (plugin.getKrampusManager() != null && plugin.getKrampusManager().isKidnapped(requester)) {
+            requester.sendMessage(plugin.getMessageManager().getMessage("tpa.caged", requester));
+            return;
+        }
+        if (requester.isDead() || target.isDead()) {
+            requester.sendMessage(plugin.getMessageManager().getMessage("common.player-dead", requester));
+            return;
+        }
+
         if (tpaToggledOff.contains(target.getUniqueId())) {
             requester.sendMessage(plugin.getMessageManager().getMessage("tpa.target-toggled-off", requester,
                     Map.of("target", target.getName())));
@@ -123,6 +132,12 @@ public class TpaManager {
             return;
         }
 
+        if (plugin.getKrampusManager() != null && plugin.getKrampusManager().isKidnapped(requester)) {
+            acceptor.sendMessage(plugin.getMessageManager().getMessage("tpa.target-caged", acceptor));
+            requester.sendMessage(plugin.getMessageManager().getMessage("tpa.caged", requester));
+            return;
+        }
+
         plugin.getTeleportManager().startTeleport(requester, acceptor.getLocation(), "to " + acceptor.getName());
         acceptor.sendMessage(plugin.getMessageManager().getMessage("tpa.accepted", acceptor,
                 Map.of(), requester));
@@ -163,5 +178,10 @@ public class TpaManager {
             tpaToggledOff.add(player.getUniqueId());
             player.sendMessage(plugin.getMessageManager().getMessage("tpa.toggle-off"));
         }
+    }
+
+    public void cleanup() {
+        pendingRequests.clear();
+        tpaToggledOff.clear();
     }
 }

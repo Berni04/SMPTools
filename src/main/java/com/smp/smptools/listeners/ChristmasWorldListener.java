@@ -1,8 +1,11 @@
 package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
+import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -36,31 +39,90 @@ public class ChristmasWorldListener implements Listener {
         }
     }
 
+    public static final org.bukkit.NamespacedKey ORIG_GAMEMODE_KEY = new org.bukkit.NamespacedKey(SMPTools.getInstance(), "orig_gamemode");
+
     @EventHandler
     public void onPlayerChangedWorld(PlayerChangedWorldEvent event) {
-        if (event.getPlayer().getWorld().getName().equalsIgnoreCase(WORLD_NAME)) {
-            if (event.getPlayer().getGameMode() != GameMode.CREATIVE
-                    && event.getPlayer().getGameMode() != GameMode.SPECTATOR) {
-                event.getPlayer().setGameMode(GameMode.ADVENTURE);
+        Player player = event.getPlayer();
+        if (player.getWorld().getName().equalsIgnoreCase(WORLD_NAME)) {
+            // Entering christmas world
+            if (player.getGameMode() != GameMode.CREATIVE && player.getGameMode() != GameMode.SPECTATOR) {
+                player.getPersistentDataContainer().set(ORIG_GAMEMODE_KEY, org.bukkit.persistence.PersistentDataType.STRING, player.getGameMode().name());
+                player.setGameMode(GameMode.ADVENTURE);
             }
+        } else if (event.getFrom().getName().equalsIgnoreCase(WORLD_NAME)) {
+            // Leaving christmas world
+            restoreOriginalGameMode(player);
         }
     }
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        if (event.getPlayer().getWorld().getName().equalsIgnoreCase(WORLD_NAME)) {
-            if (event.getPlayer().getGameMode() != GameMode.CREATIVE
-                    && event.getPlayer().getGameMode() != GameMode.SPECTATOR) {
-                event.getPlayer().setGameMode(GameMode.ADVENTURE);
+        Player player = event.getPlayer();
+        if (player.getWorld().getName().equalsIgnoreCase(WORLD_NAME)) {
+            if (player.getGameMode() != GameMode.CREATIVE && player.getGameMode() != GameMode.SPECTATOR) {
+                if (!player.getPersistentDataContainer().has(ORIG_GAMEMODE_KEY, org.bukkit.persistence.PersistentDataType.STRING)) {
+                    player.getPersistentDataContainer().set(ORIG_GAMEMODE_KEY, org.bukkit.persistence.PersistentDataType.STRING, player.getGameMode().name());
+                }
+                player.setGameMode(GameMode.ADVENTURE);
             }
         }
     }
 
     @EventHandler
+    public void onPlayerQuit(org.bukkit.event.player.PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        if (player.getWorld().getName().equalsIgnoreCase(WORLD_NAME)) {
+            restoreOriginalGameMode(player);
+        }
+    }
+
+    private void restoreOriginalGameMode(Player player) {
+        if (player.getPersistentDataContainer().has(ORIG_GAMEMODE_KEY, org.bukkit.persistence.PersistentDataType.STRING)) {
+            String saved = player.getPersistentDataContainer().get(ORIG_GAMEMODE_KEY, org.bukkit.persistence.PersistentDataType.STRING);
+            player.getPersistentDataContainer().remove(ORIG_GAMEMODE_KEY);
+            if (saved != null) {
+                try {
+                    player.setGameMode(GameMode.valueOf(saved));
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
+    }
+
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH)
     public void onEntityDamage(EntityDamageEvent event) {
         if (event.getEntity().getWorld().getName().equalsIgnoreCase(WORLD_NAME)) {
-            if (event.getEntity() instanceof Player) {
+            if (event.getEntity() instanceof Player player) {
                 event.setCancelled(true);
+                if (event.getCause() == EntityDamageEvent.DamageCause.VOID) {
+                    Location spawn = player.getWorld().getSpawnLocation();
+                    java.util.Optional<Location> safeSpawn = com.smp.smptools.teleport.SafeLocationFinder.findSafeLocation(spawn);
+                    if (safeSpawn.isPresent()) {
+                        player.teleport(safeSpawn.get());
+                        player.setFallDistance(0);
+                        return;
+                    }
+
+                    for (World w : Bukkit.getWorlds()) {
+                        if (w.getEnvironment() == World.Environment.NORMAL && !w.getName().equalsIgnoreCase(WORLD_NAME)) {
+                            java.util.Optional<Location> normalSafe = com.smp.smptools.teleport.SafeLocationFinder.findSafeLocation(w.getSpawnLocation());
+                            if (normalSafe.isPresent()) {
+                                player.teleport(normalSafe.get());
+                                player.setFallDistance(0);
+                                return;
+                            }
+                        }
+                    }
+
+                    World primaryWorld = Bukkit.getWorlds().stream()
+                            .filter(w -> w.getEnvironment() == World.Environment.NORMAL && !w.getName().equalsIgnoreCase(WORLD_NAME))
+                            .findFirst()
+                            .orElse(Bukkit.getWorlds().get(0));
+                    int highestY = primaryWorld.getHighestBlockYAt(primaryWorld.getSpawnLocation());
+                    Location highSpawn = new Location(primaryWorld, primaryWorld.getSpawnLocation().getX(), highestY + 1, primaryWorld.getSpawnLocation().getZ());
+                    com.smp.smptools.teleport.SafeLocationFinder.findSafeLocation(highSpawn).ifPresent(player::teleport);
+                    player.setFallDistance(0);
+                }
             }
         }
     }

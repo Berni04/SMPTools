@@ -19,6 +19,11 @@ public class HomeCommand extends AbstractPlayerCommand {
 
     @Override
     protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
+        if (plugin.getKrampusManager() != null && plugin.getKrampusManager().isKidnapped(player)) {
+            player.sendMessage(plugin.getMessageManager().getMessage("homes.caged", player));
+            return true;
+        }
+
         if (args.length == 0) {
             player.sendMessage(plugin.getMessageManager().getMessage("common.usage", player,
                     java.util.Map.of("usage", "/home <name>")));

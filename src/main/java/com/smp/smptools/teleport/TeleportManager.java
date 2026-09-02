@@ -49,10 +49,17 @@ public class TeleportManager {
                             Map.of("seconds", String.valueOf(countdown))));
                     countdown--;
                 } else {
+                    java.util.Optional<Location> safe = SafeLocationFinder.findSafeLocation(location);
+                    if (safe.isEmpty()) {
+                        player.sendMessage(plugin.getMessageManager().getMessage("teleport.unsafe", player));
+                        finishTeleport(player);
+                        this.cancel();
+                        return;
+                    }
                     teleportingSafely.add(player.getUniqueId());
-                    player.teleport(location);
+                    boolean success = player.teleport(safe.get());
                     teleportingSafely.remove(player.getUniqueId());
-                    if (player.isOnline()) {
+                    if (success && player.isOnline()) {
                         player.sendMessage(plugin.getMessageManager().getMessage("teleport.successful"));
                     }
                     finishTeleport(player);

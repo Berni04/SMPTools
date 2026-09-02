@@ -102,6 +102,7 @@ public class SMPTools extends JavaPlugin {
     private NPCManager npcManager;
     private DialogueManager dialogueManager;
     private BlackFridayManager blackFridayManager;
+    private com.smp.smptools.listeners.BlackFridayListener blackFridayListener;
     private MessageManager messageManager;
     private StorageManager storageManager;
     private com.smp.smptools.afk.AFKManager afkManager;
@@ -285,8 +286,8 @@ public class SMPTools extends JavaPlugin {
 
         // Black Friday (conditional)
         if (getConfig().getBoolean("features.blackfriday.enabled", true)) {
-            Bukkit.getPluginManager()
-                    .registerEvents(new com.smp.smptools.listeners.BlackFridayListener(this, blackFridayManager), this);
+            this.blackFridayListener = new com.smp.smptools.listeners.BlackFridayListener(this, blackFridayManager);
+            Bukkit.getPluginManager().registerEvents(this.blackFridayListener, this);
             Objects.requireNonNull(getCommand("blackfriday"))
                     .setExecutor(new com.smp.smptools.commands.BlackFridayCommand(blackFridayManager));
         }
@@ -361,6 +362,9 @@ public class SMPTools extends JavaPlugin {
         if (tradeManager != null) {
             tradeManager.cleanup();
         }
+        if (tpaManager != null) {
+            tpaManager.cleanup();
+        }
         if (chunkLoaderManager != null) {
             chunkLoaderManager.unloadAllChunks(); // Unload all force-loaded chunks
         }
@@ -370,6 +374,9 @@ public class SMPTools extends JavaPlugin {
         if (npcManager != null) {
             npcManager.removeAllNPCs();
         }
+        if (dialogueManager != null) {
+            dialogueManager.cleanupAll();
+        }
         if (eventManager != null) {
             eventManager.shutdown();
         }
@@ -378,6 +385,9 @@ public class SMPTools extends JavaPlugin {
         }
         if (krampusManager != null) {
             krampusManager.cleanupAll();
+        }
+        if (blackFridayListener != null) {
+            blackFridayListener.restoreAllActive();
         }
         if (seasonalManager != null) {
             seasonalManager.saveLocations();
@@ -716,5 +726,9 @@ public class SMPTools extends JavaPlugin {
 
     public SeasonalManager getSeasonalManager() {
         return seasonalManager;
+    }
+
+    public com.smp.smptools.christmas.KrampusManager getKrampusManager() {
+        return krampusManager;
     }
 }

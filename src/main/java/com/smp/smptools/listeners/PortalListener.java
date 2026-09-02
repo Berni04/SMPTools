@@ -37,8 +37,9 @@ public class PortalListener implements Listener {
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
+        Location from = event.getFrom();
         Location to = event.getTo();
-        if (to == null)
+        if (to == null || (java.util.Objects.equals(from.getWorld(), to.getWorld()) && from.getBlockX() == to.getBlockX() && from.getBlockY() == to.getBlockY() && from.getBlockZ() == to.getBlockZ()))
             return;
 
         Block block = to.getBlock();
@@ -49,8 +50,11 @@ public class PortalListener implements Listener {
 
                 // Teleport logic
                 if (player.getWorld().getName().equals("christmas")) {
-                    // Teleport back to overworld spawn (or previous location if we tracked it)
-                    player.teleport(Bukkit.getWorlds().get(0).getSpawnLocation());
+                    org.bukkit.World overworld = Bukkit.getWorlds().stream()
+                            .filter(w -> w.getEnvironment() == org.bukkit.World.Environment.NORMAL)
+                            .findFirst()
+                            .orElse(Bukkit.getWorlds().get(0));
+                    player.teleport(overworld.getSpawnLocation());
                 } else {
                     // Teleport to Christmas world
                     Location target = plugin.getPortalManager().getChristmasSpawn();
