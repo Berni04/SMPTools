@@ -181,6 +181,10 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
                             items.add(item.clone());
                         }
                     }
+                    if (event.getCursor() != null && event.getCursor().getType() != Material.AIR) {
+                        items.add(event.getCursor().clone());
+                        event.getWhoClicked().setItemOnCursor(null);
+                    }
                     if (items.isEmpty()) {
                         player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.empty-deposit", player));
                         return;
