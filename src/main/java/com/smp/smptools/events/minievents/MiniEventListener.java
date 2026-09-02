@@ -229,6 +229,13 @@ public class MiniEventListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onCreatureSpawn(org.bukkit.event.entity.CreatureSpawnEvent event) {
+        if (event.getSpawnReason() == org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.SPAWNER) {
+            event.getEntity().setMetadata("spawner_mob", new org.bukkit.metadata.FixedMetadataValue(plugin, true));
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onEntityKill(EntityDeathEvent event) {
         MiniEventSession activeSession = eventManager.getActiveSession();
         if (activeSession == null || !activeSession.isActive() || activeSession.getType() != MiniEventType.MOB_FRENZY) {
@@ -247,6 +254,14 @@ public class MiniEventListener implements Listener {
         }
 
         FileConfiguration cfg = plugin.getEventsConfig();
+
+        if (entity.hasMetadata("spawner_mob")) {
+            boolean allowSpawner = cfg.getBoolean("events.types.mob_frenzy.allow-spawner-mobs", false);
+            if (!allowSpawner) {
+                return;
+            }
+        }
+
         int pts = 0;
         String typeName = entity.getType().name();
 
