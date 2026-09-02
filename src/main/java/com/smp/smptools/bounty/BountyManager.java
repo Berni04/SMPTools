@@ -342,7 +342,7 @@ public class BountyManager {
         }
 
         bounties.remove(bounty);
-        saveBounties();
+        saveBountiesSync();
 
         if (claimer != null && claimer.isOnline()) {
             processPendingRefunds(claimer);
