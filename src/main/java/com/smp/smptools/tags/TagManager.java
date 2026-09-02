@@ -372,9 +372,10 @@ public class TagManager implements Listener {
             }
 
             if (playerValue >= requiredValue && !hasUnlockedTitle(player, title)) {
-                unlockTitle(player, title);
-                Component formattedPlayerName = plugin.getChatManager().getFormattedDisplayName(player);
-                plugin.getServer().broadcast(formattedPlayerName.append(Component.text(" has unlocked the title: " + title, NamedTextColor.GREEN)));
+                if (unlockTitle(player, title)) {
+                    Component formattedPlayerName = plugin.getChatManager().getFormattedDisplayName(player);
+                    plugin.getServer().broadcast(formattedPlayerName.append(Component.text(" has unlocked the title: " + title, NamedTextColor.GREEN)));
+                }
             }
         }
     }
@@ -434,14 +435,17 @@ public class TagManager implements Listener {
      *
      * @param player the player to unlock the title for
      * @param title the title to unlock
+     * @return true if the title was newly unlocked, false if already possessed
      */
-    public void unlockTitle(@NotNull Player player, @NotNull String title) {
-        List<String> unlockedTitles = plugin.getTagsConfig().getStringList("unlocked-titles." + player.getUniqueId().toString());
+    public synchronized boolean unlockTitle(@NotNull Player player, @NotNull String title) {
+        List<String> unlockedTitles = new java.util.ArrayList<>(plugin.getTagsConfig().getStringList("unlocked-titles." + player.getUniqueId().toString()));
         if (!unlockedTitles.contains(title)) {
             unlockedTitles.add(title);
             plugin.getTagsConfig().set("unlocked-titles." + player.getUniqueId().toString(), unlockedTitles);
             plugin.saveTagsConfig();
+            return true;
         }
+        return false;
     }
 
     /**
