@@ -372,7 +372,12 @@ public class KrampusManager implements Listener {
 
         Player player = Bukkit.getPlayer(uuid);
         if (player != null && player.isOnline() && originalLoc != null) {
-            player.teleport(originalLoc);
+            try {
+                allowedTeleports.add(uuid);
+                player.teleport(originalLoc);
+            } finally {
+                allowedTeleports.remove(uuid);
+            }
             player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("krampus.escaped"));
         }
     }

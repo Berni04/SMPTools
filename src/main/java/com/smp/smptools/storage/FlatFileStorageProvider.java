@@ -20,7 +20,10 @@ public class FlatFileStorageProvider implements StorageProvider {
 
     private void runSyncOrNow(Runnable task) {
         synchronized (taskLock) {
-            if (isShutdown || Bukkit.getServer() == null || Bukkit.isPrimaryThread() || plugin == null || !plugin.isEnabled()) {
+            if (isShutdown) {
+                return; // Reject late writes after shutdown to prevent off-thread mutation
+            }
+            if (Bukkit.getServer() == null || Bukkit.isPrimaryThread() || plugin == null || !plugin.isEnabled()) {
                 task.run();
                 return;
             }
@@ -34,7 +37,9 @@ public class FlatFileStorageProvider implements StorageProvider {
                 });
             } catch (Exception e) {
                 pendingTasks.remove(task);
-                task.run();
+                if (!isShutdown) {
+                    task.run();
+                }
             }
         }
     }

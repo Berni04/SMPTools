@@ -58,9 +58,13 @@ public class SleepListener implements Listener {
     }
 
     private void handleInitiatorLeave(Player player) {
-        if (sleepManager.isVoteInProgress() && player.equals(sleepManager.getVoteInitiator())) {
-            sleepManager.endVote();
-            org.bukkit.Bukkit.broadcast(plugin.getMessageManager().getMessage("sleep.vote-cancelled-initiator-left"));
+        org.bukkit.World world = player.getWorld();
+        if (world != null && sleepManager.isVoteInProgress(world)) {
+            Player initiator = sleepManager.getVoteInitiator(world);
+            if (player.equals(initiator)) {
+                sleepManager.endVote(world);
+                world.sendMessage(plugin.getMessageManager().getMessage("sleep.vote-cancelled-initiator-left"));
+            }
         }
     }
 }

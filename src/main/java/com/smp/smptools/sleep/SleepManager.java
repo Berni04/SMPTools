@@ -7,29 +7,43 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SleepManager {
 
+    public static class WorldVoteState {
+        private final World world;
+        private final UUID initiatorUuid;
+        private final Set<UUID> yesVotes = ConcurrentHashMap.newKeySet();
+        private final Set<UUID> noVotes = ConcurrentHashMap.newKeySet();
+
+        public WorldVoteState(World world, UUID initiatorUuid) {
+            this.world = world;
+            this.initiatorUuid = initiatorUuid;
+        }
+
+        public World getWorld() { return world; }
+        public UUID getInitiatorUuid() { return initiatorUuid; }
+        public Set<UUID> getYesVotes() { return yesVotes; }
+        public Set<UUID> getNoVotes() { return noVotes; }
+    }
+
     private final SMPTools plugin;
-    private boolean voteInProgress = false;
-    private final Set<UUID> yesVotes = ConcurrentHashMap.newKeySet();
-    private final Set<UUID> noVotes = ConcurrentHashMap.newKeySet();
-    private Player voteInitiator;
-    private World voteWorld;
+    private final Map<UUID, WorldVoteState> activeVotes = new ConcurrentHashMap<>();
 
     public SleepManager(SMPTools plugin) {
         this.plugin = plugin;
     }
 
     public boolean isVoteInProgress() {
-        return voteInProgress;
+        return !activeVotes.isEmpty();
     }
 
     public boolean isVoteInProgress(World world) {
-        return voteInProgress && voteWorld != null && voteWorld.equals(world);
+        return world != null && activeVotes.containsKey(world.getUID());
     }
 
     public void startVote(Player player) {
@@ -43,20 +57,17 @@ public class SleepManager {
             return;
         }
 
-        voteInProgress = true;
-        voteInitiator = player;
-        voteWorld = world;
-        yesVotes.clear();
-        noVotes.clear();
-        
+        WorldVoteState state = new WorldVoteState(world, player.getUniqueId());
+        activeVotes.put(world.getUID(), state);
+
         // The initiator automatically votes yes
-        yesVotes.add(player.getUniqueId());
+        state.getYesVotes().add(player.getUniqueId());
 
         // AFK players automatically vote yes only if explicitly configured
         if (plugin.getAFKManager() != null && plugin.getConfig().getBoolean("features.afk.auto-vote-sleep", false)) {
             for (Player p : world.getPlayers()) {
                 if (plugin.getAFKManager().isAFK(p)) {
-                    yesVotes.add(p.getUniqueId());
+                    state.getYesVotes().add(p.getUniqueId());
                 }
             }
         }
@@ -75,72 +86,73 @@ public class SleepManager {
 
         world.sendMessage(broadcastMsg);
         
-        checkVoteStatus();
+        checkVoteStatus(world);
     }
 
     public void addVote(Player player, boolean vote) {
-        if (!voteInProgress || voteWorld == null) {
+        World world = player.getWorld();
+        WorldVoteState state = activeVotes.get(world.getUID());
+        if (state == null) {
             player.sendMessage(plugin.getMessageManager().getMessage("sleep.no-vote"));
             return;
         }
 
-        if (!player.getWorld().equals(voteWorld)) {
-            player.sendMessage(plugin.getMessageManager().getMessage("sleep.wrong-world"));
-            return;
-        }
-
         UUID playerUUID = player.getUniqueId();
-        if (yesVotes.contains(playerUUID) || noVotes.contains(playerUUID)) {
+        if (state.getYesVotes().contains(playerUUID) || state.getNoVotes().contains(playerUUID)) {
             player.sendMessage(plugin.getMessageManager().getMessage("sleep.already-voted"));
             return;
         }
 
-        World world = player.getWorld();
         if (vote) {
-            yesVotes.add(playerUUID);
+            state.getYesVotes().add(playerUUID);
             world.sendMessage(plugin.getMessageManager().getMessage("sleep.voted-yes", player));
         } else {
-            noVotes.add(playerUUID);
+            state.getNoVotes().add(playerUUID);
             world.sendMessage(plugin.getMessageManager().getMessage("sleep.voted-no", player));
         }
 
-        checkVoteStatus();
+        checkVoteStatus(world);
     }
 
-    private void checkVoteStatus() {
-        if (voteWorld == null) {
-            endVote();
-            return;
-        }
+    private void checkVoteStatus(World world) {
+        if (world == null) return;
+        WorldVoteState state = activeVotes.get(world.getUID());
+        if (state == null) return;
 
-        int onlinePlayers = voteWorld.getPlayers().size();
+        int onlinePlayers = world.getPlayers().size();
         int requiredVotes = (int) Math.ceil(onlinePlayers / 2.0);
 
-        if (yesVotes.size() >= requiredVotes) {
-            voteWorld.sendMessage(plugin.getMessageManager().getMessage("sleep.vote-accepted"));
-            voteWorld.setTime(0);
-            voteWorld.setThundering(false);
-            voteWorld.setStorm(false);
-            endVote();
-        } else if (noVotes.size() >= (onlinePlayers - requiredVotes + 1)) {
-            voteWorld.sendMessage(plugin.getMessageManager().getMessage("sleep.vote-failed"));
-            endVote();
+        if (state.getYesVotes().size() >= requiredVotes) {
+            world.sendMessage(plugin.getMessageManager().getMessage("sleep.vote-accepted"));
+            world.setTime(0);
+            world.setThundering(false);
+            world.setStorm(false);
+            endVote(world);
+        } else if (state.getNoVotes().size() >= (onlinePlayers - requiredVotes + 1)) {
+            world.sendMessage(plugin.getMessageManager().getMessage("sleep.vote-failed"));
+            endVote(world);
         }
     }
 
     public void endVote() {
-        voteInProgress = false;
-        yesVotes.clear();
-        noVotes.clear();
-        voteInitiator = null;
-        voteWorld = null;
+        activeVotes.clear();
+    }
+
+    public void endVote(World world) {
+        if (world != null) {
+            activeVotes.remove(world.getUID());
+        }
     }
 
     public Player getVoteInitiator() {
-        return voteInitiator;
+        if (activeVotes.isEmpty()) return null;
+        WorldVoteState state = activeVotes.values().iterator().next();
+        return org.bukkit.Bukkit.getPlayer(state.getInitiatorUuid());
     }
 
-    public World getVoteWorld() {
-        return voteWorld;
+    public Player getVoteInitiator(World world) {
+        if (world == null) return null;
+        WorldVoteState state = activeVotes.get(world.getUID());
+        return state != null ? org.bukkit.Bukkit.getPlayer(state.getInitiatorUuid()) : null;
     }
 }

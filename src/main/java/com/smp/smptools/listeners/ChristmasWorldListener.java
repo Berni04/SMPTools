@@ -93,18 +93,31 @@ public class ChristmasWorldListener implements Listener {
     public void onEntityDamage(EntityDamageEvent event) {
         if (event.getEntity().getWorld().getName().equalsIgnoreCase(WORLD_NAME)) {
             if (event.getEntity() instanceof Player player) {
-                event.setCancelled(true);
                 if (event.getCause() == EntityDamageEvent.DamageCause.VOID) {
                     Location spawn = player.getWorld().getSpawnLocation();
                     java.util.Optional<Location> safeSpawn = com.smp.smptools.teleport.SafeLocationFinder.findSafeLocation(spawn);
                     if (safeSpawn.isPresent()) {
+                        event.setCancelled(true);
                         player.teleport(safeSpawn.get());
-                    } else {
-                        World mainWorld = Bukkit.getWorlds().get(0);
-                        com.smp.smptools.teleport.SafeLocationFinder.findSafeLocation(mainWorld.getSpawnLocation())
-                                .ifPresent(player::teleport);
+                        player.setFallDistance(0);
+                        return;
                     }
-                    player.setFallDistance(0);
+
+                    World normalWorld = Bukkit.getWorlds().stream()
+                            .filter(w -> w.getEnvironment() == World.Environment.NORMAL && !w.getName().equalsIgnoreCase(WORLD_NAME))
+                            .findFirst()
+                            .orElse(null);
+                    if (normalWorld != null) {
+                        java.util.Optional<Location> mainSafe = com.smp.smptools.teleport.SafeLocationFinder.findSafeLocation(normalWorld.getSpawnLocation());
+                        if (mainSafe.isPresent()) {
+                            event.setCancelled(true);
+                            player.teleport(mainSafe.get());
+                            player.setFallDistance(0);
+                            return;
+                        }
+                    }
+                } else {
+                    event.setCancelled(true);
                 }
             }
         }
