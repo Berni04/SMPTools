@@ -63,6 +63,7 @@ commands:
   rename:
     description: Rename the item in your hand with MiniMessage formatting.
     usage: /rename <name>
+    permission: smptools.rename
   daily:
     description: Claim your daily reward.
   skills:
