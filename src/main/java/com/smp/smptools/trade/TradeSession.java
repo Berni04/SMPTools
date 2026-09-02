@@ -23,10 +23,16 @@ public class TradeSession {
     private final Player player2;
     private final Inventory inventory;
 
+    public enum State {
+        ACTIVE,
+        SETTLING,
+        COMPLETED,
+        CANCELLED
+    }
+
+    private State state = State.ACTIVE;
     private boolean player1Ready = false;
     private boolean player2Ready = false;
-    private boolean completed = false;
-    private boolean cancelled = false;
 
     // Slot definitions
     public static final List<Integer> P1_SLOTS_ORDERED = List.of(0, 1, 2, 3, 9, 10, 11, 12, 18, 19, 20, 21, 27, 28, 29, 30);
@@ -94,7 +100,7 @@ public class TradeSession {
                 plugin.getConfig().getInt("features.remote-trade.request-timeout-seconds", 60));
 
         this.timeoutTask = Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (!completed && !cancelled) {
+            if (state == State.ACTIVE) {
                 String timeoutReason = plugin.getMessageManager().getRawMessage("trade.timed-out");
                 if (timeoutReason == null || timeoutReason.isEmpty()) {
                     timeoutReason = "Trade timed out after " + timeoutSeconds + " seconds.";
@@ -131,9 +137,13 @@ public class TradeSession {
     }
 
     public synchronized void completeTrade() {
-        if (completed || cancelled) return;
-        completed = true;
+        if (state != State.ACTIVE) return;
+        state = State.SETTLING;
         cancelTask();
+
+        // Synchronously clear all decoration/button slots
+        for (int slot : DIVIDER_SLOTS) inventory.setItem(slot, null);
+        for (int i = 36; i < 54; i++) inventory.setItem(i, null);
 
         List<ItemStack> p1Items = getOfferedItems(P1_SLOTS);
         List<ItemStack> p2Items = getOfferedItems(P2_SLOTS);
@@ -158,15 +168,20 @@ public class TradeSession {
         player1.sendMessage(plugin.getMessageManager().getMessage("trade.completed"));
         player2.sendMessage(plugin.getMessageManager().getMessage("trade.completed"));
 
+        state = State.COMPLETED;
         plugin.getTradeManager().removeSession(player1.getUniqueId(), player2.getUniqueId());
 
         scheduleCloseInventories();
     }
 
     public synchronized void cancelTrade(Component p1Message, Component p2Message) {
-        if (completed || cancelled) return;
-        cancelled = true;
+        if (state != State.ACTIVE) return;
+        state = State.SETTLING;
         cancelTask();
+
+        // Synchronously clear all decoration/button slots
+        for (int slot : DIVIDER_SLOTS) inventory.setItem(slot, null);
+        for (int i = 36; i < 54; i++) inventory.setItem(i, null);
 
         List<ItemStack> p1Items = getOfferedItems(P1_SLOTS);
         List<ItemStack> p2Items = getOfferedItems(P2_SLOTS);
@@ -182,6 +197,7 @@ public class TradeSession {
         if (p1Message != null) player1.sendMessage(p1Message);
         if (p2Message != null) player2.sendMessage(p2Message);
 
+        state = State.CANCELLED;
         plugin.getTradeManager().removeSession(player1.getUniqueId(), player2.getUniqueId());
 
         scheduleCloseInventories();
@@ -268,6 +284,7 @@ public class TradeSession {
     public Player getPlayer1() { return player1; }
     public Player getPlayer2() { return player2; }
     public Inventory getInventory() { return inventory; }
-    public boolean isCompleted() { return completed; }
-    public boolean isCancelled() { return cancelled; }
+    public State getState() { return state; }
+    public boolean isCompleted() { return state == State.COMPLETED; }
+    public boolean isCancelled() { return state == State.CANCELLED; }
 }

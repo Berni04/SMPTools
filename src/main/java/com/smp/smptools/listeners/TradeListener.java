@@ -36,6 +36,11 @@ public class TradeListener implements Listener {
         TradeSession session = tradeManager.getSession(player);
         if (session == null) return;
 
+        if (session.getState() != TradeSession.State.ACTIVE) {
+            event.setCancelled(true);
+            return;
+        }
+
         if (event.getAction() == InventoryAction.COLLECT_TO_CURSOR || event.getAction() == InventoryAction.CLONE_STACK) {
             event.setCancelled(true);
             return;
@@ -148,6 +153,11 @@ public class TradeListener implements Listener {
 
         TradeSession session = tradeManager.getSession(player);
         if (session == null) return;
+
+        if (session.getState() != TradeSession.State.ACTIVE) {
+            event.setCancelled(true);
+            return;
+        }
 
         boolean isP1 = player.equals(session.getPlayer1());
         Set<Integer> allowedSlots = isP1 ? TradeSession.P1_SLOTS : TradeSession.P2_SLOTS;
