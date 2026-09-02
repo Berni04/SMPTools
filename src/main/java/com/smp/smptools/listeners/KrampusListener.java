@@ -23,6 +23,7 @@ import org.bukkit.persistence.PersistentDataType;
 import java.io.File;
 import java.util.List;
 import java.util.Random;
+import java.util.UUID;
 
 public class KrampusListener implements Listener {
 
@@ -98,14 +99,10 @@ public class KrampusListener implements Listener {
         }
 
         // Guard Death (Escape)
-        if (entity instanceof Zombie && entity.getCustomName() != null
-                && entity.getCustomName().contains("Cage Guard")) {
-            if (entity.getKiller() != null) {
-                Player killer = entity.getKiller();
-                if (krampusManager.isKidnapped(killer)) {
-                    krampusManager.checkGuardDeath(killer, entity.getUniqueId());
-                }
-            }
+        UUID guardId = entity.getUniqueId();
+        UUID victimUuid = krampusManager.getVictimForGuard(guardId);
+        if (victimUuid != null) {
+            krampusManager.checkGuardDeath(victimUuid, guardId);
         }
     }
 

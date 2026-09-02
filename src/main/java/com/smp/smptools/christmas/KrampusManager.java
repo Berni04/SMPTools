@@ -48,6 +48,31 @@ public class KrampusManager implements Listener {
         this.krampusKey = new NamespacedKey(plugin, "krampus_entity");
         Bukkit.getPluginManager().registerEvents(this, plugin);
         loadConfig();
+        startGuardWatchdogTask();
+    }
+
+    private void startGuardWatchdogTask() {
+        if (plugin == null || !plugin.isEnabled()) return;
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            for (Map.Entry<UUID, Set<UUID>> entry : new HashMap<>(playerGuards).entrySet()) {
+                UUID victimUuid = entry.getKey();
+                Player victim = Bukkit.getPlayer(victimUuid);
+                if (victim == null || !victim.isOnline()) {
+                    releasePlayer(victimUuid);
+                    continue;
+                }
+
+                Set<UUID> guards = entry.getValue();
+                guards.removeIf(guardId -> {
+                    org.bukkit.entity.Entity e = Bukkit.getEntity(guardId);
+                    return e == null || e.isDead() || !e.isValid();
+                });
+
+                if (guards.isEmpty()) {
+                    releasePlayer(victimUuid);
+                }
+            }
+        }, 200L, 200L); // Watchdog every 10s
     }
 
     @EventHandler
@@ -289,19 +314,33 @@ public class KrampusManager implements Listener {
         return false;
     }
 
-    public void checkGuardDeath(Player player, UUID guardId) {
-        if (playerGuards.containsKey(player.getUniqueId())) {
-            Set<UUID> guards = playerGuards.get(player.getUniqueId());
-            if (guards.remove(guardId)) {
-                if (guards.isEmpty()) {
-                    releasePlayer(player);
-                    playerGuards.remove(player.getUniqueId());
-                } else {
-                    player.sendMessage(
-                            SMPTools.getInstance().getMessageManager().getMessage("krampus.guard-defeated").replaceText(builder -> builder.matchLiteral("{remaining}").replacement(String.valueOf(guards.size()))));
-                }
+    public UUID getVictimForGuard(UUID guardId) {
+        if (guardId == null) return null;
+        for (Map.Entry<UUID, Set<UUID>> entry : playerGuards.entrySet()) {
+            if (entry.getValue().contains(guardId)) {
+                return entry.getKey();
             }
         }
+        return null;
+    }
+
+    public void checkGuardDeath(UUID playerUuid, UUID guardId) {
+        if (playerUuid == null) return;
+        Set<UUID> guards = playerGuards.get(playerUuid);
+        if (guards != null && guards.remove(guardId)) {
+            Player player = Bukkit.getPlayer(playerUuid);
+            if (guards.isEmpty()) {
+                releasePlayer(playerUuid);
+            } else if (player != null && player.isOnline()) {
+                player.sendMessage(
+                        SMPTools.getInstance().getMessageManager().getMessage("krampus.guard-defeated").replaceText(builder -> builder.matchLiteral("{remaining}").replacement(String.valueOf(guards.size()))));
+            }
+        }
+    }
+
+    public void checkGuardDeath(Player player, UUID guardId) {
+        if (player == null) return;
+        checkGuardDeath(player.getUniqueId(), guardId);
     }
 
     public void releasePlayer(Player player) {
