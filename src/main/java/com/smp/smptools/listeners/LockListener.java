@@ -142,6 +142,14 @@ public class LockListener implements Listener {
         event.blockList().removeIf(block -> lockManager.isContainer(block) && lockManager.isLocked(block));
     }
 
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onEntityChangeBlock(org.bukkit.event.entity.EntityChangeBlockEvent event) {
+        Block block = event.getBlock();
+        if (lockManager.isContainer(block) && lockManager.isLocked(block)) {
+            event.setCancelled(true);
+        }
+    }
+
     private Block getBlockFromInventory(Inventory inventory) {
         if (inventory == null) return null;
         if (inventory.getLocation() != null && inventory.getLocation().getWorld() != null) {
