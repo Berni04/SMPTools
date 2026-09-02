@@ -143,19 +143,24 @@ public class NPCManager {
         }
 
         // Apply Skin
-        if (npc instanceof Player) {
-            try {
-                PlayerProfile profile = Bukkit.createProfile(skinName);
-                if (!profile.complete(false)) {
+        if (npc instanceof Player playerNPC) {
+            final String sanitizedSkin = (skinName != null && skinName.matches("^[a-zA-Z0-9_-]+$")) ? skinName : "Steve";
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                try {
+                    PlayerProfile profile = Bukkit.createProfile(sanitizedSkin);
                     profile.complete(true);
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        if (playerNPC.isValid()) {
+                            playerNPC.setPlayerProfile(profile);
+                        }
+                    });
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Failed to load skin for NPC " + id + ": " + e.getMessage());
                 }
-                ((Player) npc).setPlayerProfile(profile);
-            } catch (Exception e) {
-                plugin.getLogger().warning("Failed to load skin for NPC " + id + ": " + e.getMessage());
-            }
+            });
         } else if (entityType.name().equals("MANNEQUIN")) {
-            // Use /data merge for Mannequin skin
-            String command = String.format("data merge entity %s {profile:{name:\"%s\"}}", npc.getUniqueId(), skinName);
+            String sanitizedSkin = (skinName != null && skinName.matches("^[a-zA-Z0-9_-]+$")) ? skinName : "Steve";
+            String command = String.format("data merge entity %s {profile:{name:\"%s\"}}", npc.getUniqueId(), sanitizedSkin);
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
         } else {
             plugin.getLogger().info(
@@ -254,13 +259,26 @@ public class NPCManager {
             }
 
             if (skinName != null && !skinName.isEmpty()) {
-                ItemStack head = new ItemStack(Material.PLAYER_HEAD);
-                org.bukkit.inventory.meta.SkullMeta meta = (org.bukkit.inventory.meta.SkullMeta) head.getItemMeta();
-                PlayerProfile profile = Bukkit.createProfile(skinName);
-                profile.complete(true);
-                meta.setPlayerProfile(profile);
-                head.setItemMeta(meta);
-                z.getEquipment().setHelmet(head);
+                final String sanitizedSkin = skinName.matches("^[a-zA-Z0-9_-]+$") ? skinName : "Steve";
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                    try {
+                        PlayerProfile profile = Bukkit.createProfile(sanitizedSkin);
+                        profile.complete(true);
+                        Bukkit.getScheduler().runTask(plugin, () -> {
+                            if (z.isValid()) {
+                                ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+                                org.bukkit.inventory.meta.SkullMeta meta = (org.bukkit.inventory.meta.SkullMeta) head.getItemMeta();
+                                if (meta != null) {
+                                    meta.setPlayerProfile(profile);
+                                    head.setItemMeta(meta);
+                                    z.getEquipment().setHelmet(head);
+                                }
+                            }
+                        });
+                    } catch (Exception e) {
+                        plugin.getLogger().warning("Failed to fetch skin profile for " + sanitizedSkin + ": " + e.getMessage());
+                    }
+                });
             }
             addEntityToTeam(z);
         } else {
