@@ -87,6 +87,7 @@ teleport:
   successful: "<green>Teleport successful!</green>"
   cancelled: "<red>Teleport cancelled: {reason}</red>"
   already-teleporting: "<red>You are already teleporting.</red>"
+  unsafe: "<red>Teleport destination is unsafe or obstructed!</red>"
 
 # Fly
 fly:
