@@ -21,7 +21,7 @@ public class ChunkLoaderListener implements Listener {
         this.chunkLoaderManager = plugin.getChunkLoaderManager();
     }
 
-    @EventHandler
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
         if (!plugin.getConfig().getBoolean("features.chunk-loaders.enabled", true)) {
             return;
@@ -37,7 +37,7 @@ public class ChunkLoaderListener implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         if (!plugin.getConfig().getBoolean("features.chunk-loaders.enabled", true)) {
             return;
