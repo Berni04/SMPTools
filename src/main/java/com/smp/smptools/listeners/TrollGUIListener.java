@@ -209,6 +209,12 @@ public class TrollGUIListener implements Listener {
             return;
         }
 
+        if (!target.isOnline() || !target.isValid()) {
+            opener.sendMessage(plugin.getMessageManager().getMessage("common.player-not-found"));
+            opener.closeInventory();
+            return;
+        }
+
         String trollName = MiniMessage.miniMessage().serialize(clickedItem.getItemMeta().displayName());
         opener.sendMessage(plugin.getMessageManager().getMessage("troll.executing", opener,
                 Map.of("troll", trollName, "target", target.getName())));
@@ -323,9 +329,11 @@ public class TrollGUIListener implements Listener {
     }
 
     private void spawnTemporaryBlock(Player player, Material blockType) {
+        if (!player.isOnline()) return;
         Block targetBlock = player.getLocation().getBlock().getRelative(BlockFace.DOWN);
         if (targetBlock.getType().isSolid()) {
             Block tempBlock = targetBlock.getRelative(BlockFace.UP);
+            if (!tempBlock.getType().isAir()) return;
             Material originalType = tempBlock.getType();
             tempBlock.setType(blockType);
             new BukkitRunnable() {
@@ -365,11 +373,12 @@ public class TrollGUIListener implements Listener {
     }
 
     private void teleportRandomly(Player player) {
+        if (!player.isOnline()) return;
         int radius = 10;
         int x = player.getLocation().getBlockX() + random.nextInt(radius * 2) - radius;
         int z = player.getLocation().getBlockZ() + random.nextInt(radius * 2) - radius;
-        int y = player.getWorld().getHighestBlockYAt(x, z) + 1; // Teleport to highest block + 1
-        player.teleport(new Location(player.getWorld(), x + 0.5, y, z + 0.5));
+        Location targetLoc = new Location(player.getWorld(), x + 0.5, player.getLocation().getY(), z + 0.5);
+        com.smp.smptools.teleport.SafeLocationFinder.findSafeLocation(targetLoc).ifPresent(player::teleport);
     }
 
     private void sendFakeAdvancement(Player player) {
