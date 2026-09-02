@@ -140,6 +140,9 @@ public class ArtifactManager {
                             for (String slotStr : userSec.getKeys(false)) {
                                 try {
                                     int slot = Integer.parseInt(slotStr);
+                                    if (slot < 0 || slot >= 54) {
+                                        continue;
+                                    }
                                     ItemStack item = artifactsConfig.getItemStack("pouch." + uuidStr + "." + slotStr);
                                     if (item != null) {
                                         ArtifactType type = getArtifactType(item);
@@ -162,18 +165,20 @@ public class ArtifactManager {
     }
 
     public void savePouchData() {
-        if (artifactsConfig == null) return;
+        if (artifactsConfig == null || artifactsFile == null) return;
         artifactsConfig.set("pouch", null);
 
         for (Map.Entry<UUID, Map<Integer, ItemStack>> entry : equippedPouchMap.entrySet()) {
             String uuidStr = entry.getKey().toString();
             for (Map.Entry<Integer, ItemStack> slotEntry : entry.getValue().entrySet()) {
-                artifactsConfig.set("pouch." + uuidStr + "." + slotEntry.getKey(), slotEntry.getValue());
+                if (slotEntry.getKey() >= 0 && slotEntry.getKey() < 54) {
+                    artifactsConfig.set("pouch." + uuidStr + "." + slotEntry.getKey(), slotEntry.getValue());
+                }
             }
         }
 
         try {
-            artifactsConfig.save(artifactsFile);
+            com.smp.smptools.utils.AtomicFileWriter.save(artifactsConfig, artifactsFile);
         } catch (IOException e) {
             plugin.getLogger().log(java.util.logging.Level.SEVERE, "Could not save artifacts.yml", e);
         }
