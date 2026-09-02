@@ -2,7 +2,6 @@ package com.smp.smptools.storage;
 
 import com.smp.smptools.SMPTools;
 import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.*;
@@ -13,6 +12,14 @@ public class FlatFileStorageProvider implements StorageProvider {
 
     public FlatFileStorageProvider(SMPTools plugin) {
         this.plugin = plugin;
+    }
+
+    private void runSyncOrNow(Runnable task) {
+        if (Bukkit.getServer() == null || Bukkit.isPrimaryThread() || plugin == null || !plugin.isEnabled()) {
+            task.run();
+        } else {
+            Bukkit.getScheduler().runTask(plugin, task);
+        }
     }
 
     @Override
@@ -28,8 +35,10 @@ public class FlatFileStorageProvider implements StorageProvider {
 
     @Override
     public void saveStat(UUID uuid, String statKey, Object value) {
-        plugin.getStatsConfig().set("stats." + uuid + "." + statKey, value);
-        plugin.saveStatsConfig();
+        runSyncOrNow(() -> {
+            plugin.getStatsConfig().set("stats." + uuid + "." + statKey, value);
+            plugin.saveStatsConfig();
+        });
     }
 
     @Override
@@ -50,7 +59,6 @@ public class FlatFileStorageProvider implements StorageProvider {
             return defaultValue;
         }
     }
-
 
     @Override
     public Map<String, Object> getAllPlayerStats(UUID uuid) {
@@ -83,18 +91,22 @@ public class FlatFileStorageProvider implements StorageProvider {
 
     @Override
     public void clearPlayerStats(UUID uuid) {
-        String activeTrail = plugin.getStatsConfig().getString("stats." + uuid + ".active_trail");
-        plugin.getStatsConfig().set("stats." + uuid, null);
-        if (activeTrail != null) {
-            plugin.getStatsConfig().set("stats." + uuid + ".active_trail", activeTrail);
-        }
-        plugin.saveStatsConfig();
+        runSyncOrNow(() -> {
+            String activeTrail = plugin.getStatsConfig().getString("stats." + uuid + ".active_trail");
+            plugin.getStatsConfig().set("stats." + uuid, null);
+            if (activeTrail != null) {
+                plugin.getStatsConfig().set("stats." + uuid + ".active_trail", activeTrail);
+            }
+            plugin.saveStatsConfig();
+        });
     }
 
     @Override
     public void savePlayerTitle(UUID uuid, String title) {
-        plugin.getTagsConfig().set("player-titles." + uuid, title);
-        plugin.saveTagsConfig();
+        runSyncOrNow(() -> {
+            plugin.getTagsConfig().set("player-titles." + uuid, title);
+            plugin.saveTagsConfig();
+        });
     }
 
     @Override
@@ -104,8 +116,10 @@ public class FlatFileStorageProvider implements StorageProvider {
 
     @Override
     public void removePlayerTitle(UUID uuid) {
-        plugin.getTagsConfig().set("player-titles." + uuid, null);
-        plugin.saveTagsConfig();
+        runSyncOrNow(() -> {
+            plugin.getTagsConfig().set("player-titles." + uuid, null);
+            plugin.saveTagsConfig();
+        });
     }
 
     @Override
