@@ -164,4 +164,9 @@ public class TpaManager {
             player.sendMessage(plugin.getMessageManager().getMessage("tpa.toggle-off"));
         }
     }
+
+    public void cleanup() {
+        pendingRequests.clear();
+        tpaToggledOff.clear();
+    }
 }

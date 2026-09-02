@@ -362,6 +362,9 @@ public class SMPTools extends JavaPlugin {
         if (tradeManager != null) {
             tradeManager.cleanup();
         }
+        if (tpaManager != null) {
+            tpaManager.cleanup();
+        }
         if (chunkLoaderManager != null) {
             chunkLoaderManager.unloadAllChunks(); // Unload all force-loaded chunks
         }
