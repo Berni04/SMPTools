@@ -39,7 +39,7 @@ public class PortalListener implements Listener {
     public void onPlayerMove(PlayerMoveEvent event) {
         Location from = event.getFrom();
         Location to = event.getTo();
-        if (to == null || (from.getWorld().equals(to.getWorld()) && from.getBlockX() == to.getBlockX() && from.getBlockY() == to.getBlockY() && from.getBlockZ() == to.getBlockZ()))
+        if (to == null || (java.util.Objects.equals(from.getWorld(), to.getWorld()) && from.getBlockX() == to.getBlockX() && from.getBlockY() == to.getBlockY() && from.getBlockZ() == to.getBlockZ()))
             return;
 
         Block block = to.getBlock();

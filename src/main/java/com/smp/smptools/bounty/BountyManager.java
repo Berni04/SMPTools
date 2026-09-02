@@ -350,8 +350,12 @@ public class BountyManager {
             bounty.setClaimed(false);
             bounties.add(bounty);
             List<ItemStack> pending = pendingRefunds.get(claimerUuid);
-            if (pending != null) {
-                pending.removeAll(addedPending);
+            if (pending != null && !addedPending.isEmpty()) {
+                int toRemove = addedPending.size();
+                while (toRemove > 0 && !pending.isEmpty()) {
+                    pending.remove(pending.size() - 1);
+                    toRemove--;
+                }
                 if (pending.isEmpty()) {
                     pendingRefunds.remove(claimerUuid);
                 }

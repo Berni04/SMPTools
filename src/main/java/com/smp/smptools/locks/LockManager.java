@@ -312,10 +312,15 @@ public class LockManager {
 
     public boolean removeLock(Block block) {
         if (block == null) return false;
+        String resolvedKey = getLockKey(block);
         String canonicalKey = getBlockKey(block);
         String directKey = getLocationKey(block.getLocation());
 
         boolean removed = false;
+        if (resolvedKey != null && containerOwners.remove(resolvedKey) != null) {
+            containerTrusted.remove(resolvedKey);
+            removed = true;
+        }
         if (canonicalKey != null && containerOwners.remove(canonicalKey) != null) {
             containerTrusted.remove(canonicalKey);
             removed = true;
@@ -323,6 +328,15 @@ public class LockManager {
         if (directKey != null && containerOwners.remove(directKey) != null) {
             containerTrusted.remove(directKey);
             removed = true;
+        }
+
+        Block otherHalf = getSurvivingDoubleChestHalf(block);
+        if (otherHalf != null) {
+            String otherKey = getLocationKey(otherHalf.getLocation());
+            if (otherKey != null && containerOwners.remove(otherKey) != null) {
+                containerTrusted.remove(otherKey);
+                removed = true;
+            }
         }
 
         if (removed) {

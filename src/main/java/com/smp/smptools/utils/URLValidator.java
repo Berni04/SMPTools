@@ -202,7 +202,22 @@ public final class URLValidator {
                 }
             }
 
-            conn = (HttpURLConnection) currentUrl.openConnection();
+            InetAddress chosenAddress = addresses[0];
+            String hostHeader = host + (currentUrl.getPort() != -1 ? ":" + currentUrl.getPort() : "");
+            String ipString = chosenAddress.getHostAddress();
+            if (chosenAddress instanceof java.net.Inet6Address) {
+                ipString = "[" + ipString + "]";
+            }
+            int port = currentUrl.getPort() != -1 ? currentUrl.getPort() : currentUrl.getDefaultPort();
+            URL pinnedUrl = new URL(currentUrl.getProtocol(), ipString, port, currentUrl.getFile());
+
+            conn = (HttpURLConnection) pinnedUrl.openConnection(java.net.Proxy.NO_PROXY);
+            conn.setRequestProperty("Host", hostHeader);
+            if (conn instanceof javax.net.ssl.HttpsURLConnection httpsConn) {
+                httpsConn.setHostnameVerifier((hostname, session) ->
+                    javax.net.ssl.HttpsURLConnection.getDefaultHostnameVerifier().verify(host, session)
+                );
+            }
             conn.setConnectTimeout(Constants.URL_CONNECT_TIMEOUT_MS);
             conn.setReadTimeout(Constants.URL_READ_TIMEOUT_MS);
             conn.setInstanceFollowRedirects(false);

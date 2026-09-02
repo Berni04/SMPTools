@@ -33,8 +33,8 @@ public class SleepListener implements Listener {
             return; // It's not night
         }
 
-        // Prevent starting a vote if one is already in progress by another player
-        if (sleepManager.isVoteInProgress()) {
+        // Prevent starting a vote if one is already in progress in this world
+        if (sleepManager.isVoteInProgress(player.getWorld())) {
             player.sendMessage(plugin.getMessageManager().getMessage("sleep.already-voting"));
             return;
         }

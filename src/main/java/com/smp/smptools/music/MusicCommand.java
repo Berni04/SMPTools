@@ -74,6 +74,7 @@ public class MusicCommand extends AbstractPlayerCommand implements org.bukkit.ev
             SongPlayer task = playingTasks.remove(player.getUniqueId());
             boolean stoppedBroadcast = false;
             if (player.hasPermission("smptools.music.broadcast")) {
+                activeRequestGen.put(BROADCAST_UUID, 0L);
                 SongPlayer broadcastTask = playingTasks.remove(BROADCAST_UUID);
                 if (broadcastTask != null) {
                     broadcastTask.cancel();
@@ -134,7 +135,8 @@ public class MusicCommand extends AbstractPlayerCommand implements org.bukkit.ev
 
         player.sendMessage(plugin.getMessageManager().getMessage("music.downloading"));
         long requestId = globalRequestCounter.incrementAndGet();
-        activeRequestGen.put(player.getUniqueId(), requestId);
+        UUID requestKey = subCommand.equals("broadcast") ? BROADCAST_UUID : player.getUniqueId();
+        activeRequestGen.put(requestKey, requestId);
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
@@ -144,17 +146,21 @@ public class MusicCommand extends AbstractPlayerCommand implements org.bukkit.ev
                     Song song = NBSParser.parse(boundedStream);
                     if (song == null) {
                         Bukkit.getScheduler().runTask(plugin, () -> {
-                            if (java.util.Objects.equals(activeRequestGen.get(player.getUniqueId()), requestId)) {
+                            if (java.util.Objects.equals(activeRequestGen.get(requestKey), requestId)) {
                                 player.sendMessage(plugin.getMessageManager().getMessage("music.parse-failed"));
-                                activeRequestGen.remove(player.getUniqueId(), requestId);
+                                activeRequestGen.remove(requestKey, requestId);
                             }
                         });
                         return;
                     }
 
                     Bukkit.getScheduler().runTask(plugin, () -> {
-                        if (!java.util.Objects.equals(activeRequestGen.get(player.getUniqueId()), requestId)) {
+                        if (!java.util.Objects.equals(activeRequestGen.get(requestKey), requestId)) {
                             return; // Superseded by a newer request
+                        }
+
+                        if (subCommand.equals("broadcast") && !player.hasPermission("smptools.music.broadcast")) {
+                            return;
                         }
 
                         UUID targetKey = subCommand.equals("broadcast") ? BROADCAST_UUID : player.getUniqueId();
@@ -176,9 +182,9 @@ public class MusicCommand extends AbstractPlayerCommand implements org.bukkit.ev
                 }
             } catch (Exception e) {
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    if (java.util.Objects.equals(activeRequestGen.get(player.getUniqueId()), requestId)) {
+                    if (java.util.Objects.equals(activeRequestGen.get(requestKey), requestId)) {
                         player.sendMessage(plugin.getMessageManager().getMessage("music.download-failed"));
-                        activeRequestGen.remove(player.getUniqueId(), requestId);
+                        activeRequestGen.remove(requestKey, requestId);
                     }
                 });
                 plugin.getLogger().log(Level.SEVERE, "Failed to download song", e);

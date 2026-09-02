@@ -227,10 +227,12 @@ public class DialogueManager implements Listener {
         Location loc = player.getLocation().add(0, 2.2, 0);
         TextDisplay display = (TextDisplay) player.getWorld().spawn(loc, TextDisplay.class);
 
-        display.text(MiniMessage.miniMessage().deserialize("<gray>\"" + text + "\"</gray>"));
+        display.text(LegacyComponentSerializer.legacyAmpersand().deserialize(text));
         display.setBillboard(Display.Billboard.CENTER);
         display.setDefaultBackground(true);
         display.setAlignment(TextDisplay.TextAlignment.CENTER);
+        display.setVisibleByDefault(false);
+        player.showEntity(plugin, display);
 
         activeTextDisplays.put(player.getUniqueId(), display.getUniqueId());
 

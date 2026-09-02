@@ -47,7 +47,9 @@ public class DailyRewardCommand extends AbstractPlayerCommand {
                 }
             } catch (java.time.format.DateTimeParseException e) {
                 plugin.getLogger().warning("Corrupted daily reward timestamp for player " + uuid + ": " + lastClaimedString);
-                player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Could not verify daily reward status due to data corruption. Please contact an administrator.</red>"));
+                plugin.getRewardsConfig().set("players." + uuid + ".last-claimed", null);
+                plugin.saveRewardsConfig();
+                player.sendMessage(plugin.getMessageManager().getMessage("daily.corrupted", player));
                 return true;
             }
         }

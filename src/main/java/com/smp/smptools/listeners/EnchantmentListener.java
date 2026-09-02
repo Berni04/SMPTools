@@ -77,6 +77,11 @@ public class EnchantmentListener implements Listener {
                     continue;
                 }
 
+                if (!childEvent.isDropItems()) {
+                    block.setType(Material.AIR);
+                    continue;
+                }
+
                 if (hasTelekinesis) {
                     if (player.getInventory().firstEmpty() != -1) {
                         for (ItemStack drop : block.getDrops(tool)) {

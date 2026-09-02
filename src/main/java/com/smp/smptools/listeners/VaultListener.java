@@ -36,13 +36,13 @@ public class VaultListener implements Listener {
 
             try {
                 String encodedInventory = PrivateVaultCommand.encodeInventory(inventory.getContents());
-                File vaultsFile = new File(plugin.getDataFolder(), "vaults.yml");
+                File vaultsFile = PrivateVaultCommand.getVaultsFile(plugin);
                 YamlConfiguration vaultsConfig = PrivateVaultCommand.getVaultsConfig(plugin);
                 vaultsConfig.set("vaults." + player.getUniqueId(), encodedInventory);
-                com.smp.smptools.utils.AsyncConfigHelper.saveConfigAsync(plugin, vaultsConfig, vaultsFile, "vaults.yml");
+                AtomicFileWriter.save(vaultsConfig, vaultsFile);
 
                 player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("vault.saved", player));
-            } catch (IllegalStateException e) {
+            } catch (IllegalStateException | IOException e) {
                 plugin.getLogger().warning("Failed to save vault for player " + player.getName() + ": " + e.getMessage());
                 player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("vault.save-failed", player));
             }

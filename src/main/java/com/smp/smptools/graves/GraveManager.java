@@ -73,9 +73,20 @@ public class GraveManager implements Listener {
                         }
                     }
                     Block b = loc.getBlock();
-                    if (b.getState() instanceof org.bukkit.block.Skull skull &&
-                        skull.getPersistentDataContainer().has(GRAVE_OWNER_KEY, org.bukkit.persistence.PersistentDataType.STRING)) {
-                        b.setType(Material.AIR);
+                    boolean isSkull = b.getType() == Material.PLAYER_HEAD || b.getType() == Material.PLAYER_WALL_HEAD;
+                    if (isSkull) {
+                        if (b.getState() instanceof org.bukkit.block.Skull skull) {
+                            String ownerKey = skull.getPersistentDataContainer().get(GRAVE_OWNER_KEY, org.bukkit.persistence.PersistentDataType.STRING);
+                            if (ownerKey != null) {
+                                if (ownerKey.equals(g.getOwner().toString())) {
+                                    b.setType(Material.AIR);
+                                }
+                            } else {
+                                b.setType(Material.AIR);
+                            }
+                        } else {
+                            b.setType(Material.AIR);
+                        }
                     }
                     removeHolograms(loc);
                     graves.remove(loc);
@@ -149,16 +160,19 @@ public class GraveManager implements Listener {
             while (graves.containsKey(candidate) && candidate.getBlockY() < world.getMaxHeight() - 1) {
                 candidate.add(0, 1, 0);
             }
-            if (!graves.containsKey(candidate)) {
+            if (!graves.containsKey(candidate) && candidate.getBlock().getType().isAir() && !candidate.getBlock().isLiquid()) {
                 validLocation = candidate;
             } else {
                 for (int dx = -2; dx <= 2 && (validLocation == null || graves.containsKey(validLocation)); dx++) {
                     for (int dz = -2; dz <= 2 && (validLocation == null || graves.containsKey(validLocation)); dz++) {
                         int hx = baseX + dx;
                         int hz = baseZ + dz;
-                        int hy = Math.max(world.getMinHeight() + 1, Math.min(world.getMaxHeight() - 1, world.getHighestBlockYAt(hx, hz) + 1));
+                        int topH = world.getHighestBlockYAt(hx, hz);
+                        if (topH >= world.getMaxHeight() - 1) continue;
+                        int hy = Math.max(world.getMinHeight() + 1, topH + 1);
                         Location hCand = new Location(world, hx, hy, hz);
-                        if (!graves.containsKey(hCand)) {
+                        Block candBlock = hCand.getBlock();
+                        if (!graves.containsKey(hCand) && candBlock.getType().isAir() && !candBlock.isLiquid()) {
                             validLocation = hCand;
                         }
                     }

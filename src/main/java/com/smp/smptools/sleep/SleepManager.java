@@ -28,13 +28,16 @@ public class SleepManager {
         return voteInProgress;
     }
 
+    public boolean isVoteInProgress(World world) {
+        return voteInProgress && voteWorld != null && voteWorld.equals(world);
+    }
+
     public void startVote(Player player) {
-        if (voteInProgress) {
+        World world = player.getWorld();
+        if (isVoteInProgress(world)) {
             player.sendMessage(plugin.getMessageManager().getMessage("sleep.already-voting"));
             return;
         }
-
-        World world = player.getWorld();
         if (world.getEnvironment() != World.Environment.NORMAL) {
             player.sendMessage(plugin.getMessageManager().getMessage("sleep.not-overworld"));
             return;

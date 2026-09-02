@@ -42,7 +42,11 @@ public class PrivateVaultCommand extends AbstractPlayerCommand {
             } catch (IOException ignored) {}
         }
         try {
-            cachedVaultsConfig = YamlConfiguration.loadConfiguration(file);
+            YamlConfiguration config = new YamlConfiguration();
+            if (file.exists()) {
+                config.load(file);
+            }
+            cachedVaultsConfig = config;
             vaultsConfigLoadFailed = false;
         } catch (Exception e) {
             vaultsConfigLoadFailed = true;

@@ -1,9 +1,11 @@
 package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
+import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -94,8 +96,14 @@ public class ChristmasWorldListener implements Listener {
                 event.setCancelled(true);
                 if (event.getCause() == EntityDamageEvent.DamageCause.VOID) {
                     Location spawn = player.getWorld().getSpawnLocation();
-                    com.smp.smptools.teleport.SafeLocationFinder.findSafeLocation(spawn)
-                            .ifPresentOrElse(player::teleport, () -> player.teleport(spawn));
+                    java.util.Optional<Location> safeSpawn = com.smp.smptools.teleport.SafeLocationFinder.findSafeLocation(spawn);
+                    if (safeSpawn.isPresent()) {
+                        player.teleport(safeSpawn.get());
+                    } else {
+                        World mainWorld = Bukkit.getWorlds().get(0);
+                        com.smp.smptools.teleport.SafeLocationFinder.findSafeLocation(mainWorld.getSpawnLocation())
+                                .ifPresent(player::teleport);
+                    }
                     player.setFallDistance(0);
                 }
             }

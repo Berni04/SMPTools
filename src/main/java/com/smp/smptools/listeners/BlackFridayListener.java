@@ -65,13 +65,11 @@ public class BlackFridayListener implements Listener {
         }
 
         if (!manager.isEnabled()) {
-            java.util.Set<UUID> viewers = activeViewers.get(villagerUUID);
-            if (viewers == null || viewers.isEmpty()) {
-                List<MerchantRecipe> original = originalRecipes.remove(villagerUUID);
-                if (original != null) {
-                    restoreOriginalRecipes(merchant, original);
-                }
+            List<MerchantRecipe> original = originalRecipes.remove(villagerUUID);
+            if (original != null) {
+                restoreOriginalRecipes(merchant, original);
             }
+            activeViewers.remove(villagerUUID);
             return;
         }
 

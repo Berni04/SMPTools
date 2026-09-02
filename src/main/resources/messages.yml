@@ -252,6 +252,7 @@ daily:
   disabled: "<red>The daily reward system is currently disabled.</red>"
   cooldown: "<red>You have already claimed your daily reward. Please wait {hours}h {minutes}m.</red>"
   claimed: "<green>You have successfully claimed your daily reward!</green>"
+  corrupted: "<red>Could not verify daily reward status due to data corruption. Timestamp has been reset.</red>"
 
 # Private Vault
 vault:
