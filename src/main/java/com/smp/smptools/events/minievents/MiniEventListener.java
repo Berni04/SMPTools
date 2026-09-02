@@ -52,6 +52,14 @@ public class MiniEventListener implements Listener {
         eventManager.claimOfflineRewards(event.getPlayer());
     }
 
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerQuit(org.bukkit.event.player.PlayerQuitEvent event) {
+        MiniEventSession activeSession = eventManager.getActiveSession();
+        if (activeSession != null && activeSession.isActive()) {
+            activeSession.cleanPlayer(event.getPlayer());
+        }
+    }
+
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onFish(PlayerFishEvent event) {
         MiniEventSession activeSession = eventManager.getActiveSession();

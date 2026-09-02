@@ -120,9 +120,9 @@ public class MapCommand extends AbstractPlayerCommand {
 
             } catch (Exception e) {
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    player.sendMessage(plugin.getMessageManager().getMessage("map.error", player, Map.of("message", e.getMessage())));
+                    player.sendMessage(plugin.getMessageManager().getMessage("map.download-failed", player));
                 });
-                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to create map", e);
+                plugin.getLogger().log(java.util.logging.Level.WARNING, "Failed to create map for " + player.getName() + " from " + urlString + ": " + e.getMessage(), e);
             }
         });
 

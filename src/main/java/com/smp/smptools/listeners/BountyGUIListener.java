@@ -202,23 +202,45 @@ public class BountyGUIListener implements Listener {
         holder.setInventory(inv);
 
         List<Bounty> active = bountyManager.getActiveBountiesForTarget(targetUuid);
-        int slot = 0;
+        List<Map.Entry<Bounty, ItemStack>> allItems = new ArrayList<>();
         for (Bounty b : active) {
             for (ItemStack item : b.getItems()) {
-                if (slot >= 45) break;
                 if (item != null && item.getType() != Material.AIR) {
-                    ItemStack copy = item.clone();
-                    ItemMeta meta = copy.getItemMeta();
-                    if (meta != null) {
-                        List<Component> lore = meta.hasLore() && meta.lore() != null ? new ArrayList<>(meta.lore()) : new ArrayList<>();
-                        lore.add(Component.empty());
-                        lore.add(MiniMessage.miniMessage().deserialize("<dark_gray>Placed by: " + b.getPlacerName() + "</dark_gray>"));
-                        meta.lore(lore);
-                        copy.setItemMeta(meta);
-                    }
-                    inv.setItem(slot++, copy);
+                    allItems.add(Map.entry(b, item));
                 }
             }
+        }
+
+        int slot = 0;
+        int maxSlots = allItems.size() > 45 ? 44 : 45;
+        for (int i = 0; i < allItems.size(); i++) {
+            if (slot >= maxSlots) break;
+            Map.Entry<Bounty, ItemStack> entry = allItems.get(i);
+            Bounty b = entry.getKey();
+            ItemStack item = entry.getValue();
+
+            ItemStack copy = item.clone();
+            ItemMeta meta = copy.getItemMeta();
+            if (meta != null) {
+                List<Component> lore = meta.hasLore() && meta.lore() != null ? new ArrayList<>(meta.lore()) : new ArrayList<>();
+                lore.add(Component.empty());
+                lore.add(MiniMessage.miniMessage().deserialize("<dark_gray>Placed by: " + b.getPlacerName() + "</dark_gray>"));
+                meta.lore(lore);
+                copy.setItemMeta(meta);
+            }
+            inv.setItem(slot++, copy);
+        }
+
+        if (allItems.size() > 45) {
+            int remaining = allItems.size() - 44;
+            ItemStack more = new ItemStack(Material.PAPER);
+            ItemMeta moreMeta = more.getItemMeta();
+            if (moreMeta != null) {
+                moreMeta.displayName(MiniMessage.miniMessage().deserialize("<yellow><b>+" + remaining + " more item" + (remaining == 1 ? "" : "s") + "</b></yellow>"));
+                moreMeta.lore(List.of(MiniMessage.miniMessage().deserialize("<gray>Claim the bounty to receive all items.</gray>")));
+                more.setItemMeta(moreMeta);
+            }
+            inv.setItem(44, more);
         }
 
         // Back button (Slot 49)

@@ -47,29 +47,40 @@ public class FestiveMobsListener implements Listener {
         }
     }
 
-    @EventHandler
-    public void onEntitySpawn(EntitySpawnEvent event) {
-        if (christmasConfig == null || !christmasConfig.getBoolean("festive-mobs.enabled"))
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
+    public void onCreatureSpawn(org.bukkit.event.entity.CreatureSpawnEvent event) {
+        if (christmasConfig == null || !christmasConfig.getBoolean("festive-mobs.enabled", false))
             return;
 
-        if (event.getEntity() instanceof Zombie) {
-            Zombie zombie = (Zombie) event.getEntity();
+        // Limit to NATURAL spawns or christmas world
+        String worldName = event.getEntity().getWorld().getName();
+        boolean isChristmasWorld = "christmas".equalsIgnoreCase(worldName);
+        if (event.getSpawnReason() != org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.NATURAL && !isChristmasWorld) {
+            return;
+        }
+
+        if (event.getEntity() instanceof Zombie zombie) {
             ItemStack helmet = new ItemStack(Material.LEATHER_HELMET);
             LeatherArmorMeta meta = (LeatherArmorMeta) helmet.getItemMeta();
-            meta.setColor(Color.RED);
-            meta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
-                    .deserialize(SMPTools.getInstance().getMessageManager().getRawMessage("christmas.santa-hat")));
-            helmet.setItemMeta(meta);
-            zombie.getEquipment().setHelmet(helmet);
-        } else if (event.getEntity() instanceof Skeleton) {
-            Skeleton skeleton = (Skeleton) event.getEntity();
+            if (meta != null) {
+                meta.setColor(Color.RED);
+                meta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                        .deserialize(SMPTools.getInstance().getMessageManager().getRawMessage("christmas.santa-hat")));
+                helmet.setItemMeta(meta);
+                zombie.getEquipment().setHelmet(helmet);
+                zombie.getEquipment().setHelmetDropChance(0.0f);
+            }
+        } else if (event.getEntity() instanceof Skeleton skeleton) {
             ItemStack helmet = new ItemStack(Material.LEATHER_HELMET);
             LeatherArmorMeta meta = (LeatherArmorMeta) helmet.getItemMeta();
-            meta.setColor(Color.GREEN);
-            meta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
-                    .deserialize(SMPTools.getInstance().getMessageManager().getRawMessage("christmas.elf-hat")));
-            helmet.setItemMeta(meta);
-            skeleton.getEquipment().setHelmet(helmet);
+            if (meta != null) {
+                meta.setColor(Color.GREEN);
+                meta.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                        .deserialize(SMPTools.getInstance().getMessageManager().getRawMessage("christmas.elf-hat")));
+                helmet.setItemMeta(meta);
+                skeleton.getEquipment().setHelmet(helmet);
+                skeleton.getEquipment().setHelmetDropChance(0.0f);
+            }
         }
     }
 

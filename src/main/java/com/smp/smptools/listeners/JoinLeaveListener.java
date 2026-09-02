@@ -29,9 +29,14 @@ public class JoinLeaveListener implements Listener {
         Player player = event.getPlayer();
         event.quitMessage(SMPTools.getInstance().getMessageManager().getMessage("join-leave.left", player));
 
-        // Update playtime on quit
         long totalTicks = player.getStatistic(org.bukkit.Statistic.PLAY_ONE_MINUTE);
         long totalMinutes = totalTicks / (20 * 60);
         plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".playtime_minutes", totalMinutes);
+        if (plugin.getChatManager() != null) {
+            plugin.getChatManager().removePlayer(player.getUniqueId());
+        }
+        if (plugin.getConfig().getBoolean("stats.save-on-quit", true)) {
+            plugin.saveStatsConfig();
+        }
     }
 }

@@ -185,7 +185,7 @@ public class TagManager implements Listener {
                 try {
                     flatFileSnapshotTemp = Bukkit.getScheduler().callSyncMethod(plugin, () ->
                             plugin.getStorageManager().getProvider().getAllPlayerStats(uuid)
-                    ).get();
+                    ).get(5, java.util.concurrent.TimeUnit.SECONDS);
                 } catch (Exception e) {
                     plugin.getLogger().warning("Could not load stats for " + uuid + ": " + e.getMessage());
                     loadingPlayers.remove(uuid);

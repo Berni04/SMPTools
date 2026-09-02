@@ -115,8 +115,17 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
                     return true;
                 }
                 if (args.length > 1 && args[1].equalsIgnoreCase("start")) {
+                    if (manager.hasAnyGiftsDeposited()) {
+                        player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Cannot start Secret Santa: deposited gifts already exist from a previous round! Run <yellow>/secretsanta admin clear</yellow> first.</red>"));
+                        return true;
+                    }
                     manager.generateMatches();
                     player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.matches-generated"));
+                } else if (args.length > 1 && args[1].equalsIgnoreCase("clear")) {
+                    manager.clearAllData();
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<green>Cleared all Secret Santa participants, matches, and gifts.</green>"));
+                } else {
+                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<yellow>Usage: /secretsanta admin <start|clear></yellow>"));
                 }
                 break;
 
