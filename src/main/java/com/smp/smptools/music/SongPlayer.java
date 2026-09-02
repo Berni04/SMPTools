@@ -34,7 +34,10 @@ public class SongPlayer extends BukkitRunnable {
             }
 
             for (Player player : audience) {
-                player.playNote(player.getLocation(), getInstrument(note.getInstrument()), new org.bukkit.Note(note.getKey() - 33));
+                if (player != null && player.isOnline()) {
+                    int noteId = Math.max(0, Math.min(24, note.getKey() - 33));
+                    player.playNote(player.getLocation(), getInstrument(note.getInstrument()), new org.bukkit.Note(noteId));
+                }
             }
         }
     }

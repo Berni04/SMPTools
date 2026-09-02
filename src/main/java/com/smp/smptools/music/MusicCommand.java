@@ -17,7 +17,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
-public class MusicCommand extends AbstractPlayerCommand {
+public class MusicCommand extends AbstractPlayerCommand implements org.bukkit.event.Listener {
 
     private final Map<UUID, SongPlayer> playingTasks = new ConcurrentHashMap<>();
     private final Map<UUID, Long> activeRequestGen = new ConcurrentHashMap<>();
@@ -25,6 +25,29 @@ public class MusicCommand extends AbstractPlayerCommand {
 
     public MusicCommand(SMPTools plugin) {
         super(plugin);
+        if (plugin != null && Bukkit.getServer() != null) {
+            try {
+                Bukkit.getPluginManager().registerEvents(this, plugin);
+            } catch (Exception ignored) {}
+        }
+    }
+
+    @org.bukkit.event.EventHandler
+    public void onPlayerQuit(org.bukkit.event.player.PlayerQuitEvent event) {
+        UUID uuid = event.getPlayer().getUniqueId();
+        activeRequestGen.remove(uuid);
+        SongPlayer task = playingTasks.remove(uuid);
+        if (task != null) {
+            try { task.cancel(); } catch (Exception ignored) {}
+        }
+    }
+
+    public void cleanup() {
+        activeRequestGen.clear();
+        for (SongPlayer task : playingTasks.values()) {
+            try { task.cancel(); } catch (Exception ignored) {}
+        }
+        playingTasks.clear();
     }
 
     @Override
