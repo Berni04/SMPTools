@@ -98,15 +98,18 @@ public class LockManagerTest {
         // Now pair into a double chest
         createDoubleChestPair(leftBlock, rightBlock);
 
+        // getBlockKey must be a pure function and NOT mutate containerOwners on read path (CRIT-01)
         String doubleKey = manager.getBlockKey(leftBlock);
         assertNotNull(doubleKey);
         assertEquals(leftKey, doubleKey); // canonical key is leftKey (x=10)
+        assertEquals(ownerA, manager.getContainerOwners().get(leftKey));
+        assertEquals(ownerB, manager.getContainerOwners().get(rightKey));
+
+        // Explicit migration moves rightKey to canonical key safely
+        manager.migrateToDoubleChest(rightBlock, leftBlock);
 
         // Verify primary owner is ownerA
         assertEquals(ownerA, manager.getContainerOwners().get(doubleKey));
-
-        // Verify rightKey lock entry was removed from containerOwners
-        assertFalse(manager.getContainerOwners().containsKey(rightKey));
 
         // Verify both owners and trusted players retain access via canAccess
         assertTrue(manager.canAccess(leftBlock, createPlayerProxy(ownerA)), "Owner A must retain access.");

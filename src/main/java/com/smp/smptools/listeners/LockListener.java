@@ -3,11 +3,14 @@ package com.smp.smptools.listeners;
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.locks.LockManager;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
+import org.bukkit.block.Chest;
 import org.bukkit.block.DoubleChest;
 import org.bukkit.entity.Player;
+import java.util.UUID;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -17,6 +20,7 @@ import org.bukkit.event.block.BlockDispenseEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.inventory.InventoryMoveItemEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
@@ -29,6 +33,41 @@ public class LockListener implements Listener {
     public LockListener(SMPTools plugin) {
         this.plugin = plugin;
         this.lockManager = plugin.getLockManager();
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onChestPlace(BlockPlaceEvent event) {
+        Block placed = event.getBlockPlaced();
+        if (!(placed.getState() instanceof Chest)) return;
+
+        Player player = event.getPlayer();
+        for (org.bukkit.block.BlockFace face : new org.bukkit.block.BlockFace[]{
+                org.bukkit.block.BlockFace.NORTH,
+                org.bukkit.block.BlockFace.EAST,
+                org.bukkit.block.BlockFace.SOUTH,
+                org.bukkit.block.BlockFace.WEST
+        }) {
+            Block adjacent = placed.getRelative(face);
+            if (adjacent.getState() instanceof Chest) {
+                if (lockManager.isLocked(adjacent)) {
+                    UUID owner = lockManager.getOwnerUUID(adjacent);
+                    if (owner != null && !owner.equals(player.getUniqueId()) && !player.hasPermission("smptools.locks.admin")) {
+                        event.setCancelled(true);
+                        player.sendMessage(MiniMessage.miniMessage().deserialize("<red>🔒 You cannot place a chest adjacent to someone else's locked chest!</red>"));
+                        return;
+                    }
+                    if (owner != null && owner.equals(player.getUniqueId())) {
+                        if (plugin != null) {
+                            Bukkit.getScheduler().runTask(plugin, () -> {
+                                if (placed.getState() instanceof Chest placedAfter && placedAfter.getInventory() instanceof org.bukkit.inventory.DoubleChestInventory) {
+                                    lockManager.migrateToDoubleChest(adjacent, placed);
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
