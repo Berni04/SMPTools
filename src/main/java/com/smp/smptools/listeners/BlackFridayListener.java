@@ -69,7 +69,7 @@ public class BlackFridayListener implements Listener {
             java.util.Set<UUID> viewers = activeViewers.get(villagerUUID);
             if (viewers != null && !viewers.isEmpty()) {
                 event.setCancelled(true);
-                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>This merchant's special sale has ended.</red>"));
+                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("blackfriday.sale-ended", player));
                 return;
             }
             List<MerchantRecipe> original = originalRecipes.remove(villagerUUID);

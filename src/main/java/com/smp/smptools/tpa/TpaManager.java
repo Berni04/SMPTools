@@ -56,7 +56,7 @@ public class TpaManager {
      */
     public void sendTeleportRequest(@NotNull Player requester, @NotNull Player target) {
         if (plugin.getKrampusManager() != null && plugin.getKrampusManager().isKidnapped(requester)) {
-            requester.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>You cannot teleport while trapped in Krampus's cage!</red>"));
+            requester.sendMessage(plugin.getMessageManager().getMessage("tpa.caged", requester));
             return;
         }
         if (requester.isDead() || target.isDead()) {
@@ -133,8 +133,8 @@ public class TpaManager {
         }
 
         if (plugin.getKrampusManager() != null && plugin.getKrampusManager().isKidnapped(requester)) {
-            acceptor.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>The player cannot teleport while trapped in Krampus's cage!</red>"));
-            requester.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>You cannot teleport while trapped in Krampus's cage!</red>"));
+            acceptor.sendMessage(plugin.getMessageManager().getMessage("tpa.target-caged", acceptor));
+            requester.sendMessage(plugin.getMessageManager().getMessage("tpa.caged", requester));
             return;
         }
 

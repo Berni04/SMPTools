@@ -110,6 +110,21 @@ public final class AsyncConfigHelper {
      * @param onSuccess callback invoked on the main thread after successful save
      * @param onError callback invoked on the main thread if save fails
      */
+    private static void dispatchMainThreadCallback(Plugin plugin, Runnable callback) {
+        if (callback == null) return;
+        if (plugin != null && plugin.isEnabled()) {
+            try {
+                if (org.bukkit.Bukkit.isPrimaryThread()) {
+                    callback.run();
+                } else {
+                    org.bukkit.Bukkit.getScheduler().runTask(plugin, callback);
+                }
+            } catch (Exception ignored) {
+                // Suppress Bukkit-dependent callbacks when scheduler is disabled/shutting down
+            }
+        }
+    }
+
     public static void saveConfigAsync(Plugin plugin, FileConfiguration config, File file, String name, Runnable onSuccess, java.util.function.Consumer<Exception> onError) {
         // Serialize to string on main thread - this creates a deep snapshot
         String data = config.saveToString();
@@ -118,23 +133,13 @@ public final class AsyncConfigHelper {
             getExecutor().submit(() -> {
                 try {
                     AtomicFileWriter.write(file.toPath(), data.getBytes(StandardCharsets.UTF_8));
-                    if (onSuccess != null) {
-                        if (plugin != null && plugin.isEnabled()) {
-                            org.bukkit.Bukkit.getScheduler().runTask(plugin, onSuccess);
-                        } else {
-                            onSuccess.run();
-                        }
-                    }
+                    dispatchMainThreadCallback(plugin, onSuccess);
                 } catch (IOException e) {
                     if (plugin != null) {
                         plugin.getLogger().log(Level.SEVERE, "Could not save " + name + "!", e);
                     }
                     if (onError != null) {
-                        if (plugin != null && plugin.isEnabled()) {
-                            org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> onError.accept(e));
-                        } else {
-                            onError.accept(e);
-                        }
+                        dispatchMainThreadCallback(plugin, () -> onError.accept(e));
                     }
                 }
             });
@@ -144,15 +149,13 @@ public final class AsyncConfigHelper {
             // Fallback synchronous write if executor is already shut down
             try {
                 AtomicFileWriter.write(file.toPath(), data.getBytes(StandardCharsets.UTF_8));
-                if (onSuccess != null) {
-                    onSuccess.run();
-                }
+                dispatchMainThreadCallback(plugin, onSuccess);
             } catch (IOException ex) {
                 if (plugin != null) {
                     plugin.getLogger().log(Level.SEVERE, "Could not save " + name + "!", ex);
                 }
                 if (onError != null) {
-                    onError.accept(ex);
+                    dispatchMainThreadCallback(plugin, () -> onError.accept(ex));
                 }
             }
         }

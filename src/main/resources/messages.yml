@@ -51,6 +51,7 @@ homes:
   limit-reached: "<red>You have reached your home limit of {limit} homes.</red>"
   invalid-name: "<red>Invalid home name. Use only letters, numbers, _ and - (max {max} characters).</red>"
   world-not-found: "<red>Error: Home world not found.</red>"
+  caged: "<red>You cannot teleport while trapped in Krampus's cage!</red>"
   gui-title: "Your Homes"
   delete-confirm-title: "Delete home '{name}'?"
   confirm: "<green>Confirm</green>"
@@ -78,6 +79,8 @@ tpa:
   already-pending: "<gold>{target} already has a pending teleport request.</gold>"
   self-request: "<red>You cannot send a teleport request to yourself.</red>"
   target-toggled-off: "<red>{target} is not accepting teleport requests at this time.</red>"
+  caged: "<red>You cannot teleport while trapped in Krampus's cage!</red>"
+  target-caged: "<red>The player cannot teleport while trapped in Krampus's cage!</red>"
   expired-other: "<red>Teleport request from {target} has expired.</red>"
 
 # Teleport
@@ -391,6 +394,7 @@ blackfriday:
   enabled: "<green>Black Friday event has been enabled!</green>"
   disabled: "<red>Black Friday event has been disabled!</red>"
   reloaded: "<green>Black Friday configuration reloaded!</green>"
+  sale-ended: "<red>This merchant's special sale has ended.</red>"
   status-header: "<gold>=== Black Friday Status ===</gold>"
   status-enabled: "<yellow>Enabled: </yellow>{status}"
   status-enabled-yes: "<green>YES</green>"

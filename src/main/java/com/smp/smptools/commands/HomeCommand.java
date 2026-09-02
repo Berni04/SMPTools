@@ -20,7 +20,7 @@ public class HomeCommand extends AbstractPlayerCommand {
     @Override
     protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
         if (plugin.getKrampusManager() != null && plugin.getKrampusManager().isKidnapped(player)) {
-            player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>You cannot teleport while trapped in Krampus's cage!</red>"));
+            player.sendMessage(plugin.getMessageManager().getMessage("homes.caged", player));
             return true;
         }
 

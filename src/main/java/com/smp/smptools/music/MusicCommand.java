@@ -163,7 +163,7 @@ public class MusicCommand extends AbstractPlayerCommand implements org.bukkit.ev
                             return; // Superseded by a newer request
                         }
 
-                        if (subCommand.equals("broadcast") && !player.hasPermission("smptools.music.broadcast")) {
+                        if (subCommand.equals("broadcast") && player.isOnline() && !player.hasPermission("smptools.music.broadcast")) {
                             return;
                         }
 
@@ -181,7 +181,9 @@ public class MusicCommand extends AbstractPlayerCommand implements org.bukkit.ev
                         
                         playingTasks.put(targetKey, songPlayer);
                         songPlayer.play(plugin);
-                        player.sendMessage(plugin.getMessageManager().getMessage("music.now-playing", player, Map.of("title", song.getTitle())));
+                        if (player.isOnline()) {
+                            player.sendMessage(plugin.getMessageManager().getMessage("music.now-playing", player, Map.of("title", song.getTitle())));
+                        }
                     });
                 }
             } catch (Exception e) {

@@ -118,7 +118,9 @@ public class ChristmasWorldListener implements Listener {
                             .filter(w -> w.getEnvironment() == World.Environment.NORMAL && !w.getName().equalsIgnoreCase(WORLD_NAME))
                             .findFirst()
                             .orElse(Bukkit.getWorlds().get(0));
-                    player.teleport(primaryWorld.getSpawnLocation());
+                    int highestY = primaryWorld.getHighestBlockYAt(primaryWorld.getSpawnLocation());
+                    Location highSpawn = new Location(primaryWorld, primaryWorld.getSpawnLocation().getX(), highestY + 1, primaryWorld.getSpawnLocation().getZ());
+                    com.smp.smptools.teleport.SafeLocationFinder.findSafeLocation(highSpawn).ifPresent(player::teleport);
                     player.setFallDistance(0);
                 }
             }

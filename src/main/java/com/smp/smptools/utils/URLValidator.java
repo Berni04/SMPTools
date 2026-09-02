@@ -1,12 +1,24 @@
 package com.smp.smptools.utils;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
+import java.net.Socket;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Utility class for validating and securing URL connections.
@@ -202,28 +214,20 @@ public final class URLValidator {
                 }
             }
 
-            InetAddress chosenAddress = addresses[0];
-            String hostHeader = host + (currentUrl.getPort() != -1 ? ":" + currentUrl.getPort() : "");
-
             if ("https".equalsIgnoreCase(currentUrl.getProtocol())) {
                 conn = (HttpURLConnection) currentUrl.openConnection(java.net.Proxy.NO_PROXY);
-                conn.setRequestProperty("Host", hostHeader);
+                conn.setConnectTimeout(Constants.URL_CONNECT_TIMEOUT_MS);
+                conn.setReadTimeout(Constants.URL_READ_TIMEOUT_MS);
+                conn.setInstanceFollowRedirects(false);
                 if (conn instanceof javax.net.ssl.HttpsURLConnection httpsConn) {
-                    httpsConn.setSSLSocketFactory(new PinningSSLSocketFactory((javax.net.ssl.SSLSocketFactory) javax.net.ssl.SSLSocketFactory.getDefault(), chosenAddress));
+                    httpsConn.setSSLSocketFactory(new PinningSSLSocketFactory(
+                            (javax.net.ssl.SSLSocketFactory) javax.net.ssl.SSLSocketFactory.getDefault(),
+                            addresses,
+                            Constants.URL_CONNECT_TIMEOUT_MS));
                 }
             } else {
-                String ipString = chosenAddress.getHostAddress();
-                if (chosenAddress instanceof java.net.Inet6Address) {
-                    ipString = "[" + ipString + "]";
-                }
-                int port = currentUrl.getPort() != -1 ? currentUrl.getPort() : currentUrl.getDefaultPort();
-                URL pinnedUrl = new URL(currentUrl.getProtocol(), ipString, port, currentUrl.getFile());
-                conn = (HttpURLConnection) pinnedUrl.openConnection(java.net.Proxy.NO_PROXY);
-                conn.setRequestProperty("Host", hostHeader);
+                conn = new PinnedHttpURLConnection(currentUrl, addresses, Constants.URL_CONNECT_TIMEOUT_MS, Constants.URL_READ_TIMEOUT_MS);
             }
-            conn.setConnectTimeout(Constants.URL_CONNECT_TIMEOUT_MS);
-            conn.setReadTimeout(Constants.URL_READ_TIMEOUT_MS);
-            conn.setInstanceFollowRedirects(false);
 
             int responseCode = conn.getResponseCode();
             if (responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
@@ -260,11 +264,27 @@ public final class URLValidator {
 
     private static class PinningSSLSocketFactory extends javax.net.ssl.SSLSocketFactory {
         private final javax.net.ssl.SSLSocketFactory delegate;
-        private final InetAddress pinnedAddress;
+        private final InetAddress[] pinnedAddresses;
+        private final int connectTimeoutMs;
 
-        public PinningSSLSocketFactory(javax.net.ssl.SSLSocketFactory delegate, InetAddress pinnedAddress) {
+        public PinningSSLSocketFactory(javax.net.ssl.SSLSocketFactory delegate, InetAddress[] pinnedAddresses, int connectTimeoutMs) {
             this.delegate = delegate;
-            this.pinnedAddress = pinnedAddress;
+            this.pinnedAddresses = pinnedAddresses;
+            this.connectTimeoutMs = connectTimeoutMs;
+        }
+
+        private Socket connectSocket(int port) throws IOException {
+            IOException lastEx = null;
+            for (InetAddress addr : pinnedAddresses) {
+                try {
+                    Socket socket = new Socket();
+                    socket.connect(new InetSocketAddress(addr, port), connectTimeoutMs);
+                    return socket;
+                } catch (IOException e) {
+                    lastEx = e;
+                }
+            }
+            throw lastEx != null ? lastEx : new IOException("Could not connect to any resolved IP address");
         }
 
         @Override
@@ -278,32 +298,191 @@ public final class URLValidator {
         }
 
         @Override
-        public java.net.Socket createSocket(String host, int port) throws IOException {
-            java.net.Socket socket = new java.net.Socket(pinnedAddress, port);
+        public Socket createSocket(String host, int port) throws IOException {
+            Socket socket = connectSocket(port);
             return delegate.createSocket(socket, host, port, true);
         }
 
         @Override
-        public java.net.Socket createSocket(String host, int port, InetAddress localHost, int localPort) throws IOException {
-            java.net.Socket socket = new java.net.Socket(pinnedAddress, port, localHost, localPort);
+        public Socket createSocket(String host, int port, InetAddress localHost, int localPort) throws IOException {
+            Socket socket = new Socket();
+            socket.bind(new InetSocketAddress(localHost, localPort));
+            socket.connect(new InetSocketAddress(pinnedAddresses[0], port), connectTimeoutMs);
             return delegate.createSocket(socket, host, port, true);
         }
 
         @Override
-        public java.net.Socket createSocket(InetAddress host, int port) throws IOException {
-            java.net.Socket socket = new java.net.Socket(pinnedAddress, port);
+        public Socket createSocket(InetAddress host, int port) throws IOException {
+            Socket socket = connectSocket(port);
             return delegate.createSocket(socket, host.getHostName(), port, true);
         }
 
         @Override
-        public java.net.Socket createSocket(InetAddress address, int port, InetAddress localAddress, int localPort) throws IOException {
-            java.net.Socket socket = new java.net.Socket(pinnedAddress, port, localAddress, localPort);
+        public Socket createSocket(InetAddress address, int port, InetAddress localAddress, int localPort) throws IOException {
+            Socket socket = new Socket();
+            socket.bind(new InetSocketAddress(localAddress, localPort));
+            socket.connect(new InetSocketAddress(pinnedAddresses[0], port), connectTimeoutMs);
             return delegate.createSocket(socket, address.getHostName(), port, true);
         }
 
         @Override
-        public java.net.Socket createSocket(java.net.Socket s, String host, int port, boolean autoClose) throws IOException {
-            return delegate.createSocket(s, host, port, autoClose);
+        public Socket createSocket(Socket s, String host, int port, boolean autoClose) throws IOException {
+            if (s != null && s.isConnected()) {
+                if (isPrivateOrBlockedIp(s.getInetAddress())) {
+                    throw new IOException("Connected socket address is in a blocked range: " + s.getInetAddress());
+                }
+                return delegate.createSocket(s, host, port, autoClose);
+            }
+            Socket connected = connectSocket(port);
+            return delegate.createSocket(connected, host, port, true);
+        }
+    }
+
+    private static class PinnedHttpURLConnection extends HttpURLConnection {
+        private final InetAddress[] pinnedAddresses;
+        private final int connectTimeoutMs;
+        private final int readTimeoutMs;
+        private Socket socket;
+        private InputStream inputStream;
+        private final Map<String, List<String>> headerFields = new LinkedHashMap<>();
+
+        public PinnedHttpURLConnection(URL url, InetAddress[] pinnedAddresses, int connectTimeoutMs, int readTimeoutMs) {
+            super(url);
+            this.pinnedAddresses = pinnedAddresses;
+            this.connectTimeoutMs = connectTimeoutMs;
+            this.readTimeoutMs = readTimeoutMs;
+        }
+
+        @Override
+        public void connect() throws IOException {
+            if (connected) return;
+            int port = url.getPort() != -1 ? url.getPort() : 80;
+            IOException lastEx = null;
+            for (InetAddress addr : pinnedAddresses) {
+                try {
+                    Socket s = new Socket();
+                    s.setSoTimeout(readTimeoutMs);
+                    s.connect(new InetSocketAddress(addr, port), connectTimeoutMs);
+                    this.socket = s;
+                    break;
+                } catch (IOException e) {
+                    lastEx = e;
+                }
+            }
+            if (socket == null) {
+                throw lastEx != null ? lastEx : new IOException("Could not connect to any resolved IP address");
+            }
+
+            String hostHeader = url.getHost() + (url.getPort() != -1 && url.getPort() != 80 ? ":" + url.getPort() : "");
+            String file = url.getFile();
+            if (file == null || file.isEmpty()) file = "/";
+
+            OutputStream os = socket.getOutputStream();
+            String request = "GET " + file + " HTTP/1.1\r\n" +
+                             "Host: " + hostHeader + "\r\n" +
+                             "User-Agent: SMPTools\r\n" +
+                             "Connection: close\r\n\r\n";
+            os.write(request.getBytes(StandardCharsets.US_ASCII));
+            os.flush();
+
+            InputStream rawIn = socket.getInputStream();
+            BufferedInputStream bis = new BufferedInputStream(rawIn);
+            String statusLine = readLine(bis);
+            if (statusLine == null) {
+                throw new IOException("Premature EOF from HTTP server");
+            }
+            String[] parts = statusLine.split(" ", 3);
+            if (parts.length >= 2) {
+                try {
+                    this.responseCode = Integer.parseInt(parts[1]);
+                    this.responseMessage = parts.length > 2 ? parts[2] : "";
+                } catch (NumberFormatException e) {
+                    this.responseCode = 200;
+                }
+            } else {
+                this.responseCode = 200;
+            }
+
+            String line;
+            while ((line = readLine(bis)) != null && !line.isEmpty()) {
+                int colon = line.indexOf(':');
+                if (colon > 0) {
+                    String headerName = line.substring(0, colon).trim();
+                    String headerVal = line.substring(colon + 1).trim();
+                    headerFields.computeIfAbsent(headerName, k -> new ArrayList<>()).add(headerVal);
+                }
+            }
+
+            this.inputStream = bis;
+            this.connected = true;
+        }
+
+        private static String readLine(InputStream is) throws IOException {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            int b;
+            while ((b = is.read()) != -1) {
+                if (b == '\r') {
+                    is.mark(1);
+                    int next = is.read();
+                    if (next != '\n' && next != -1) {
+                        is.reset();
+                    }
+                    break;
+                } else if (b == '\n') {
+                    break;
+                }
+                baos.write(b);
+            }
+            if (b == -1 && baos.size() == 0) return null;
+            return baos.toString(StandardCharsets.US_ASCII);
+        }
+
+        @Override
+        public InputStream getInputStream() throws IOException {
+            connect();
+            return inputStream;
+        }
+
+        @Override
+        public int getResponseCode() throws IOException {
+            connect();
+            return responseCode;
+        }
+
+        @Override
+        public String getHeaderField(String name) {
+            try {
+                connect();
+            } catch (IOException ignored) {}
+            for (Map.Entry<String, List<String>> entry : headerFields.entrySet()) {
+                if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(name)) {
+                    List<String> list = entry.getValue();
+                    return (list != null && !list.isEmpty()) ? list.get(list.size() - 1) : null;
+                }
+            }
+            return null;
+        }
+
+        @Override
+        public Map<String, List<String>> getHeaderFields() {
+            try {
+                connect();
+            } catch (IOException ignored) {}
+            return Collections.unmodifiableMap(headerFields);
+        }
+
+        @Override
+        public void disconnect() {
+            if (socket != null && !socket.isClosed()) {
+                try {
+                    socket.close();
+                } catch (IOException ignored) {}
+            }
+        }
+
+        @Override
+        public boolean usingProxy() {
+            return false;
         }
     }
 }
