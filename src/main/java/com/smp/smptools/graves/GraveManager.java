@@ -40,13 +40,50 @@ public class GraveManager implements Listener {
     private File gravesFile;
     private FileConfiguration gravesConfig;
 
+    public static final org.bukkit.NamespacedKey GRAVE_OWNER_KEY = new org.bukkit.NamespacedKey(SMPTools.getInstance(), "grave_owner");
+
     public GraveManager(SMPTools plugin) {
         this.plugin = plugin;
         setupGravesConfig();
         loadGraves();
+        startGraveExpiryTask();
     }
 
-    @EventHandler
+    private void startGraveExpiryTask() {
+        if (plugin == null || !plugin.isEnabled()) return;
+        long expireHours = plugin.getConfig().getLong("features.player-graves.expire-hours", 72);
+        if (expireHours <= 0) return;
+
+        long expireMillis = expireHours * 3600_000L;
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            long now = System.currentTimeMillis();
+            List<Location> expired = new ArrayList<>();
+            for (Map.Entry<Location, Grave> entry : graves.entrySet()) {
+                if (now - entry.getValue().getTimeOfDeath() > expireMillis) {
+                    expired.add(entry.getKey());
+                }
+            }
+            for (Location loc : expired) {
+                Grave g = graves.get(loc);
+                if (g != null) {
+                    // Expire grave: drop items and clear holograms
+                    for (ItemStack item : g.getItems()) {
+                        if (item != null && item.getType() != Material.AIR) {
+                            loc.getWorld().dropItemNaturally(loc, item);
+                        }
+                    }
+                    loc.getBlock().setType(Material.AIR);
+                    removeHolograms(loc);
+                    graves.remove(loc);
+                }
+            }
+            if (!expired.isEmpty()) {
+                saveGraves();
+            }
+        }, 1200L, 1200L); // Check every minute
+    }
+
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
     public void onPlayerDeath(PlayerDeathEvent event) {
         if (!plugin.getConfig().getBoolean("features.player-graves.enabled")) {
             return;
@@ -74,6 +111,7 @@ public class GraveManager implements Listener {
             for (int y : candidates) {
                 if (y <= world.getMinHeight() || y >= world.getMaxHeight()) continue;
                 Location checkLoc = new Location(world, baseX, y, baseZ);
+                if (graves.containsKey(checkLoc)) continue; // Avoid grave collision
                 Block b = checkLoc.getBlock();
                 Block below = checkLoc.clone().add(0, -1, 0).getBlock();
                 if (b.getType().isAir() && !b.isLiquid() && !below.getType().isAir() && !below.isLiquid() && below.getType().isSolid()) {
@@ -84,13 +122,13 @@ public class GraveManager implements Listener {
             if (validLocation != null) break;
         }
 
-        // If not found near death location (e.g. drowning in ocean, lava, mid-air, or void),
-        // search upward from death/surface for the first non-liquid air block
+        // If not found near death location, search upward for the first unoccupied dry air block
         if (validLocation == null) {
             int topY = world.getHighestBlockYAt(baseX, baseZ);
             int searchStartY = Math.max(world.getMinHeight() + 1, Math.min(startY, topY));
             for (int y = searchStartY; y < world.getMaxHeight() - 1; y++) {
                 Location candidate = new Location(world, baseX, y, baseZ);
+                if (graves.containsKey(candidate)) continue;
                 Block candBlock = candidate.getBlock();
                 if (candBlock.getType().isAir() && !candBlock.isLiquid()) {
                     validLocation = candidate;
@@ -99,11 +137,15 @@ public class GraveManager implements Listener {
             }
         }
 
-        // If still no dry air block found, fallback to clamped location above highest block
+        // Clamped fallback
         if (validLocation == null) {
             int topY = world.getHighestBlockYAt(baseX, baseZ);
             int clampedY = Math.max(world.getMinHeight() + 1, Math.min(world.getMaxHeight() - 1, topY + 1));
-            validLocation = new Location(world, baseX, clampedY, baseZ);
+            Location candidate = new Location(world, baseX, clampedY, baseZ);
+            while (graves.containsKey(candidate) && candidate.getBlockY() < world.getMaxHeight() - 1) {
+                candidate.add(0, 1, 0);
+            }
+            validLocation = candidate;
         }
 
         // Remove drops from the event only after safe location is confirmed
@@ -121,14 +163,14 @@ public class GraveManager implements Listener {
         player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("grave.stored", player, Map.of("location", graveLocation)));
     }
 
-    @EventHandler
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
     public void onPlayerInteract(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) {
             return;
         }
 
         Block block = event.getClickedBlock();
-        if (block == null || block.getType() != Material.PLAYER_HEAD && block.getType() != Material.PLAYER_WALL_HEAD) {
+        if (block == null || (block.getType() != Material.PLAYER_HEAD && block.getType() != Material.PLAYER_WALL_HEAD)) {
             return;
         }
 
@@ -141,8 +183,67 @@ public class GraveManager implements Listener {
         Grave grave = graves.get(location);
         Player player = event.getPlayer();
 
+        if (!player.getUniqueId().equals(grave.getOwner()) && !player.hasPermission("smptools.graves.admin")) {
+            player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>🔒 You cannot open someone else's grave!</red>"));
+            return;
+        }
+
         // Loot the grave
         lootGrave(grave, player);
+    }
+
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
+    public void onBlockBreak(org.bukkit.event.block.BlockBreakEvent event) {
+        Location loc = event.getBlock().getLocation();
+        if (!graves.containsKey(loc)) return;
+
+        Grave grave = graves.get(loc);
+        Player player = event.getPlayer();
+        if (!player.getUniqueId().equals(grave.getOwner()) && !player.hasPermission("smptools.graves.admin")) {
+            event.setCancelled(true);
+            player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>🔒 You cannot break someone else's grave!</red>"));
+            return;
+        }
+
+        event.setCancelled(true);
+        lootGrave(grave, player);
+    }
+
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
+    public void onBlockExplode(org.bukkit.event.block.BlockExplodeEvent event) {
+        event.blockList().removeIf(graves::containsKey);
+    }
+
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
+    public void onEntityExplode(org.bukkit.event.entity.EntityExplodeEvent event) {
+        event.blockList().removeIf(b -> graves.containsKey(b.getLocation()));
+    }
+
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
+    public void onPistonExtend(org.bukkit.event.block.BlockPistonExtendEvent event) {
+        for (Block b : event.getBlocks()) {
+            if (graves.containsKey(b.getLocation())) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+    }
+
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
+    public void onPistonRetract(org.bukkit.event.block.BlockPistonRetractEvent event) {
+        for (Block b : event.getBlocks()) {
+            if (graves.containsKey(b.getLocation())) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+    }
+
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
+    public void onLiquidFlow(org.bukkit.event.block.BlockFromToEvent event) {
+        if (graves.containsKey(event.getToBlock().getLocation())) {
+            event.setCancelled(true);
+        }
     }
 
     private void createGraveBlock(Grave grave) {
@@ -152,10 +253,21 @@ public class GraveManager implements Listener {
 
         if (block.getState() instanceof Skull skull) {
             skull.setOwningPlayer(Bukkit.getOfflinePlayer(grave.getOwner()));
+            skull.getPersistentDataContainer().set(GRAVE_OWNER_KEY, org.bukkit.persistence.PersistentDataType.STRING, grave.getOwner().toString());
             skull.update();
         }
 
         spawnHologram(grave);
+    }
+
+    private void removeHolograms(Location loc) {
+        if (loc.getWorld() == null) return;
+        String graveTag = "grave_" + loc.getBlockX() + "_" + loc.getBlockY() + "_" + loc.getBlockZ();
+        loc.getWorld().getNearbyEntities(loc, 3, 3, 3).forEach(entity -> {
+            if (entity instanceof ArmorStand && entity.getScoreboardTags().contains(graveTag)) {
+                entity.remove();
+            }
+        });
     }
 
     private void spawnHologram(Grave grave) {
@@ -205,12 +317,7 @@ public class GraveManager implements Listener {
         loc.getBlock().setType(Material.AIR);
 
         // Remove holograms
-        loc.getWorld().getNearbyEntities(loc, 2, 2, 2).forEach(entity -> {
-            if (entity instanceof ArmorStand && entity.getScoreboardTags()
-                    .contains("grave_" + loc.getBlockX() + "_" + loc.getBlockY() + "_" + loc.getBlockZ())) {
-                entity.remove();
-            }
-        });
+        removeHolograms(loc);
 
         graves.remove(loc);
         saveGraves();
