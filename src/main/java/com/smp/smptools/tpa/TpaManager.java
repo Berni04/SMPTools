@@ -55,6 +55,11 @@ public class TpaManager {
      * @param target the player to teleport to
      */
     public void sendTeleportRequest(@NotNull Player requester, @NotNull Player target) {
+        if (requester.isDead() || target.isDead()) {
+            requester.sendMessage(plugin.getMessageManager().getMessage("common.player-dead", requester));
+            return;
+        }
+
         if (tpaToggledOff.contains(target.getUniqueId())) {
             requester.sendMessage(plugin.getMessageManager().getMessage("tpa.target-toggled-off", requester,
                     Map.of("target", target.getName())));
