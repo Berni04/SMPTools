@@ -82,11 +82,11 @@ public class KrampusListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onPlayerTeleport(PlayerTeleportEvent event) {
-        if (krampusManager.isKidnapped(event.getPlayer())) {
-            if (event.getCause() == PlayerTeleportEvent.TeleportCause.CHORUS_FRUIT ||
-                event.getCause() == PlayerTeleportEvent.TeleportCause.ENDER_PEARL) {
+        Player player = event.getPlayer();
+        if (krampusManager.isKidnapped(player)) {
+            if (!krampusManager.isAllowedTeleport(player.getUniqueId())) {
                 event.setCancelled(true);
-                event.getPlayer().sendMessage(MiniMessage.miniMessage().deserialize("<red>You cannot teleport while trapped in Krampus's cage!</red>"));
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>You cannot teleport while trapped in Krampus's cage!</red>"));
             }
         }
     }

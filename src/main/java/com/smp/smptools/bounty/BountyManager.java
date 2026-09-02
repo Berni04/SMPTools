@@ -332,17 +332,35 @@ public class BountyManager {
         bounty.setClaimed(true);
 
         List<ItemStack> items = bounty.getItems();
+        List<ItemStack> addedPending = new ArrayList<>();
         if (items != null && !items.isEmpty()) {
             List<ItemStack> pending = pendingRefunds.computeIfAbsent(claimerUuid, k -> new ArrayList<>());
             for (ItemStack item : items) {
                 if (item != null && item.getType() != Material.AIR) {
-                    pending.add(item.clone());
+                    ItemStack copy = item.clone();
+                    pending.add(copy);
+                    addedPending.add(copy);
                 }
             }
         }
 
         bounties.remove(bounty);
-        saveBountiesSync();
+        if (!saveBountiesSync()) {
+            // Rollback in-memory state on persistence failure
+            bounty.setClaimed(false);
+            bounties.add(bounty);
+            List<ItemStack> pending = pendingRefunds.get(claimerUuid);
+            if (pending != null) {
+                pending.removeAll(addedPending);
+                if (pending.isEmpty()) {
+                    pendingRefunds.remove(claimerUuid);
+                }
+            }
+            if (plugin != null) {
+                plugin.getLogger().severe("Failed to persist bounty claim for " + claimer.getName() + "; claim aborted.");
+            }
+            return false;
+        }
 
         if (claimer != null && claimer.isOnline()) {
             processPendingRefunds(claimer);

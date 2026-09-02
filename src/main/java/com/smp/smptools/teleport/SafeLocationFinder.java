@@ -36,7 +36,9 @@ public final class SafeLocationFinder {
             Material.SOUL_FIRE,
             Material.SWEET_BERRY_BUSH,
             Material.POWDER_SNOW,
-            Material.WITHER_ROSE
+            Material.WITHER_ROSE,
+            Material.CAMPFIRE,
+            Material.SOUL_CAMPFIRE
     );
 
     private SafeLocationFinder() {

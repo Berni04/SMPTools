@@ -60,11 +60,17 @@ public class BlackFridayListener implements Listener {
         Merchant merchant = (Merchant) villager;
         UUID villagerUUID = villager.getUniqueId();
         UUID playerUUID = player.getUniqueId();
+        if (event.isCancelled()) {
+            return;
+        }
 
-        if (!manager.isEnabled() || event.isCancelled()) {
-            List<MerchantRecipe> original = originalRecipes.remove(villagerUUID);
-            if (original != null) {
-                restoreOriginalRecipes(merchant, original);
+        if (!manager.isEnabled()) {
+            java.util.Set<UUID> viewers = activeViewers.get(villagerUUID);
+            if (viewers == null || viewers.isEmpty()) {
+                List<MerchantRecipe> original = originalRecipes.remove(villagerUUID);
+                if (original != null) {
+                    restoreOriginalRecipes(merchant, original);
+                }
             }
             return;
         }

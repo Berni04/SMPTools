@@ -214,3 +214,9 @@ permissions:
   smptools.sudo:
     description: Allows access to the /sudo command.
     default: op
+  smptools.rename:
+    description: Allows renaming held items via /rename.
+    default: true
+  smptools.admin:
+    description: Full administrative access for SMPTools commands.
+    default: op

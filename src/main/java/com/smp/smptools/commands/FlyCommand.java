@@ -73,6 +73,12 @@ public class FlyCommand extends AbstractPlayerCommand implements Listener {
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        pluginFlyingPlayers.remove(event.getPlayer().getUniqueId());
+        Player player = event.getPlayer();
+        if (pluginFlyingPlayers.remove(player.getUniqueId())) {
+            if (player.getGameMode() != GameMode.CREATIVE && player.getGameMode() != GameMode.SPECTATOR) {
+                player.setAllowFlight(false);
+                player.setFlying(false);
+            }
+        }
     }
 }

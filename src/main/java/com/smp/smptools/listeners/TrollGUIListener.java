@@ -172,6 +172,10 @@ public class TrollGUIListener implements Listener {
 
         event.setCancelled(true);
 
+        if (event.getClickedInventory() == null || !event.getClickedInventory().equals(event.getView().getTopInventory())) {
+            return;
+        }
+
         Player opener = (Player) event.getWhoClicked();
         if (!opener.hasPermission("smptools.troll")) {
             opener.closeInventory();
@@ -377,7 +381,8 @@ public class TrollGUIListener implements Listener {
         int radius = 10;
         int x = player.getLocation().getBlockX() + random.nextInt(radius * 2) - radius;
         int z = player.getLocation().getBlockZ() + random.nextInt(radius * 2) - radius;
-        Location targetLoc = new Location(player.getWorld(), x + 0.5, player.getLocation().getY(), z + 0.5);
+        int surfaceY = player.getWorld().getHighestBlockYAt(x, z);
+        Location targetLoc = new Location(player.getWorld(), x + 0.5, surfaceY + 1, z + 0.5);
         com.smp.smptools.teleport.SafeLocationFinder.findSafeLocation(targetLoc).ifPresent(player::teleport);
     }
 

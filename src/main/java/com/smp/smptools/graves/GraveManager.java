@@ -72,7 +72,11 @@ public class GraveManager implements Listener {
                             loc.getWorld().dropItemNaturally(loc, item);
                         }
                     }
-                    loc.getBlock().setType(Material.AIR);
+                    Block b = loc.getBlock();
+                    if (b.getState() instanceof org.bukkit.block.Skull skull &&
+                        skull.getPersistentDataContainer().has(GRAVE_OWNER_KEY, org.bukkit.persistence.PersistentDataType.STRING)) {
+                        b.setType(Material.AIR);
+                    }
                     removeHolograms(loc);
                     graves.remove(loc);
                 }
@@ -137,15 +141,33 @@ public class GraveManager implements Listener {
             }
         }
 
-        // Clamped fallback
-        if (validLocation == null) {
+        // Clamped fallback with horizontal search if column is full
+        if (validLocation == null || graves.containsKey(validLocation)) {
             int topY = world.getHighestBlockYAt(baseX, baseZ);
             int clampedY = Math.max(world.getMinHeight() + 1, Math.min(world.getMaxHeight() - 1, topY + 1));
             Location candidate = new Location(world, baseX, clampedY, baseZ);
             while (graves.containsKey(candidate) && candidate.getBlockY() < world.getMaxHeight() - 1) {
                 candidate.add(0, 1, 0);
             }
-            validLocation = candidate;
+            if (!graves.containsKey(candidate)) {
+                validLocation = candidate;
+            } else {
+                for (int dx = -2; dx <= 2 && (validLocation == null || graves.containsKey(validLocation)); dx++) {
+                    for (int dz = -2; dz <= 2 && (validLocation == null || graves.containsKey(validLocation)); dz++) {
+                        int hx = baseX + dx;
+                        int hz = baseZ + dz;
+                        int hy = Math.max(world.getMinHeight() + 1, Math.min(world.getMaxHeight() - 1, world.getHighestBlockYAt(hx, hz) + 1));
+                        Location hCand = new Location(world, hx, hy, hz);
+                        if (!graves.containsKey(hCand)) {
+                            validLocation = hCand;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (validLocation == null || graves.containsKey(validLocation)) {
+            return;
         }
 
         // Remove drops from the event only after safe location is confirmed

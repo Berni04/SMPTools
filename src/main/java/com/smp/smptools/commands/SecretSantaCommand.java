@@ -122,8 +122,17 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
                     manager.generateMatches();
                     player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.matches-generated"));
                 } else if (args.length > 1 && args[1].equalsIgnoreCase("clear")) {
-                    manager.clearAllData();
-                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<green>Cleared all Secret Santa participants, matches, and gifts.</green>"));
+                    for (Player online : Bukkit.getOnlinePlayers()) {
+                        if (online.getOpenInventory().getTopInventory().getHolder() instanceof com.smp.smptools.christmas.SecretSantaHolder) {
+                            online.closeInventory();
+                        }
+                    }
+                    boolean cleared = manager.clearAllData();
+                    if (cleared) {
+                        player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<green>Cleared all Secret Santa participants, matches, and gifts.</green>"));
+                    } else {
+                        player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Failed to clear Secret Santa data from disk.</red>"));
+                    }
                 } else {
                     player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<yellow>Usage: /secretsanta admin <start|clear></yellow>"));
                 }
@@ -190,9 +199,9 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
                             items.add(item.clone());
                         }
                     }
-                    if (event.getCursor() != null && event.getCursor().getType() != Material.AIR) {
-                        items.add(event.getCursor().clone());
-                        event.getWhoClicked().setItemOnCursor(null);
+                    ItemStack cursorItem = event.getCursor() != null ? event.getCursor().clone() : null;
+                    if (cursorItem != null && cursorItem.getType() != Material.AIR) {
+                        items.add(cursorItem);
                     }
                     if (items.isEmpty()) {
                         player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.empty-deposit", player));
@@ -205,6 +214,7 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
                         player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.deposit-save-failed", player));
                         return;
                     }
+                    event.getWhoClicked().setItemOnCursor(null);
                     inv.clear();
                     Bukkit.getScheduler().runTask(plugin, (Runnable) player::closeInventory);
                     player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.gift-deposited", player));

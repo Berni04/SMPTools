@@ -18,6 +18,7 @@ public class SleepManager {
     private final Set<UUID> yesVotes = ConcurrentHashMap.newKeySet();
     private final Set<UUID> noVotes = ConcurrentHashMap.newKeySet();
     private Player voteInitiator;
+    private World voteWorld;
 
     public SleepManager(SMPTools plugin) {
         this.plugin = plugin;
@@ -41,6 +42,7 @@ public class SleepManager {
 
         voteInProgress = true;
         voteInitiator = player;
+        voteWorld = world;
         yesVotes.clear();
         noVotes.clear();
         
@@ -74,12 +76,12 @@ public class SleepManager {
     }
 
     public void addVote(Player player, boolean vote) {
-        if (!voteInProgress) {
+        if (!voteInProgress || voteWorld == null) {
             player.sendMessage(plugin.getMessageManager().getMessage("sleep.no-vote"));
             return;
         }
 
-        if (voteInitiator == null || !player.getWorld().equals(voteInitiator.getWorld())) {
+        if (!player.getWorld().equals(voteWorld)) {
             player.sendMessage(plugin.getMessageManager().getMessage("sleep.wrong-world"));
             return;
         }
@@ -103,23 +105,22 @@ public class SleepManager {
     }
 
     private void checkVoteStatus() {
-        if (voteInitiator == null || !voteInitiator.isOnline() || voteInitiator.getWorld() == null) {
+        if (voteWorld == null) {
             endVote();
             return;
         }
 
-        World world = voteInitiator.getWorld();
-        int onlinePlayers = world.getPlayers().size();
+        int onlinePlayers = voteWorld.getPlayers().size();
         int requiredVotes = (int) Math.ceil(onlinePlayers / 2.0);
 
         if (yesVotes.size() >= requiredVotes) {
-            world.sendMessage(plugin.getMessageManager().getMessage("sleep.vote-accepted"));
-            world.setTime(0);
-            world.setThundering(false);
-            world.setStorm(false);
+            voteWorld.sendMessage(plugin.getMessageManager().getMessage("sleep.vote-accepted"));
+            voteWorld.setTime(0);
+            voteWorld.setThundering(false);
+            voteWorld.setStorm(false);
             endVote();
         } else if (noVotes.size() >= (onlinePlayers - requiredVotes + 1)) {
-            world.sendMessage(plugin.getMessageManager().getMessage("sleep.vote-failed"));
+            voteWorld.sendMessage(plugin.getMessageManager().getMessage("sleep.vote-failed"));
             endVote();
         }
     }
@@ -129,9 +130,14 @@ public class SleepManager {
         yesVotes.clear();
         noVotes.clear();
         voteInitiator = null;
+        voteWorld = null;
     }
 
     public Player getVoteInitiator() {
         return voteInitiator;
+    }
+
+    public World getVoteWorld() {
+        return voteWorld;
     }
 }

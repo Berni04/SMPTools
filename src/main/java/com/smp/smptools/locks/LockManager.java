@@ -143,6 +143,13 @@ public class LockManager {
         if (directKey != null && containerOwners.containsKey(directKey)) {
             return directKey;
         }
+        Block otherHalf = getSurvivingDoubleChestHalf(block);
+        if (otherHalf != null) {
+            String otherKey = getLocationKey(otherHalf.getLocation());
+            if (otherKey != null && containerOwners.containsKey(otherKey)) {
+                return otherKey;
+            }
+        }
         return canonicalKey;
     }
 
@@ -251,22 +258,14 @@ public class LockManager {
 
     public boolean isLocked(Block block) {
         if (block == null) return false;
-        String canonicalKey = getBlockKey(block);
-        if (canonicalKey != null && containerOwners.containsKey(canonicalKey)) {
-            return true;
-        }
-        String directKey = getLocationKey(block.getLocation());
-        return directKey != null && containerOwners.containsKey(directKey);
+        String key = getLockKey(block);
+        return key != null && containerOwners.containsKey(key);
     }
 
     public UUID getOwnerUUID(Block block) {
         if (block == null) return null;
-        String canonicalKey = getBlockKey(block);
-        if (canonicalKey != null && containerOwners.containsKey(canonicalKey)) {
-            return containerOwners.get(canonicalKey);
-        }
-        String directKey = getLocationKey(block.getLocation());
-        return directKey != null ? containerOwners.get(directKey) : null;
+        String key = getLockKey(block);
+        return key != null ? containerOwners.get(key) : null;
     }
 
     public boolean canAccess(Block block, Player player) {

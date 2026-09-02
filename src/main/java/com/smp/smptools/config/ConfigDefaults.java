@@ -41,7 +41,7 @@ public final class ConfigDefaults {
         config.addDefault("features.blackfriday.enabled", true);
         config.addDefault("features.afk.enabled", true);
         config.addDefault("features.afk.timeout-minutes", 30);
-        config.addDefault("features.afk.auto-vote-sleep", true);
+        config.addDefault("features.afk.auto-vote-sleep", false);
         config.addDefault("features.remote-trade.enabled", true);
         config.addDefault("features.remote-trade.request-timeout-seconds", 60);
         config.addDefault("features.remote-trade.session-timeout-seconds", 60);

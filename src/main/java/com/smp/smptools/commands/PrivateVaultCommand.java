@@ -25,17 +25,42 @@ public class PrivateVaultCommand extends AbstractPlayerCommand {
     }
 
     public static File getVaultsFile(SMPTools plugin) {
-        return new File(plugin.getDataFolder(), "vaults.yml");
+        return new File(plugin != null ? plugin.getDataFolder() : new File("plugins/SMPTools"), "vaults.yml");
     }
 
-    public static YamlConfiguration getVaultsConfig(SMPTools plugin) {
+    private static volatile YamlConfiguration cachedVaultsConfig = null;
+    private static volatile boolean vaultsConfigLoadFailed = false;
+
+    public static synchronized YamlConfiguration getVaultsConfig(SMPTools plugin) {
+        if (cachedVaultsConfig != null) {
+            return cachedVaultsConfig;
+        }
         File file = getVaultsFile(plugin);
         if (!file.exists()) {
             try {
                 file.createNewFile();
             } catch (IOException ignored) {}
         }
-        return YamlConfiguration.loadConfiguration(file);
+        try {
+            cachedVaultsConfig = YamlConfiguration.loadConfiguration(file);
+            vaultsConfigLoadFailed = false;
+        } catch (Exception e) {
+            vaultsConfigLoadFailed = true;
+            if (plugin != null) {
+                plugin.getLogger().severe("Failed to load vaults.yml! Aborting vault saves to prevent file overwrite: " + e.getMessage());
+            }
+            cachedVaultsConfig = new YamlConfiguration();
+        }
+        return cachedVaultsConfig;
+    }
+
+    public static boolean isVaultsConfigLoadFailed() {
+        return vaultsConfigLoadFailed;
+    }
+
+    public static synchronized void resetCachedConfig() {
+        cachedVaultsConfig = null;
+        vaultsConfigLoadFailed = false;
     }
 
     @Override

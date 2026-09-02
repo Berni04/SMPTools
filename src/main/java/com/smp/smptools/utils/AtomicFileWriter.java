@@ -48,8 +48,12 @@ public final class AtomicFileWriter {
 
             try {
                 Files.move(tmp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-            } catch (AtomicMoveNotSupportedException e) {
-                Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException moveEx) {
+                try {
+                    Files.move(tmp, target, StandardCopyOption.ATOMIC_MOVE);
+                } catch (Exception ignored) {
+                    Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+                }
             }
         } finally {
             Files.deleteIfExists(tmp);

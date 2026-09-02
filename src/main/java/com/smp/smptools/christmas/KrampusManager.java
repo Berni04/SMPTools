@@ -41,7 +41,12 @@ public class KrampusManager implements Listener {
     private final Map<UUID, Location> playerCages = new ConcurrentHashMap<>();
     private final Map<UUID, Set<UUID>> playerGuards = new ConcurrentHashMap<>();
     private final Map<UUID, Map<Location, org.bukkit.block.BlockState>> originalCageBlocks = new ConcurrentHashMap<>();
+    private final Set<UUID> allowedTeleports = ConcurrentHashMap.newKeySet();
     public final NamespacedKey krampusKey;
+
+    public boolean isAllowedTeleport(UUID uuid) {
+        return uuid != null && allowedTeleports.contains(uuid);
+    }
 
     public KrampusManager(SMPTools plugin) {
         this.plugin = plugin;
@@ -233,7 +238,12 @@ public class KrampusManager implements Listener {
         buildCage(player.getUniqueId(), cageLoc);
 
         // Teleport
-        player.teleport(cageLoc.clone().add(0.5, 1, 0.5));
+        try {
+            allowedTeleports.add(player.getUniqueId());
+            player.teleport(cageLoc.clone().add(0.5, 1, 0.5));
+        } finally {
+            allowedTeleports.remove(player.getUniqueId());
+        }
         player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("krampus.kidnapped"));
 
         // Spawn Guards
@@ -362,7 +372,12 @@ public class KrampusManager implements Listener {
 
         Player player = Bukkit.getPlayer(uuid);
         if (player != null && player.isOnline() && originalLoc != null) {
-            player.teleport(originalLoc);
+            try {
+                allowedTeleports.add(uuid);
+                player.teleport(originalLoc);
+            } finally {
+                allowedTeleports.remove(uuid);
+            }
             player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("krampus.escaped"));
         }
     }

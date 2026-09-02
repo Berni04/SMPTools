@@ -28,21 +28,21 @@ public class VaultListener implements Listener {
             Player player = (Player) event.getPlayer();
             Inventory inventory = event.getInventory();
 
-            if (holder.isDecodeFailed()) {
-                plugin.getLogger().warning("Aborted vault save for " + player.getName() + " due to previous decode failure.");
+            if (holder.isDecodeFailed() || PrivateVaultCommand.isVaultsConfigLoadFailed()) {
+                plugin.getLogger().warning("Aborted vault save for " + player.getName() + " due to previous decode or config load failure.");
                 player.sendMessage(MiniMessage.miniMessage().deserialize("<red>🔒 Vault save aborted to protect existing data from decode errors. Contact an admin.</red>"));
                 return;
             }
 
             try {
                 String encodedInventory = PrivateVaultCommand.encodeInventory(inventory.getContents());
-                File vaultsFile = PrivateVaultCommand.getVaultsFile(plugin);
+                File vaultsFile = new File(plugin.getDataFolder(), "vaults.yml");
                 YamlConfiguration vaultsConfig = PrivateVaultCommand.getVaultsConfig(plugin);
                 vaultsConfig.set("vaults." + player.getUniqueId(), encodedInventory);
-                AtomicFileWriter.save(vaultsConfig, vaultsFile);
+                com.smp.smptools.utils.AsyncConfigHelper.saveConfigAsync(plugin, vaultsConfig, vaultsFile, "vaults.yml");
 
                 player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("vault.saved", player));
-            } catch (IllegalStateException | IOException e) {
+            } catch (IllegalStateException e) {
                 plugin.getLogger().warning("Failed to save vault for player " + player.getName() + ": " + e.getMessage());
                 player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("vault.save-failed", player));
             }

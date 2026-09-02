@@ -3,6 +3,7 @@ package com.smp.smptools.events.minievents;
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.events.EventManager;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -28,6 +29,7 @@ public class MiniEventListener implements Listener {
 
     private final SMPTools plugin;
     private final EventManager eventManager;
+    private final NamespacedKey spawnerMobKey;
     private final Random random = new Random();
 
     private static final Set<Material> TREASURE_FISH_ITEMS = Set.of(
@@ -45,6 +47,7 @@ public class MiniEventListener implements Listener {
     public MiniEventListener(SMPTools plugin, EventManager eventManager) {
         this.plugin = plugin;
         this.eventManager = eventManager;
+        this.spawnerMobKey = new NamespacedKey(plugin, "spawner_mob");
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -239,6 +242,7 @@ public class MiniEventListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onCreatureSpawn(org.bukkit.event.entity.CreatureSpawnEvent event) {
         if (event.getSpawnReason() == org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.SPAWNER) {
+            event.getEntity().getPersistentDataContainer().set(spawnerMobKey, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
             event.getEntity().setMetadata("spawner_mob", new org.bukkit.metadata.FixedMetadataValue(plugin, true));
         }
     }
@@ -263,7 +267,9 @@ public class MiniEventListener implements Listener {
 
         FileConfiguration cfg = plugin.getEventsConfig();
 
-        if (entity.hasMetadata("spawner_mob")) {
+        boolean isSpawnerMob = entity.hasMetadata("spawner_mob") ||
+                entity.getPersistentDataContainer().has(spawnerMobKey, org.bukkit.persistence.PersistentDataType.BYTE);
+        if (isSpawnerMob) {
             boolean allowSpawner = cfg.getBoolean("events.types.mob_frenzy.allow-spawner-mobs", false);
             if (!allowSpawner) {
                 return;

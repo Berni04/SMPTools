@@ -65,16 +65,14 @@ public class SecretSantaManager {
     }
 
     public Phase getCurrentPhase() {
-        if (plugin != null && plugin.getConfig().getBoolean("features.secret-santa.allow-any-month", false)) {
-            return Phase.REGISTRATION;
-        }
+        boolean allowAnyMonth = plugin != null && plugin.getConfig().getBoolean("features.secret-santa.allow-any-month", false);
 
         ZonedDateTime now = ZonedDateTime.now(CET);
         int day = now.getDayOfMonth();
         int month = now.getMonthValue();
 
-        if (month != 12)
-            return Phase.REGISTRATION; // In off-season, defaults to registration if allowed
+        if (month != 12 && !allowAnyMonth)
+            return Phase.REGISTRATION;
 
         if (day <= 15)
             return Phase.REGISTRATION;
@@ -273,10 +271,21 @@ public class SecretSantaManager {
         return false;
     }
 
-    public synchronized void clearAllData() {
+    public synchronized boolean clearAllData() {
+        Object oldParticipants = config.get("participants");
+        Object oldMatches = config.get("matches");
+        Object oldGifts = config.get("gifts");
+
         config.set("participants", null);
         config.set("matches", null);
         config.set("gifts", null);
-        saveConfig();
+
+        if (!saveConfig()) {
+            config.set("participants", oldParticipants);
+            config.set("matches", oldMatches);
+            config.set("gifts", oldGifts);
+            return false;
+        }
+        return true;
     }
 }

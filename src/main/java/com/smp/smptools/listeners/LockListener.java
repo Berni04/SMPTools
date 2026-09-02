@@ -56,14 +56,12 @@ public class LockListener implements Listener {
                         player.sendMessage(MiniMessage.miniMessage().deserialize("<red>🔒 You cannot place a chest adjacent to someone else's locked chest!</red>"));
                         return;
                     }
-                    if (owner != null && owner.equals(player.getUniqueId())) {
-                        if (plugin != null) {
-                            Bukkit.getScheduler().runTask(plugin, () -> {
-                                if (placed.getState() instanceof Chest placedAfter && placedAfter.getInventory() instanceof org.bukkit.inventory.DoubleChestInventory) {
-                                    lockManager.migrateToDoubleChest(adjacent, placed);
-                                }
-                            });
-                        }
+                    if (plugin != null) {
+                        Bukkit.getScheduler().runTask(plugin, () -> {
+                            if (placed.getState() instanceof Chest placedAfter && placedAfter.getInventory() instanceof org.bukkit.inventory.DoubleChestInventory) {
+                                lockManager.migrateToDoubleChest(adjacent, placed);
+                            }
+                        });
                     }
                 }
             }
@@ -96,9 +94,17 @@ public class LockListener implements Listener {
                 event.setCancelled(true);
                 String ownerName = lockManager.getOwnerName(block);
                 player.sendMessage(MiniMessage.miniMessage().deserialize("<red>🔒 You cannot break a container locked by " + ownerName + "!</red>"));
-                return;
             }
+        }
+    }
 
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBlockBreakMonitor(BlockBreakEvent event) {
+        Block block = event.getBlock();
+        if (!lockManager.isContainer(block)) return;
+
+        if (lockManager.isLocked(block)) {
+            Player player = event.getPlayer();
             Block survivingHalf = lockManager.getSurvivingDoubleChestHalf(block);
             if (survivingHalf != null) {
                 lockManager.removeOrMigrateLock(block, survivingHalf);

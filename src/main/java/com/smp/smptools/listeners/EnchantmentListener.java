@@ -3,6 +3,7 @@ package com.smp.smptools.listeners;
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.enchants.LumberjackEnchant;
 import com.smp.smptools.enchants.TelekinesisEnchant;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -45,7 +46,7 @@ public class EnchantmentListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         if (brokenBlocks.contains(event.getBlock())) {
             return;
@@ -69,6 +70,12 @@ public class EnchantmentListener implements Listener {
                     continue;
                 }
                 brokenBlocks.add(block);
+
+                BlockBreakEvent childEvent = new BlockBreakEvent(block, player);
+                Bukkit.getPluginManager().callEvent(childEvent);
+                if (childEvent.isCancelled()) {
+                    continue;
+                }
 
                 if (hasTelekinesis) {
                     if (player.getInventory().firstEmpty() != -1) {

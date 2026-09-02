@@ -38,12 +38,26 @@ public class ChunkLoaderListener implements Listener {
         ItemStack itemInHand = event.getItemInHand();
 
         if (ChunkLoaderManager.isChunkLoaderItem(itemInHand)) {
+            if (!chunkLoaderManager.canPlaceChunkLoader(player.getUniqueId(), player)) {
+                event.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBlockPlaceMonitor(BlockPlaceEvent event) {
+        if (!plugin.getConfig().getBoolean("features.chunk-loaders.enabled", true)) {
+            return;
+        }
+
+        Player player = event.getPlayer();
+        ItemStack itemInHand = event.getItemInHand();
+
+        if (ChunkLoaderManager.isChunkLoaderItem(itemInHand)) {
             Block placedBlock = event.getBlockPlaced();
             boolean added = chunkLoaderManager.addChunkLoader(placedBlock.getLocation(), player.getUniqueId(), player);
             if (added) {
-                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("chunk-loader.placed", player));
-            } else {
-                event.setCancelled(true);
+                player.sendMessage(plugin.getMessageManager().getMessage("chunk-loader.placed", player));
             }
         }
     }
@@ -59,20 +73,40 @@ public class ChunkLoaderListener implements Listener {
         if (chunkLoaderManager.isChunkLoader(loc)) {
             Player player = event.getPlayer();
             UUID owner = chunkLoaderManager.getOwner(loc);
-            if (owner != null && !owner.equals(player.getUniqueId()) && !player.hasPermission("smptools.chunkloaders.admin")) {
+            if (owner != null) {
+                if (!owner.equals(player.getUniqueId()) && !player.hasPermission("smptools.chunkloaders.admin")) {
+                    event.setCancelled(true);
+                    player.sendMessage(MiniMessage.miniMessage().deserialize("<red>🔒 You cannot break someone else's chunk loader!</red>"));
+                    return;
+                }
+            } else if (!player.hasPermission("smptools.chunkloaders.admin")) {
+                // Fail-closed for legacy unowned chunk loaders: admin required
                 event.setCancelled(true);
-                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>🔒 You cannot break someone else's chunk loader!</red>"));
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>🔒 Only administrators can remove legacy chunk loaders without recorded ownership.</red>"));
                 return;
             }
 
-            chunkLoaderManager.removeChunkLoader(loc);
-            player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("chunk-loader.removed", player));
             event.setDropItems(false); // Prevent default block drop
-            brokenBlock.getWorld().dropItemNaturally(loc.add(0.5, 0.5, 0.5), ChunkLoaderManager.getChunkLoaderItem());
         }
     }
 
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBlockBreakMonitor(BlockBreakEvent event) {
+        if (!plugin.getConfig().getBoolean("features.chunk-loaders.enabled", true)) {
+            return;
+        }
+
+        Block brokenBlock = event.getBlock();
+        Location loc = brokenBlock.getLocation();
+        if (chunkLoaderManager.isChunkLoader(loc)) {
+            Player player = event.getPlayer();
+            chunkLoaderManager.removeChunkLoader(loc);
+            player.sendMessage(plugin.getMessageManager().getMessage("chunk-loader.removed", player));
+            brokenBlock.getWorld().dropItemNaturally(loc.clone().add(0.5, 0.5, 0.5), ChunkLoaderManager.getChunkLoaderItem());
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockExplode(BlockExplodeEvent event) {
         for (Block block : event.blockList()) {
             Location loc = block.getLocation();
@@ -83,7 +117,7 @@ public class ChunkLoaderListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onEntityExplode(EntityExplodeEvent event) {
         for (Block block : event.blockList()) {
             Location loc = block.getLocation();
@@ -94,7 +128,7 @@ public class ChunkLoaderListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onEntityChangeBlock(EntityChangeBlockEvent event) {
         Location loc = event.getBlock().getLocation();
         if (chunkLoaderManager.isChunkLoader(loc)) {

@@ -179,17 +179,35 @@ public final class URLValidator {
      * @throws IOException if the connection fails, redirect target is blocked, or redirect limit is exceeded
      */
     public static URLConnection openConnection(URL url) throws IOException {
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setConnectTimeout(Constants.URL_CONNECT_TIMEOUT_MS);
-        conn.setReadTimeout(Constants.URL_READ_TIMEOUT_MS);
-        conn.setInstanceFollowRedirects(false);
+        validateUrl(url);
 
         URL currentUrl = url;
         int redirectCount = 0;
+        HttpURLConnection conn = null;
 
         while (redirectCount < MAX_REDIRECTS) {
-            int responseCode = conn.getResponseCode();
+            String host = currentUrl.getHost();
+            InetAddress[] addresses;
+            try {
+                addresses = InetAddress.getAllByName(host);
+            } catch (UnknownHostException e) {
+                throw new IOException("Could not resolve host: " + host, e);
+            }
+            if (addresses == null || addresses.length == 0) {
+                throw new IOException("Could not resolve host: " + host);
+            }
+            for (InetAddress addr : addresses) {
+                if (isPrivateOrBlockedIp(addr)) {
+                    throw new IOException("Resolved IP address is in a blocked range: " + addr.getHostAddress());
+                }
+            }
 
+            conn = (HttpURLConnection) currentUrl.openConnection();
+            conn.setConnectTimeout(Constants.URL_CONNECT_TIMEOUT_MS);
+            conn.setReadTimeout(Constants.URL_READ_TIMEOUT_MS);
+            conn.setInstanceFollowRedirects(false);
+
+            int responseCode = conn.getResponseCode();
             if (responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
                 responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
                 responseCode == HttpURLConnection.HTTP_SEE_OTHER ||
@@ -205,11 +223,6 @@ public final class URLValidator {
                 validateUrl(redirectUrl);
 
                 conn.disconnect();
-                conn = (HttpURLConnection) redirectUrl.openConnection();
-                conn.setConnectTimeout(Constants.URL_CONNECT_TIMEOUT_MS);
-                conn.setReadTimeout(Constants.URL_READ_TIMEOUT_MS);
-                conn.setInstanceFollowRedirects(false);
-
                 currentUrl = redirectUrl;
                 redirectCount++;
             } else {
@@ -218,7 +231,9 @@ public final class URLValidator {
         }
 
         if (redirectCount >= MAX_REDIRECTS) {
-            conn.disconnect();
+            if (conn != null) {
+                conn.disconnect();
+            }
             throw new IOException("Too many redirects (exceeded " + MAX_REDIRECTS + " limit)");
         }
 

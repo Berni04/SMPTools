@@ -4,7 +4,7 @@
   <groupId>com.smp</groupId>
   <artifactId>smptools</artifactId>
   <name>SMPTools</name>
-  <version>1.1</version>
+  <version>1.1.2</version>
   <build>
     <resources>
       <resource>

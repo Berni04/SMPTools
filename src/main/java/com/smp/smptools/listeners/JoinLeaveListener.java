@@ -32,6 +32,9 @@ public class JoinLeaveListener implements Listener {
         long totalTicks = player.getStatistic(org.bukkit.Statistic.PLAY_ONE_MINUTE);
         long totalMinutes = totalTicks / (20 * 60);
         plugin.getStatsConfig().set("stats." + player.getUniqueId() + ".playtime_minutes", totalMinutes);
+        if (plugin.getStorageManager() != null && plugin.getStorageManager().getProvider() != null) {
+            plugin.getStorageManager().getProvider().saveStat(player.getUniqueId(), "playtime_minutes", totalMinutes);
+        }
         if (plugin.getChatManager() != null) {
             plugin.getChatManager().removePlayer(player.getUniqueId());
         }

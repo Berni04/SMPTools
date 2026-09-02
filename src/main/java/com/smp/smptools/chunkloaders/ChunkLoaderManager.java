@@ -118,7 +118,7 @@ public class ChunkLoaderManager {
         }
     }
 
-    public boolean addChunkLoader(Location loc, UUID owner, Player player) {
+    public boolean canPlaceChunkLoader(UUID owner, Player player) {
         int maxGlobal = plugin != null ? plugin.getConfig().getInt("features.chunk-loaders.max-global", 128) : 128;
         int maxPerPlayer = plugin != null ? plugin.getConfig().getInt("features.chunk-loaders.max-per-player", 8) : 8;
 
@@ -134,6 +134,13 @@ public class ChunkLoaderManager {
                 player.sendMessage(MiniMessage.miniMessage().deserialize("<red>You have reached your chunk loader limit (" + maxPerPlayer + ")!</red>"));
                 return false;
             }
+        }
+        return true;
+    }
+
+    public boolean addChunkLoader(Location loc, UUID owner, Player player) {
+        if (!canPlaceChunkLoader(owner, player)) {
+            return false;
         }
 
         if (!activeChunkLoaders.contains(loc)) {

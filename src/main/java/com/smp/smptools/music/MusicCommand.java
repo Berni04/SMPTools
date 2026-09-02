@@ -32,6 +32,8 @@ public class MusicCommand extends AbstractPlayerCommand implements org.bukkit.ev
         }
     }
 
+    private static final UUID BROADCAST_UUID = new UUID(0L, 0L);
+
     @org.bukkit.event.EventHandler
     public void onPlayerQuit(org.bukkit.event.player.PlayerQuitEvent event) {
         UUID uuid = event.getPlayer().getUniqueId();
@@ -70,8 +72,18 @@ public class MusicCommand extends AbstractPlayerCommand implements org.bukkit.ev
         if (subCommand.equals("stop")) {
             activeRequestGen.put(player.getUniqueId(), 0L);
             SongPlayer task = playingTasks.remove(player.getUniqueId());
+            boolean stoppedBroadcast = false;
+            if (player.hasPermission("smptools.music.broadcast")) {
+                SongPlayer broadcastTask = playingTasks.remove(BROADCAST_UUID);
+                if (broadcastTask != null) {
+                    broadcastTask.cancel();
+                    stoppedBroadcast = true;
+                }
+            }
             if (task != null) {
                 task.cancel();
+            }
+            if (task != null || stoppedBroadcast) {
                 player.sendMessage(plugin.getMessageManager().getMessage("music.stopped"));
             } else {
                 player.sendMessage(plugin.getMessageManager().getMessage("music.not-playing"));
@@ -145,7 +157,8 @@ public class MusicCommand extends AbstractPlayerCommand implements org.bukkit.ev
                             return; // Superseded by a newer request
                         }
 
-                        SongPlayer existing = playingTasks.remove(player.getUniqueId());
+                        UUID targetKey = subCommand.equals("broadcast") ? BROADCAST_UUID : player.getUniqueId();
+                        SongPlayer existing = playingTasks.remove(targetKey);
                         if (existing != null) {
                             try { existing.cancel(); } catch (Exception ignored) {}
                         }
@@ -156,7 +169,7 @@ public class MusicCommand extends AbstractPlayerCommand implements org.bukkit.ev
                             songPlayer = new SongPlayer(song, player.getWorld().getPlayers());
                         }
                         
-                        playingTasks.put(player.getUniqueId(), songPlayer);
+                        playingTasks.put(targetKey, songPlayer);
                         songPlayer.play(plugin);
                         player.sendMessage(plugin.getMessageManager().getMessage("music.now-playing", player, Map.of("title", song.getTitle())));
                     });

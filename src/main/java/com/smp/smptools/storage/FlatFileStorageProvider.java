@@ -14,11 +14,17 @@ public class FlatFileStorageProvider implements StorageProvider {
         this.plugin = plugin;
     }
 
+    private final List<Runnable> pendingTasks = Collections.synchronizedList(new ArrayList<>());
+
     private void runSyncOrNow(Runnable task) {
         if (Bukkit.getServer() == null || Bukkit.isPrimaryThread() || plugin == null || !plugin.isEnabled()) {
             task.run();
         } else {
-            Bukkit.getScheduler().runTask(plugin, task);
+            pendingTasks.add(task);
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                pendingTasks.remove(task);
+                task.run();
+            });
         }
     }
 
@@ -29,6 +35,18 @@ public class FlatFileStorageProvider implements StorageProvider {
 
     @Override
     public void shutdown() {
+        synchronized (pendingTasks) {
+            for (Runnable task : pendingTasks) {
+                try {
+                    task.run();
+                } catch (Exception e) {
+                    if (plugin != null) {
+                        plugin.getLogger().warning("Error executing pending flat-file task during shutdown: " + e.getMessage());
+                    }
+                }
+            }
+            pendingTasks.clear();
+        }
         plugin.saveStatsConfig();
         plugin.saveTagsConfig();
     }
