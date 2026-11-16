@@ -220,7 +220,51 @@ public class LockManagerTest {
         // untrustPlayer for someone who is not trusted
         boolean removed = manager.untrustPlayer(leftBlock, createPlayerProxy(owner), createOfflinePlayerProxy(unTargetedUser));
         assertFalse(removed, "Should return false when user is not trusted.");
+        assertFalse(manager.getContainerOwners().containsKey(rightKey), "The non-canonical half record must be consolidated.");
+        assertEquals(owner, manager.getContainerOwners().get(leftKey), "The canonical record must retain the owner.");
         assertTrue(saveCount[0] > 0, "saveLocks must be called due to consolidation even when removed is false.");
+    }
+
+    @Test
+    public void testUnauthorizedTrustUntrustDoesNotConsolidateOrSave() {
+        World world = createWorldProxy("world");
+        Block leftBlock = createBlockProxy(world, 50, 64, 50);
+        Block rightBlock = createBlockProxy(world, 51, 64, 50);
+
+        setSingleChest(leftBlock);
+        setSingleChest(rightBlock);
+
+        final int[] saveCount = {0};
+        LockManager manager = new LockManager(null) {
+            @Override
+            public void saveLocks() {
+                saveCount[0]++;
+            }
+        };
+
+        java.util.UUID realOwner = java.util.UUID.randomUUID();
+        java.util.UUID intruder = java.util.UUID.randomUUID();
+        java.util.UUID target = java.util.UUID.randomUUID();
+
+        String leftKey = manager.getLocationKey(leftBlock.getLocation());
+        String rightKey = manager.getLocationKey(rightBlock.getLocation());
+
+        manager.getContainerOwners().put(leftKey, realOwner);
+        manager.getContainerOwners().put(rightKey, realOwner);
+
+        createDoubleChestPair(leftBlock, rightBlock);
+
+        // Intruder attempts to untrust
+        boolean removed = manager.untrustPlayer(leftBlock, createPlayerProxy(intruder), createOfflinePlayerProxy(target));
+        assertFalse(removed, "Unauthorized player must not untrust.");
+        assertEquals(0, saveCount[0], "No save should occur for unauthorized untrust.");
+        assertTrue(manager.getContainerOwners().containsKey(rightKey), "No consolidation should occur for unauthorized untrust.");
+
+        // Intruder attempts to trust
+        boolean trusted = manager.trustPlayer(leftBlock, createPlayerProxy(intruder), createOfflinePlayerProxy(target));
+        assertFalse(trusted, "Unauthorized player must not trust.");
+        assertEquals(0, saveCount[0], "No save should occur for unauthorized trust.");
+        assertTrue(manager.getContainerOwners().containsKey(rightKey), "No consolidation should occur for unauthorized trust.");
     }
 
     private LockManager createTestLockManager() {

@@ -432,11 +432,12 @@ public class LockManager {
     }
 
     public boolean trustPlayer(Block block, Player owner, OfflinePlayer target) {
-        String key = canonicalizeAndConsolidateDoubleChestKey(block);
+        String key = getLockKey(block);
         if (key == null || !containerOwners.containsKey(key)) return false;
         if (!containerOwners.get(key).equals(owner.getUniqueId()) && !owner.hasPermission("smptools.locks.admin")) {
             return false;
         }
+        key = canonicalizeAndConsolidateDoubleChestKey(block);
 
         containerTrusted.computeIfAbsent(key, k -> ConcurrentHashMap.newKeySet()).add(target.getUniqueId());
         saveLocks();
@@ -444,11 +445,12 @@ public class LockManager {
     }
 
     public boolean untrustPlayer(Block block, Player owner, OfflinePlayer target) {
-        String key = canonicalizeAndConsolidateDoubleChestKey(block);
+        String key = getLockKey(block);
         if (key == null || !containerOwners.containsKey(key)) return false;
         if (!containerOwners.get(key).equals(owner.getUniqueId()) && !owner.hasPermission("smptools.locks.admin")) {
             return false;
         }
+        key = canonicalizeAndConsolidateDoubleChestKey(block);
 
         boolean removed = false;
         Set<UUID> set = containerTrusted.get(key);

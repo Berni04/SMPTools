@@ -92,7 +92,7 @@ public class ArtifactCommand implements CommandExecutor, TabCompleter {
             if (recovered.isEmpty()) {
                 player.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>No overflow artifacts to claim.</yellow>"));
             } else {
-                player.sendMessage(MiniMessage.miniMessage().deserialize("<green>Successfully claimed " + recovered.size() + " recovered artifact(s)!</green>"));
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<green>Successfully claimed " + recovered.size() + " recovered artifact(s) (check your inventory or nearby ground)!</green>"));
             }
             return true;
         }
@@ -115,8 +115,8 @@ public class ArtifactCommand implements CommandExecutor, TabCompleter {
             if (recovered.isEmpty()) {
                 sender.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>No overflow artifacts found for " + target.getName() + ".</yellow>"));
             } else {
-                sender.sendMessage(MiniMessage.miniMessage().deserialize("<green>Recovered and delivered " + recovered.size() + " artifact(s) to " + target.getName() + ".</green>"));
-                target.sendMessage(MiniMessage.miniMessage().deserialize("<green>An administrator recovered " + recovered.size() + " artifact(s) to your inventory!</green>"));
+                sender.sendMessage(MiniMessage.miniMessage().deserialize("<green>Recovered and delivered " + recovered.size() + " artifact(s) to " + target.getName() + " (check inventory or nearby ground).</green>"));
+                target.sendMessage(MiniMessage.miniMessage().deserialize("<green>An administrator recovered " + recovered.size() + " artifact(s) for you; check your inventory or nearby ground.</green>"));
             }
             return true;
         }
