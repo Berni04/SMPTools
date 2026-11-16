@@ -183,4 +183,49 @@ public class GraveManagerTest {
         assertEquals("custom_world", locMap.get("world"));
         assertEquals(50.0, ((Number) locMap.get("x")).doubleValue());
     }
+
+    @Test
+    public void testMalformedGraveLocationRejected() throws Exception {
+        GraveManager manager = new GraveManager(null);
+        java.io.File tempFile = java.io.File.createTempFile("graves_malformed_test", ".yml");
+        tempFile.deleteOnExit();
+
+        org.bukkit.configuration.file.YamlConfiguration config =
+                org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(tempFile);
+
+        // Put a malformed grave missing 'x' and 'y'
+        java.util.Map<String, Object> badGrave = new java.util.HashMap<>();
+        badGrave.put("owner", UUID.randomUUID().toString());
+        badGrave.put("ownerName", "BadPlayer");
+        badGrave.put("worldName", "world");
+        java.util.Map<String, Object> badLoc = new java.util.HashMap<>();
+        badLoc.put("z", 10.0);
+        badLoc.put("world", "world");
+        badGrave.put("location", badLoc);
+        badGrave.put("items", Collections.emptyList());
+        badGrave.put("time", 1000L);
+        badGrave.put("cause", "void");
+
+        config.set("graves", java.util.List.of(badGrave));
+        config.save(tempFile);
+
+        java.lang.reflect.Field fileField = GraveManager.class.getDeclaredField("gravesFile");
+        fileField.setAccessible(true);
+        fileField.set(manager, tempFile);
+
+        java.lang.reflect.Field configField = GraveManager.class.getDeclaredField("gravesConfig");
+        configField.setAccessible(true);
+        configField.set(manager, config);
+
+        java.lang.reflect.Method loadMethod = GraveManager.class.getDeclaredMethod("loadGraves");
+        loadMethod.setAccessible(true);
+        loadMethod.invoke(manager);
+
+        java.lang.reflect.Field gravesMapField = GraveManager.class.getDeclaredField("graves");
+        gravesMapField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        java.util.Map<Location, Grave> gravesMap = (java.util.Map<Location, Grave>) gravesMapField.get(manager);
+
+        assertTrue(gravesMap.isEmpty(), "Malformed graves with missing coordinates must not be loaded into memory or at world origin");
+    }
 }

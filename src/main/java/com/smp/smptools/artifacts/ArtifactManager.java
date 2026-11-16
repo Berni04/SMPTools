@@ -26,7 +26,21 @@ public class ArtifactManager {
     private final NamespacedKey artifactKey;
     private final Map<UUID, Map<Integer, ItemStack>> equippedPouchMap = new HashMap<>();
     private final Map<UUID, List<ItemStack>> pouchOverflow = new HashMap<>();
-    private final Map<UUID, List<ItemStack>> pouchPendingClaims = new HashMap<>();
+    private static class PendingClaim {
+        final List<ItemStack> toDeliver;
+        final List<ItemStack> delivered;
+        final List<ItemStack> undelivered;
+        final boolean settled;
+
+        PendingClaim(List<ItemStack> toDeliver, List<ItemStack> delivered, List<ItemStack> undelivered, boolean settled) {
+            this.toDeliver = toDeliver != null ? toDeliver : Collections.emptyList();
+            this.delivered = delivered != null ? delivered : Collections.emptyList();
+            this.undelivered = undelivered != null ? undelivered : Collections.emptyList();
+            this.settled = settled;
+        }
+    }
+
+    private final Map<UUID, PendingClaim> pouchPendingClaims = new HashMap<>();
     private File artifactsFile;
     private FileConfiguration artifactsConfig;
 
@@ -130,77 +144,28 @@ public class ArtifactManager {
     }
 
     private void loadPouchData() {
-        if (plugin == null) return;
-        artifactsFile = new File(plugin.getDataFolder(), "artifacts.yml");
-        if (!artifactsFile.exists()) {
-            try {
-                artifactsFile.createNewFile();
-            } catch (IOException e) {
-                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Could not create artifacts.yml", e);
+        if (artifactsConfig == null) {
+            if (plugin == null && artifactsFile == null) return;
+            if (artifactsFile == null) {
+                artifactsFile = new File(plugin.getDataFolder(), "artifacts.yml");
             }
+            if (!artifactsFile.exists()) {
+                try {
+                    artifactsFile.createNewFile();
+                } catch (IOException e) {
+                    if (plugin != null) {
+                        plugin.getLogger().log(java.util.logging.Level.SEVERE, "Could not create artifacts.yml", e);
+                    }
+                }
+            }
+            artifactsConfig = YamlConfiguration.loadConfiguration(artifactsFile);
         }
-        artifactsConfig = YamlConfiguration.loadConfiguration(artifactsFile);
 
+        equippedPouchMap.clear();
         pouchOverflow.clear();
-        if (artifactsConfig.isConfigurationSection("pouch-overflow")) {
-            org.bukkit.configuration.ConfigurationSection overflowSec = artifactsConfig.getConfigurationSection("pouch-overflow");
-            if (overflowSec != null) {
-                for (String uuidStr : overflowSec.getKeys(false)) {
-                    try {
-                        UUID uuid = UUID.fromString(uuidStr);
-                        List<?> rawList = artifactsConfig.getList("pouch-overflow." + uuidStr);
-                        if (rawList != null) {
-                            List<ItemStack> items = new ArrayList<>();
-                            for (Object obj : rawList) {
-                                if (obj instanceof ItemStack is) items.add(is);
-                            }
-                            if (!items.isEmpty()) {
-                                pouchOverflow.put(uuid, items);
-                            }
-                        }
-                    } catch (Exception ex) {
-                        plugin.getLogger().warning("Failed to load pouch overflow for UUID '" + uuidStr + "': " + ex.getMessage());
-                    }
-                }
-            }
-        }
+        pouchPendingClaims.clear();
 
-        if (artifactsConfig.isConfigurationSection("pouch-pending-claim")) {
-            org.bukkit.configuration.ConfigurationSection pendingSec = artifactsConfig.getConfigurationSection("pouch-pending-claim");
-            if (pendingSec != null) {
-                boolean reconciledAny = false;
-                for (String uuidStr : pendingSec.getKeys(false)) {
-                    try {
-                        UUID uuid = UUID.fromString(uuidStr);
-                        List<?> rawList = artifactsConfig.getList("pouch-pending-claim." + uuidStr);
-                        if (rawList != null) {
-                            List<ItemStack> items = new ArrayList<>();
-                            for (Object obj : rawList) {
-                                if (obj instanceof ItemStack is && is.getType() != Material.AIR) {
-                                    items.add(is);
-                                }
-                            }
-                            if (!items.isEmpty()) {
-                                pouchOverflow.computeIfAbsent(uuid, k -> new ArrayList<>()).addAll(items);
-                                reconciledAny = true;
-                                if (plugin != null) {
-                                    plugin.getLogger().info("Reconciled " + items.size() + " unconfirmed claim artifact(s) for " + uuidStr + " into overflow recovery storage.");
-                                }
-                            }
-                        }
-                    } catch (Exception ex) {
-                        if (plugin != null) {
-                            plugin.getLogger().warning("Failed to reconcile pending claim for UUID '" + uuidStr + "': " + ex.getMessage());
-                        }
-                    }
-                }
-                artifactsConfig.set("pouch-pending-claim", null);
-                if (reconciledAny) {
-                    savePouchDataWithResult();
-                }
-            }
-        }
-
+        boolean migratedAnyLegacy = false;
         if (artifactsConfig.isConfigurationSection("pouch")) {
             org.bukkit.configuration.ConfigurationSection pouchSec = artifactsConfig.getConfigurationSection("pouch");
             if (pouchSec != null) {
@@ -226,7 +191,9 @@ public class ArtifactManager {
                                         }
                                     }
                                 } catch (Exception ex) {
-                                    plugin.getLogger().warning("Failed to load pouch slot '" + slotStr + "' for " + uuidStr + ": " + ex.getMessage());
+                                    if (plugin != null) {
+                                        plugin.getLogger().warning("Failed to load pouch slot '" + slotStr + "' for " + uuidStr + ": " + ex.getMessage());
+                                    }
                                 }
                             }
                             for (Map.Entry<Integer, ItemStack> legacy : legacyEntries) {
@@ -241,11 +208,13 @@ public class ArtifactManager {
                                 }
                                 if (freeSlot != null) {
                                     map.put(freeSlot, item);
+                                    migratedAnyLegacy = true;
                                     if (plugin != null) {
                                         plugin.getLogger().info("Migrated pouch artifact for " + uuidStr + " from legacy slot " + legacySlot + " to slot " + freeSlot);
                                     }
                                 } else {
                                     pouchOverflow.computeIfAbsent(uuid, k -> new ArrayList<>()).add(item);
+                                    migratedAnyLegacy = true;
                                     if (plugin != null) {
                                         plugin.getLogger().warning("No free pouch slot for " + uuidStr + " to migrate legacy slot " + legacySlot + "; preserved in recovery overflow storage.");
                                     }
@@ -254,10 +223,89 @@ public class ArtifactManager {
                         }
                         equippedPouchMap.put(uuid, map);
                     } catch (Exception ex) {
-                        plugin.getLogger().warning("Failed to load pouch data for UUID '" + uuidStr + "': " + ex.getMessage());
+                        if (plugin != null) {
+                            plugin.getLogger().warning("Failed to load pouch data for UUID '" + uuidStr + "': " + ex.getMessage());
+                        }
                     }
                 }
             }
+        }
+
+        if (artifactsConfig.isConfigurationSection("pouch-overflow")) {
+            org.bukkit.configuration.ConfigurationSection overflowSec = artifactsConfig.getConfigurationSection("pouch-overflow");
+            if (overflowSec != null) {
+                for (String uuidStr : overflowSec.getKeys(false)) {
+                    try {
+                        UUID uuid = UUID.fromString(uuidStr);
+                        List<?> rawList = artifactsConfig.getList("pouch-overflow." + uuidStr);
+                        if (rawList != null) {
+                            List<ItemStack> items = new ArrayList<>();
+                            for (Object obj : rawList) {
+                                if (obj instanceof ItemStack is && is.getType() != Material.AIR) items.add(is);
+                            }
+                            if (!items.isEmpty()) {
+                                pouchOverflow.put(uuid, items);
+                            }
+                        }
+                    } catch (Exception ex) {
+                        if (plugin != null) {
+                            plugin.getLogger().warning("Failed to load pouch overflow for UUID '" + uuidStr + "': " + ex.getMessage());
+                        }
+                    }
+                }
+            }
+        }
+
+        boolean reconciledAny = false;
+        if (artifactsConfig.isConfigurationSection("pouch-pending-claim")) {
+            org.bukkit.configuration.ConfigurationSection pendingSec = artifactsConfig.getConfigurationSection("pouch-pending-claim");
+            if (pendingSec != null) {
+                for (String uuidStr : pendingSec.getKeys(false)) {
+                    try {
+                        UUID uuid = UUID.fromString(uuidStr);
+                        List<ItemStack> itemsToRestore = new ArrayList<>();
+
+                        if (pendingSec.isConfigurationSection(uuidStr)) {
+                            org.bukkit.configuration.ConfigurationSection claimSec = pendingSec.getConfigurationSection(uuidStr);
+                            boolean settled = claimSec != null && claimSec.getBoolean("settled", false);
+                            List<?> rawList = claimSec != null ? (settled ? claimSec.getList("undelivered") : claimSec.getList("to-deliver")) : null;
+                            if (rawList != null) {
+                                for (Object obj : rawList) {
+                                    if (obj instanceof ItemStack is && is.getType() != Material.AIR) {
+                                        itemsToRestore.add(is);
+                                    }
+                                }
+                            }
+                        } else if (pendingSec.isList(uuidStr)) {
+                            List<?> rawList = pendingSec.getList(uuidStr);
+                            if (rawList != null) {
+                                for (Object obj : rawList) {
+                                    if (obj instanceof ItemStack is && is.getType() != Material.AIR) {
+                                        itemsToRestore.add(is);
+                                    }
+                                }
+                            }
+                        }
+
+                        if (!itemsToRestore.isEmpty()) {
+                            pouchOverflow.computeIfAbsent(uuid, k -> new ArrayList<>()).addAll(itemsToRestore);
+                            reconciledAny = true;
+                            if (plugin != null) {
+                                plugin.getLogger().info("Reconciled " + itemsToRestore.size() + " unconfirmed claim artifact(s) for " + uuidStr + " into overflow recovery storage.");
+                            }
+                        }
+                    } catch (Exception ex) {
+                        if (plugin != null) {
+                            plugin.getLogger().warning("Failed to reconcile pending claim for UUID '" + uuidStr + "': " + ex.getMessage());
+                        }
+                    }
+                }
+                artifactsConfig.set("pouch-pending-claim", null);
+            }
+        }
+
+        if (reconciledAny || migratedAnyLegacy) {
+            savePouchDataWithResult();
         }
     }
 
@@ -292,7 +340,7 @@ public class ArtifactManager {
         List<ItemStack> toDeliver = new ArrayList<>(list);
 
         // Stage pending-claim record on disk before removing overflow to prevent item loss on abrupt shutdown
-        pouchPendingClaims.put(uuid, toDeliver);
+        pouchPendingClaims.put(uuid, new PendingClaim(toDeliver, Collections.emptyList(), Collections.emptyList(), false));
         pouchOverflow.remove(uuid);
         if (!savePouchDataWithResult()) {
             // Restore in-memory state on persistence failure and abort claim
@@ -337,11 +385,25 @@ public class ArtifactManager {
             }
             throw t;
         } finally {
+            // Durably persist the settlement record distinguishing delivered and undelivered items before clearing pending claim
+            pouchPendingClaims.put(uuid, new PendingClaim(toDeliver, delivered, undelivered, true));
+            boolean settledSave = savePouchDataWithResult();
+            if (!settledSave) {
+                if (plugin != null) {
+                    plugin.getLogger().severe("Failed to persist durable claim settlement for " + uuid + "; retrying save...");
+                }
+                settledSave = savePouchDataWithResult();
+            }
+
+            // Once settlement is persisted on disk (or attempted), clear pending claim and restore undelivered items to overflow
             pouchPendingClaims.remove(uuid);
             if (!undelivered.isEmpty()) {
                 pouchOverflow.computeIfAbsent(uuid, k -> new ArrayList<>()).addAll(undelivered);
             }
-            savePouchDataWithResult();
+            boolean finalSave = savePouchDataWithResult();
+            if (!finalSave && plugin != null) {
+                plugin.getLogger().severe("Failed final cleanup save after claiming pouch overflow for " + uuid + ".");
+            }
         }
 
         return delivered;
@@ -373,9 +435,17 @@ public class ArtifactManager {
         }
 
         artifactsConfig.set("pouch-pending-claim", null);
-        for (Map.Entry<UUID, List<ItemStack>> entry : pouchPendingClaims.entrySet()) {
-            if (entry.getKey() != null && entry.getValue() != null && !entry.getValue().isEmpty()) {
-                artifactsConfig.set("pouch-pending-claim." + entry.getKey(), entry.getValue());
+        for (Map.Entry<UUID, PendingClaim> entry : pouchPendingClaims.entrySet()) {
+            if (entry.getKey() != null && entry.getValue() != null) {
+                String uStr = entry.getKey().toString();
+                PendingClaim claim = entry.getValue();
+                artifactsConfig.set("pouch-pending-claim." + uStr + ".settled", claim.settled);
+                if (claim.settled) {
+                    artifactsConfig.set("pouch-pending-claim." + uStr + ".undelivered", claim.undelivered);
+                    artifactsConfig.set("pouch-pending-claim." + uStr + ".delivered", claim.delivered);
+                } else {
+                    artifactsConfig.set("pouch-pending-claim." + uStr + ".to-deliver", claim.toDeliver);
+                }
             }
         }
 

@@ -548,14 +548,23 @@ public class GraveManager implements Listener {
                         }
                     }
                 } else if (rawLoc instanceof Map<?, ?> locMap) {
+                    Object rawX = locMap.get("x");
+                    Object rawY = locMap.get("y");
+                    Object rawZ = locMap.get("z");
+                    if (!(rawX instanceof Number nx && rawY instanceof Number ny && rawZ instanceof Number nz)) {
+                        if (plugin != null) {
+                            plugin.getLogger().warning("Skipping grave with missing or non-numeric coordinates: " + locMap);
+                        }
+                        continue;
+                    }
                     if (worldName == null && locMap.get("world") instanceof String w) {
                         worldName = w;
                     }
-                    double x = locMap.get("x") instanceof Number n ? n.doubleValue() : 0.0;
-                    double y = locMap.get("y") instanceof Number n ? n.doubleValue() : 0.0;
-                    double z = locMap.get("z") instanceof Number n ? n.doubleValue() : 0.0;
-                    float yaw = locMap.get("yaw") instanceof Number n ? n.floatValue() : 0.0f;
-                    float pitch = locMap.get("pitch") instanceof Number n ? n.floatValue() : 0.0f;
+                    double x = nx.doubleValue();
+                    double y = ny.doubleValue();
+                    double z = nz.doubleValue();
+                    float yaw = locMap.get("yaw") instanceof Number nyaw ? nyaw.floatValue() : 0.0f;
+                    float pitch = locMap.get("pitch") instanceof Number npitch ? npitch.floatValue() : 0.0f;
                     org.bukkit.World w = null;
                     if (worldName != null && org.bukkit.Bukkit.getServer() != null) {
                         try {
@@ -564,6 +573,11 @@ public class GraveManager implements Listener {
                         }
                     }
                     location = new Location(w, x, y, z, yaw, pitch);
+                } else {
+                    if (plugin != null) {
+                        plugin.getLogger().warning("Skipping grave with unrecognized location format: " + rawLoc);
+                    }
+                    continue;
                 }
 
                 List<ItemStack> items = (List<ItemStack>) map.get("items");
