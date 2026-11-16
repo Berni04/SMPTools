@@ -3,7 +3,7 @@
 **Project:** Minecraft Paper 1.21 plugin (Java 17, Maven), package `com.smp.smptools`, ~203 Java files.
 **Plugin version:** 1.1 (`api-version: '1.21'`, branch `updates/1.1`).
 **Build/test:** `mvn -q test -o` — all tests PASS and compile is clean. Do not break them.
-**Context:** Pass 1 (`BUG_REPORT_FIX_PLAN.md`) covered the pre-existing systems. Pass 2 covers the three NEW feature systems (artifacts, seasonal events, mini-events) and the fix code added in commits `986a531`→`f466bc2`. This document is the **authoritative list of what is still broken in the CURRENT tree** — everything else attributed to Pass 2 has already been fixed and verified (see §4).
+**Context:** Pass 1 (`BUG_REPORT_FIX_PLAN.md`) covered the pre-existing systems. Pass 2 covers the three NEW feature systems (artifacts, seasonal events, mini-events) and the fix code added in commits `986a531`→`f466bc2`. This document is a **historical snapshot of issues identified specific to revision `f466bc2`** — everything else attributed to Pass 2 has already been fixed and verified (see §4).
 
 ---
 
@@ -213,8 +213,8 @@ long periodTicks = intervalMinutes * 60 * 20L;
 - In `deliverRewards`, rewards for **online** winners are executed once and, on failure, dropped silently — not queued.
 
 **Fix plan:**
-1. In `claimOfflineRewards`: after N failed attempts (or immediately), drop the bad entry with a warning (`getLogger().warning(... decoded reward)`) instead of retrying forever; only leave entries for transient failures (currently everything is treated the same — simplest correct behavior: on `executeReward` false, log once and REMOVE the entry).
-2. In `deliverRewards`: on `executeReward` failure for an online player, log a warning (do not queue; online retry is pointless if it failed live).
+1. In `claimOfflineRewards` and `executeReward`: reliably classify reward execution outcomes into success, permanent failure, and transient failure. Permanent failures (e.g. unknown material names, malformed reward syntax, invalid quantities) must be logged once with a warning for administrator review and permanently purged from the queue so they do not loop endlessly on every join. Transient failures (e.g. external command execution temporary errors or downstream subsystem unavailability) remain in the pending queue to stay recoverable across future joins.
+2. In `deliverRewards`: for online players, distinguish execution failures similarly: queue transiently failed rewards into `pending_rewards.<uuid>` for subsequent retry on reconnect, while logging permanent failures for administrator review rather than dropping them silently.
 3. Keep the `getStringList`/set-null semantics (lines 82-94) working; note `remaining.remove(reward)` removes one occurrence even when duplicates exist — that's fine/intended.
 
 **Verify:** put a malformed reward in `events.rewards.participation`, end an event while offline → join → exactly ONE warning + no infinite retry.

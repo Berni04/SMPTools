@@ -1,7 +1,12 @@
-# SMPTools Fix Plan
+# SMPTools Fix Plan (SUPERSEDED)
+
+> [!WARNING]
+> **This plan is SUPERSEDED by [FINAL_FIX_PLAN.md](FINAL_FIX_PLAN.md).**
+> Previous drafts in this document contained vulnerabilities (such as single-half lock auto-deletion on double chest pairing). Please refer to [FINAL_FIX_PLAN.md](FINAL_FIX_PLAN.md) for the authoritative, consolidated fix plan.
 
 | | |
 |---|---|
+| **Status** | **SUPERSEDED** by [FINAL_FIX_PLAN.md](FINAL_FIX_PLAN.md) |
 | **Companion doc** | `AUDIT_FINDINGS.md` (48 findings: 4 CRIT, 15 HIGH, 29 MED, 27 LOW) |
 | **Code revision** | git `02a50d9` — all file:line refs match that tree |
 | **Goal** | Fix every finding in the audit, ordered by blast radius, with regression safety |

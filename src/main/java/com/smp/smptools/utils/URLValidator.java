@@ -523,6 +523,7 @@ public final class URLValidator {
     }
 
     private static class ChunkedInputStream extends InputStream {
+        private static final int MAX_TRAILER_BYTES = 8192;
         private final InputStream in;
         private int remainingInChunk = 0;
         private boolean eof = false;
@@ -560,8 +561,12 @@ public final class URLValidator {
                 if (remainingInChunk == 0) {
                     eof = true;
                     String trailer;
+                    int trailerBytes = 0;
                     while ((trailer = PinnedHttpURLConnection.readLine(in, MAX_HEADER_LINE_LENGTH)) != null && !trailer.isEmpty()) {
-                        // ignore trailers
+                        trailerBytes += trailer.length() + 2;
+                        if (trailerBytes > MAX_TRAILER_BYTES) {
+                            throw new IOException("Chunked trailer section exceeds " + MAX_TRAILER_BYTES + " bytes");
+                        }
                     }
                 }
             }

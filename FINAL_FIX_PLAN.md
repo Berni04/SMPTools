@@ -144,7 +144,7 @@ flowchart TD
 
 ### F-CRIT-01 — Pure Canonical Keys & `BlockPlace` Pairing Protection
 - **Finding:** CRIT-01 (Lock migration on read path transfers ownership to attacker).
-- **Files:** [`LockManager.java:120-168`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/locks/LockManager.java#L120-L168), [`LockListener.java`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/listeners/LockListener.java)
+- **Files:** [`LockManager.java:120-168`](src/main/java/com/smp/smptools/locks/LockManager.java#L120-L168), [`LockListener.java`](src/main/java/com/smp/smptools/listeners/LockListener.java)
 - **Changes:**
   1. Make `getBlockKey(Block block)` a **pure function**: compute the canonical lower-coordinate half without modifying `containerOwners` or calling `saveLocks()`.
   2. Add `BlockPlaceEvent` handler in `LockListener`:
@@ -173,14 +173,14 @@ flowchart TD
 
 ### F-CRIT-02 — Ownership Guard in `lockContainer` & Break Own Half Rule
 - **Finding:** CRIT-02 (Unchecked lock container command).
-- **Files:** [`LockManager.java:272-280`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/locks/LockManager.java#L272-L280), [`LockCommand.java:59-63`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/commands/LockCommand.java#L59-L63), [`LockListener.java:50-62`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/listeners/LockListener.java#L50-L62)
+- **Files:** [`LockManager.java:272-280`](src/main/java/com/smp/smptools/locks/LockManager.java#L272-L280), [`LockCommand.java:59-63`](src/main/java/com/smp/smptools/commands/LockCommand.java#L59-L63), [`LockListener.java:50-62`](src/main/java/com/smp/smptools/listeners/LockListener.java#L50-L62)
 - **Changes:**
   1. In `LockManager.lockContainer(Block, Player)`: check if the canonical key is already locked by another player; reject if not owner and lacks `smptools.locks.admin`.
   2. In `LockListener.onBlockBreak`: allow breaking a chest half if the breaker is the recorded owner of either half-key.
 
 ### F-CRIT-03 — Image Dimension Pre-Check Before Decode
 - **Finding:** CRIT-03 (Decompression bomb OOM via `/tomap`).
-- **Files:** [`ImageProcessor.java:17-29`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/imagemap/ImageProcessor.java#L17-L29), [`Constants.java`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/utils/Constants.java)
+- **Files:** [`ImageProcessor.java:17-29`](src/main/java/com/smp/smptools/imagemap/ImageProcessor.java#L17-L29), [`Constants.java`](src/main/java/com/smp/smptools/utils/Constants.java)
 - **Changes:**
   - Before allocating image memory, inspect headers using `ImageReader`:
     ```java
@@ -216,7 +216,7 @@ flowchart TD
 
 ### F-CRIT-04 — SSRF: DNS Pinning & Range Expansion
 - **Finding:** CRIT-04 (DNS-rebinding TOCTOU & missing IPv6/CGNAT ranges).
-- **Files:** [`URLValidator.java`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/utils/URLValidator.java), [`MapCommand.java`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/imagemap/MapCommand.java), [`MusicCommand.java`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/commands/MusicCommand.java)
+- **Files:** [`URLValidator.java`](src/main/java/com/smp/smptools/utils/URLValidator.java), [`MapCommand.java`](src/main/java/com/smp/smptools/imagemap/MapCommand.java), [`MusicCommand.java`](src/main/java/com/smp/smptools/commands/MusicCommand.java)
 - **Changes:**
   1. Expand `isPrivateOrBlockedIp(InetAddress address)` to explicitly reject:
      - `fc00::/7` (IPv6 ULA)
@@ -233,7 +233,7 @@ flowchart TD
 ## 4. Phase 2 — HIGH Fixes
 
 ### F-HIGH-01/02 — Trade Listener Hardening & Settling State Machine
-- **Files:** [`TradeListener.java:32,145`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/listeners/TradeListener.java#L32-L145), [`TradeSession.java:185-212`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/trade/TradeSession.java#L185-L212)
+- **Files:** [`TradeListener.java:32,145`](src/main/java/com/smp/smptools/listeners/TradeListener.java#L32-L145), [`TradeSession.java:185-212`](src/main/java/com/smp/smptools/trade/TradeSession.java#L185-L212)
 - **Changes:**
   1. Add `ignoreCancelled = true` on `onInventoryClick` and `onInventoryDrag`.
   2. Introduce `TradeSession.State { ACTIVE, SETTLING, COMPLETED, CANCELLED }`.
@@ -241,7 +241,7 @@ flowchart TD
   4. In `TradeListener`: if session is `SETTLING` or not found on trade inventory, cancel the click unconditionally.
 
 ### F-HIGH-03/04 — Grave Lifecycle & Tamper-Proofing
-- **Files:** [`GraveManager.java`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/graves/GraveManager.java)
+- **Files:** [`GraveManager.java`](src/main/java/com/smp/smptools/graves/GraveManager.java)
 - **Changes:**
   1. Add `@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true) onBlockBreak(BlockBreakEvent)`:
      - If location is a grave, only owner or admin can break (pops items onto ground and removes holograms). Non-owners are denied.
@@ -251,7 +251,7 @@ flowchart TD
   5. Add grave expiry configuration (`features.player-graves.expire-hours`, default 72h) with periodic cleanup dropping items at the grave spot.
 
 ### F-HIGH-05 — Private Vault Serialization Safety
-- **Files:** [`PrivateVaultCommand.java:42-76`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/commands/PrivateVaultCommand.java#L42-L76), [`VaultListener.java:31-35`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/listeners/VaultListener.java#L31-L35)
+- **Files:** [`PrivateVaultCommand.java:42-76`](src/main/java/com/smp/smptools/commands/PrivateVaultCommand.java#L42-L76), [`VaultListener.java:31-35`](src/main/java/com/smp/smptools/listeners/VaultListener.java#L31-L35)
 - **Changes:**
   1. Bound `readInt()` to `[0, MAX_VAULT_SIZE * 4]`.
   2. If deserialization fails, set transient flag `vaultDecodeFailed` on the player and open an error view.
@@ -259,7 +259,7 @@ flowchart TD
   4. Migrate vaults to isolated `vaults.yml` saved via `AtomicFileWriter`.
 
 ### F-HIGH-06/07 — Chunk Loader Caps & Lifecycle
-- **Files:** [`ChunkLoaderListener.java:24-54`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/listeners/ChunkLoaderListener.java#L24-L54), [`ChunkLoaderManager.java`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/chunkloaders/ChunkLoaderManager.java)
+- **Files:** [`ChunkLoaderListener.java:24-54`](src/main/java/com/smp/smptools/listeners/ChunkLoaderListener.java#L24-L54), [`ChunkLoaderManager.java`](src/main/java/com/smp/smptools/chunkloaders/ChunkLoaderManager.java)
 - **Changes:**
   1. Add `ignoreCancelled = true` and `priority = EventPriority.HIGH` to place/break handlers.
   2. Store `ChunkLoaderRecord { Location, UUID owner, long placedAt }`.
@@ -268,20 +268,20 @@ flowchart TD
   5. Check ownership on break: only owner or admin may dismantle a loader.
 
 ### F-HIGH-08 — Christmas Gamemode Save/Restore & Void Fall Rescue
-- **Files:** [`ChristmasWorldListener.java:40-66`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/listeners/ChristmasWorldListener.java#L40-L66)
+- **Files:** [`ChristmasWorldListener.java:40-66`](src/main/java/com/smp/smptools/listeners/ChristmasWorldListener.java#L40-L66)
 - **Changes:**
   1. On world change into `christmas`: store previous `GameMode` in player PDC (`orig_gamemode`) and switch to `ADVENTURE` (unless Creative/Spectator).
-  2. On world change out of `christmas`, player quit, or respawn: read PDC and restore original `GameMode`.
+  2. On world change out of `christmas`, player quit, or respawn: read PDC and restore original `GameMode`.\
   3. Exempt `DamageCause.VOID` from damage cancellation; schedule periodic check teleporting players falling below `minHeight` back to world spawn.
 
 ### F-HIGH-09 — Krampus Guard Liveness Tracking
-- **Files:** [`KrampusListener.java:100-109`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/listeners/KrampusListener.java#L100-L109), [`KrampusManager.java:292-305`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/christmas/KrampusManager.java#L292-L305)
+- **Files:** [`KrampusListener.java:100-109`](src/main/java/com/smp/smptools/listeners/KrampusListener.java#L100-L109), [`KrampusManager.java:292-305`](src/main/java/com/smp/smptools/christmas/KrampusManager.java#L292-L305)
 - **Changes:**
   1. Trigger `checkGuardDeath` on `EntityDeathEvent` regardless of killer identity (`/kill`, fire, other players).
   2. Add watchdog task checking live guard counts every 10s: if all guards are dead/cleared, automatically release the caged victim.
 
 ### F-HIGH-10 — `/rename` Sanitization & Permission Gating
-- **Files:** [`RenameCommand.java:41-45`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/commands/RenameCommand.java#L41-L45), [`plugin.yml:63-65`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/resources/plugin.yml#L63-L65)
+- **Files:** [`RenameCommand.java:41-45`](src/main/java/com/smp/smptools/commands/RenameCommand.java#L41-L45), [`plugin.yml:63-65`](src/main/resources/plugin.yml#L63-L65)
 - **Changes:**
   1. Add `permission: smptools.rename` to `plugin.yml`.
   2. Cap input length to 64 characters.
@@ -298,32 +298,32 @@ flowchart TD
      ```
 
 ### F-HIGH-11 — `/sudo` Command Allowlist & Target Protection
-- **Files:** [`SudoCommand.java:42-52`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/commands/SudoCommand.java#L42-L52), [`CommandBlacklist.java`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/utils/CommandBlacklist.java), [`plugin.yml:109-111`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/resources/plugin.yml#L109-L111)
+- **Files:** [`SudoCommand.java:42-52`](src/main/java/com/smp/smptools/commands/SudoCommand.java#L42-L52), [`CommandBlacklist.java`](src/main/java/com/smp/smptools/utils/CommandBlacklist.java), [`plugin.yml:109-111`](src/main/resources/plugin.yml#L109-L111)
 - **Changes:**
   1. Replace blacklist with configurable allowlist `sudo.allowed-command-prefixes: ["msg", "tell", "w", "me", "help"]`.
   2. Require `--confirm` flag if the target has OP or `smptools.sudo` permissions.
   3. Declare `permission: smptools.sudo` in `plugin.yml`.
 
 ### F-HIGH-12 — Black Friday Discount Persistence & Lazy Restore
-- **Files:** [`BlackFridayListener.java:26,56-64`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/listeners/BlackFridayListener.java#L26-L64)
+- **Files:** [`BlackFridayListener.java:26,56-64`](src/main/java/com/smp/smptools/listeners/BlackFridayListener.java#L26-L64)
 - **Changes:**
   1. Persist original recipes to `blackfriday_state.yml` using `AtomicFileWriter`.
   2. Hook `InventoryOpenEvent` and `ChunkLoadEvent`: if a villager UUID is in `blackfriday_state.yml` and Black Friday is inactive, restore original recipes on the fly.
   3. Clean up state file on complete restoration.
 
 ### F-HIGH-13 — DialogueManager Entity & Memory Cleanup
-- **Files:** [`DialogueManager.java:126-142`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/managers/DialogueManager.java#L126-L142)
+- **Files:** [`DialogueManager.java:126-142`](src/main/java/com/smp/smptools/managers/DialogueManager.java#L126-L142)
 - **Changes:**
   1. In watchdog timer: remove `TextDisplay` entity before cancelling if the player is offline.
   2. Register `PlayerQuitEvent` listener calling `stopDialogue(player)` to clear maps and despawn entities.
 
 ### F-HIGH-14 — Confine FlatFile Storage Access to Main Thread
-- **Files:** [`TagManager.java:87-109`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/tags/TagManager.java#L87-L109), [`FlatFileStorageProvider.java:95-121`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/storage/FlatFileStorageProvider.java#L95-L121)
+- **Files:** [`TagManager.java:87-109`](src/main/java/com/smp/smptools/tags/TagManager.java#L87-L109), [`FlatFileStorageProvider.java:95-121`](src/main/java/com/smp/smptools/storage/FlatFileStorageProvider.java#L95-L121)
 - **Changes:**
   - Route all `YamlConfiguration` read/set calls through the main thread using `callSyncMethod` or keep memory caches in `playerTitles` and save snapshots to disk atomically.
 
 ### F-HIGH-15 — Advent Calendar Top-Inventory Binding & PDC Day Stamping
-- **Files:** [`AdventGUIListener.java:89-101`](file:///Users/bernatfortuny/Documents/code/smptools/src/main/java/com/smp/smptools/listeners/AdventGUIListener.java#L89-L101)
+- **Files:** [`AdventGUIListener.java:89-101`](src/main/java/com/smp/smptools/listeners/AdventGUIListener.java#L89-L101)
 - **Changes:**
   1. Wrap with `GuiHolder(MenuType.ADVENT, player.getUniqueId())`.
   2. Enforce `event.getClickedInventory() == event.getView().getTopInventory()`.
