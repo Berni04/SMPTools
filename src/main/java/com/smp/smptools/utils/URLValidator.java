@@ -338,6 +338,9 @@ public final class URLValidator {
         }
     }
 
+    private static final int MAX_HEADER_LINE_LENGTH = 8192;
+    private static final int MAX_TOTAL_HEADERS_SIZE = 65536;
+
     private static class PinnedHttpURLConnection extends HttpURLConnection {
         private final InetAddress[] pinnedAddresses;
         private final int connectTimeoutMs;
@@ -357,70 +360,99 @@ public final class URLValidator {
         public void connect() throws IOException {
             if (connected) return;
             int port = url.getPort() != -1 ? url.getPort() : 80;
-            IOException lastEx = null;
-            for (InetAddress addr : pinnedAddresses) {
-                try {
-                    Socket s = new Socket();
-                    s.setSoTimeout(readTimeoutMs);
-                    s.connect(new InetSocketAddress(addr, port), connectTimeoutMs);
-                    this.socket = s;
-                    break;
-                } catch (IOException e) {
-                    lastEx = e;
+            Socket s = null;
+            try {
+                IOException lastEx = null;
+                for (InetAddress addr : pinnedAddresses) {
+                    try {
+                        Socket candidate = new Socket();
+                        candidate.setSoTimeout(readTimeoutMs);
+                        candidate.connect(new InetSocketAddress(addr, port), connectTimeoutMs);
+                        s = candidate;
+                        break;
+                    } catch (IOException e) {
+                        lastEx = e;
+                    }
                 }
-            }
-            if (socket == null) {
-                throw lastEx != null ? lastEx : new IOException("Could not connect to any resolved IP address");
-            }
+                if (s == null) {
+                    throw lastEx != null ? lastEx : new IOException("Could not connect to any resolved IP address");
+                }
+                this.socket = s;
 
-            String hostHeader = url.getHost() + (url.getPort() != -1 && url.getPort() != 80 ? ":" + url.getPort() : "");
-            String file = url.getFile();
-            if (file == null || file.isEmpty()) file = "/";
+                String hostHeader = url.getHost() + (url.getPort() != -1 && url.getPort() != 80 ? ":" + url.getPort() : "");
+                String file = url.getFile();
+                if (file == null || file.isEmpty()) file = "/";
 
-            OutputStream os = socket.getOutputStream();
-            String request = "GET " + file + " HTTP/1.1\r\n" +
-                             "Host: " + hostHeader + "\r\n" +
-                             "User-Agent: SMPTools\r\n" +
-                             "Connection: close\r\n\r\n";
-            os.write(request.getBytes(StandardCharsets.US_ASCII));
-            os.flush();
+                OutputStream os = socket.getOutputStream();
+                String request = "GET " + file + " HTTP/1.1\r\n" +
+                                 "Host: " + hostHeader + "\r\n" +
+                                 "User-Agent: SMPTools\r\n" +
+                                 "Connection: close\r\n\r\n";
+                os.write(request.getBytes(StandardCharsets.US_ASCII));
+                os.flush();
 
-            InputStream rawIn = socket.getInputStream();
-            BufferedInputStream bis = new BufferedInputStream(rawIn);
-            String statusLine = readLine(bis);
-            if (statusLine == null) {
-                throw new IOException("Premature EOF from HTTP server");
-            }
-            String[] parts = statusLine.split(" ", 3);
-            if (parts.length >= 2) {
-                try {
-                    this.responseCode = Integer.parseInt(parts[1]);
-                    this.responseMessage = parts.length > 2 ? parts[2] : "";
-                } catch (NumberFormatException e) {
+                InputStream rawIn = socket.getInputStream();
+                BufferedInputStream bis = new BufferedInputStream(rawIn);
+                String statusLine = readLine(bis, MAX_HEADER_LINE_LENGTH);
+                if (statusLine == null) {
+                    throw new IOException("Premature EOF from HTTP server");
+                }
+                String[] parts = statusLine.split(" ", 3);
+                if (parts.length >= 2) {
+                    try {
+                        this.responseCode = Integer.parseInt(parts[1]);
+                        this.responseMessage = parts.length > 2 ? parts[2] : "";
+                    } catch (NumberFormatException e) {
+                        this.responseCode = 200;
+                    }
+                } else {
                     this.responseCode = 200;
                 }
-            } else {
-                this.responseCode = 200;
-            }
 
-            String line;
-            while ((line = readLine(bis)) != null && !line.isEmpty()) {
-                int colon = line.indexOf(':');
-                if (colon > 0) {
-                    String headerName = line.substring(0, colon).trim();
-                    String headerVal = line.substring(colon + 1).trim();
-                    headerFields.computeIfAbsent(headerName, k -> new ArrayList<>()).add(headerVal);
+                int totalHeaderBytes = statusLine.length();
+                String line;
+                while ((line = readLine(bis, MAX_HEADER_LINE_LENGTH)) != null && !line.isEmpty()) {
+                    totalHeaderBytes += line.length();
+                    if (totalHeaderBytes > MAX_TOTAL_HEADERS_SIZE) {
+                        throw new IOException("HTTP headers exceeded maximum allowed size (" + MAX_TOTAL_HEADERS_SIZE + " bytes)");
+                    }
+                    int colon = line.indexOf(':');
+                    if (colon > 0) {
+                        String headerName = line.substring(0, colon).trim();
+                        String headerVal = line.substring(colon + 1).trim();
+                        headerFields.computeIfAbsent(headerName, k -> new ArrayList<>()).add(headerVal);
+                    }
                 }
-            }
 
-            this.inputStream = bis;
-            this.connected = true;
+                String transferEncoding = getHeaderFieldInternal("Transfer-Encoding");
+                if (transferEncoding != null && transferEncoding.toLowerCase(java.util.Locale.ROOT).contains("chunked")) {
+                    this.inputStream = new ChunkedInputStream(bis);
+                } else {
+                    this.inputStream = bis;
+                }
+                this.connected = true;
+            } catch (Throwable t) {
+                if (s != null && !s.isClosed()) {
+                    try {
+                        s.close();
+                    } catch (IOException ignored) {}
+                }
+                if (t instanceof IOException ioe) {
+                    throw ioe;
+                }
+                throw new IOException("Failed to connect or process HTTP request", t);
+            }
         }
 
-        private static String readLine(InputStream is) throws IOException {
+        private static String readLine(InputStream is, int maxLineLength) throws IOException {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             int b;
+            int count = 0;
             while ((b = is.read()) != -1) {
+                count++;
+                if (count > maxLineLength) {
+                    throw new IOException("HTTP header line exceeded maximum allowed length (" + maxLineLength + " bytes)");
+                }
                 if (b == '\r') {
                     is.mark(1);
                     int next = is.read();
@@ -449,11 +481,7 @@ public final class URLValidator {
             return responseCode;
         }
 
-        @Override
-        public String getHeaderField(String name) {
-            try {
-                connect();
-            } catch (IOException ignored) {}
+        private String getHeaderFieldInternal(String name) {
             for (Map.Entry<String, List<String>> entry : headerFields.entrySet()) {
                 if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(name)) {
                     List<String> list = entry.getValue();
@@ -461,6 +489,14 @@ public final class URLValidator {
                 }
             }
             return null;
+        }
+
+        @Override
+        public String getHeaderField(String name) {
+            try {
+                connect();
+            } catch (IOException ignored) {}
+            return getHeaderFieldInternal(name);
         }
 
         @Override
@@ -483,6 +519,101 @@ public final class URLValidator {
         @Override
         public boolean usingProxy() {
             return false;
+        }
+    }
+
+    private static class ChunkedInputStream extends InputStream {
+        private final InputStream in;
+        private int remainingInChunk = 0;
+        private boolean eof = false;
+
+        public ChunkedInputStream(InputStream in) {
+            this.in = in;
+        }
+
+        private void readChunkHeader() throws IOException {
+            if (eof) return;
+            if (remainingInChunk == 0) {
+                String line = PinnedHttpURLConnection.readLine(in, MAX_HEADER_LINE_LENGTH);
+                if (line == null) {
+                    eof = true;
+                    return;
+                }
+                int semi = line.indexOf(';');
+                if (semi >= 0) line = line.substring(0, semi);
+                line = line.trim();
+                if (line.isEmpty()) {
+                    line = PinnedHttpURLConnection.readLine(in, MAX_HEADER_LINE_LENGTH);
+                    if (line == null) {
+                        eof = true;
+                        return;
+                    }
+                    semi = line.indexOf(';');
+                    if (semi >= 0) line = line.substring(0, semi);
+                    line = line.trim();
+                }
+                try {
+                    remainingInChunk = Integer.parseInt(line, 16);
+                } catch (NumberFormatException e) {
+                    throw new IOException("Invalid chunk size: " + line, e);
+                }
+                if (remainingInChunk == 0) {
+                    eof = true;
+                    String trailer;
+                    while ((trailer = PinnedHttpURLConnection.readLine(in, MAX_HEADER_LINE_LENGTH)) != null && !trailer.isEmpty()) {
+                        // ignore trailers
+                    }
+                }
+            }
+        }
+
+        @Override
+        public int read() throws IOException {
+            if (eof) return -1;
+            if (remainingInChunk == 0) {
+                readChunkHeader();
+                if (eof) return -1;
+            }
+            int b = in.read();
+            if (b != -1) {
+                remainingInChunk--;
+                if (remainingInChunk == 0) {
+                    int cr = in.read();
+                    if (cr == '\r') in.read();
+                }
+            } else {
+                eof = true;
+            }
+            return b;
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            if (b == null) throw new NullPointerException();
+            if (off < 0 || len < 0 || len > b.length - off) throw new IndexOutOfBoundsException();
+            if (len == 0) return 0;
+            if (eof) return -1;
+            if (remainingInChunk == 0) {
+                readChunkHeader();
+                if (eof) return -1;
+            }
+            int toRead = Math.min(len, remainingInChunk);
+            int read = in.read(b, off, toRead);
+            if (read != -1) {
+                remainingInChunk -= read;
+                if (remainingInChunk == 0) {
+                    int cr = in.read();
+                    if (cr == '\r') in.read();
+                }
+            } else {
+                eof = true;
+            }
+            return read;
+        }
+
+        @Override
+        public void close() throws IOException {
+            in.close();
         }
     }
 }
