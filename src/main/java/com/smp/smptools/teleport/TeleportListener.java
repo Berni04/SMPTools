@@ -52,4 +52,21 @@ public class TeleportListener implements Listener {
             }
         }
     }
+
+    @EventHandler
+    public void onVehicleEnter(org.bukkit.event.vehicle.VehicleEnterEvent event) {
+        if (event.getEntered() instanceof Player player) {
+            if (teleportManager.isTeleporting(player)) {
+                teleportManager.cancelTeleport(player, "You entered a vehicle.", true);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerDeath(org.bukkit.event.entity.PlayerDeathEvent event) {
+        Player player = event.getPlayer();
+        if (teleportManager.isTeleporting(player)) {
+            teleportManager.cancelTeleport(player, "You died.", false);
+        }
+    }
 }

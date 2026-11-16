@@ -16,8 +16,22 @@ public class RenameCommand extends AbstractPlayerCommand {
         super(plugin);
     }
 
+    private static final MiniMessage SAFE_MINI_MESSAGE = MiniMessage.builder()
+            .tags(net.kyori.adventure.text.minimessage.tag.resolver.TagResolver.builder()
+                    .resolver(net.kyori.adventure.text.minimessage.tag.standard.StandardTags.color())
+                    .resolver(net.kyori.adventure.text.minimessage.tag.standard.StandardTags.decorations())
+                    .resolver(net.kyori.adventure.text.minimessage.tag.standard.StandardTags.gradient())
+                    .resolver(net.kyori.adventure.text.minimessage.tag.standard.StandardTags.rainbow())
+                    .build())
+            .build();
+
     @Override
     protected boolean onPlayerCommand(Player player, Command command, String label, String[] args) {
+        if (!player.hasPermission("smptools.rename")) {
+            player.sendMessage(plugin.getMessageManager().getMessage("common.no-permission"));
+            return true;
+        }
+
         ItemStack itemInHand = player.getInventory().getItemInMainHand();
 
         if (itemInHand.getType().isAir()) {
@@ -38,11 +52,18 @@ public class RenameCommand extends AbstractPlayerCommand {
         }
         String rawName = nameBuilder.toString().trim();
 
-        Component newName = MiniMessage.miniMessage().deserialize(rawName);
+        if (rawName.length() > 64) {
+            player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Item name cannot exceed 64 characters.</red>"));
+            return true;
+        }
+
+        Component newName = SAFE_MINI_MESSAGE.deserialize(rawName);
 
         ItemMeta meta = itemInHand.getItemMeta();
-        meta.displayName(newName);
-        itemInHand.setItemMeta(meta);
+        if (meta != null) {
+            meta.displayName(newName);
+            itemInHand.setItemMeta(meta);
+        }
 
         player.sendMessage(plugin.getMessageManager().getMessage("rename.success"));
         return true;

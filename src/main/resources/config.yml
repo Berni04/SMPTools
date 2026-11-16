@@ -67,7 +67,7 @@ features:
   afk:
     enabled: true
     timeout-minutes: 30 # Auto-AFK after 30 minutes of inactivity
-    auto-vote-sleep: true # Auto-vote YES on sleep votes when AFK
+    auto-vote-sleep: false # Auto-vote YES on sleep votes when AFK
   remote-trade:
     enabled: true
     request-timeout-seconds: 60
@@ -80,6 +80,11 @@ features:
     enabled: true
   funny-death-messages:
     enabled: true # Enable customized funny death messages when players die
+
+# Statistics configuration
+stats:
+  # Save player statistics to disk on player quit (set to false on very large servers to reduce I/O)
+  save-on-quit: true
 
 # Storage configuration
 # Supported storage types: FLATFILE, SQLITE, MYSQL, MARIADB, MONGODB

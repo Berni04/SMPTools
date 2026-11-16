@@ -17,7 +17,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
-public class MusicCommand extends AbstractPlayerCommand {
+public class MusicCommand extends AbstractPlayerCommand implements org.bukkit.event.Listener {
 
     private final Map<UUID, SongPlayer> playingTasks = new ConcurrentHashMap<>();
     private final Map<UUID, Long> activeRequestGen = new ConcurrentHashMap<>();
@@ -25,6 +25,31 @@ public class MusicCommand extends AbstractPlayerCommand {
 
     public MusicCommand(SMPTools plugin) {
         super(plugin);
+        if (plugin != null && Bukkit.getServer() != null) {
+            try {
+                Bukkit.getPluginManager().registerEvents(this, plugin);
+            } catch (Exception ignored) {}
+        }
+    }
+
+    private static final UUID BROADCAST_UUID = new UUID(0L, 0L);
+
+    @org.bukkit.event.EventHandler
+    public void onPlayerQuit(org.bukkit.event.player.PlayerQuitEvent event) {
+        UUID uuid = event.getPlayer().getUniqueId();
+        activeRequestGen.remove(uuid);
+        SongPlayer task = playingTasks.remove(uuid);
+        if (task != null) {
+            try { task.cancel(); } catch (Exception ignored) {}
+        }
+    }
+
+    public void cleanup() {
+        activeRequestGen.clear();
+        for (SongPlayer task : playingTasks.values()) {
+            try { task.cancel(); } catch (Exception ignored) {}
+        }
+        playingTasks.clear();
     }
 
     @Override
@@ -47,8 +72,19 @@ public class MusicCommand extends AbstractPlayerCommand {
         if (subCommand.equals("stop")) {
             activeRequestGen.put(player.getUniqueId(), 0L);
             SongPlayer task = playingTasks.remove(player.getUniqueId());
+            boolean stoppedBroadcast = false;
+            if (player.hasPermission("smptools.music.broadcast")) {
+                activeRequestGen.put(BROADCAST_UUID, 0L);
+                SongPlayer broadcastTask = playingTasks.remove(BROADCAST_UUID);
+                if (broadcastTask != null) {
+                    broadcastTask.cancel();
+                    stoppedBroadcast = true;
+                }
+            }
             if (task != null) {
                 task.cancel();
+            }
+            if (task != null || stoppedBroadcast) {
                 player.sendMessage(plugin.getMessageManager().getMessage("music.stopped"));
             } else {
                 player.sendMessage(plugin.getMessageManager().getMessage("music.not-playing"));
@@ -99,7 +135,8 @@ public class MusicCommand extends AbstractPlayerCommand {
 
         player.sendMessage(plugin.getMessageManager().getMessage("music.downloading"));
         long requestId = globalRequestCounter.incrementAndGet();
-        activeRequestGen.put(player.getUniqueId(), requestId);
+        UUID requestKey = subCommand.equals("broadcast") ? BROADCAST_UUID : player.getUniqueId();
+        activeRequestGen.put(requestKey, requestId);
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
@@ -109,20 +146,29 @@ public class MusicCommand extends AbstractPlayerCommand {
                     Song song = NBSParser.parse(boundedStream);
                     if (song == null) {
                         Bukkit.getScheduler().runTask(plugin, () -> {
-                            if (java.util.Objects.equals(activeRequestGen.get(player.getUniqueId()), requestId)) {
+                            if (java.util.Objects.equals(activeRequestGen.get(requestKey), requestId)) {
                                 player.sendMessage(plugin.getMessageManager().getMessage("music.parse-failed"));
-                                activeRequestGen.remove(player.getUniqueId(), requestId);
+                                activeRequestGen.remove(requestKey, requestId);
                             }
                         });
                         return;
                     }
 
                     Bukkit.getScheduler().runTask(plugin, () -> {
-                        if (!java.util.Objects.equals(activeRequestGen.get(player.getUniqueId()), requestId)) {
+                        if (!subCommand.equals("broadcast") && !player.isOnline()) {
+                            return; // Personal playback requires player to be online
+                        }
+
+                        if (!java.util.Objects.equals(activeRequestGen.get(requestKey), requestId)) {
                             return; // Superseded by a newer request
                         }
 
-                        SongPlayer existing = playingTasks.remove(player.getUniqueId());
+                        if (subCommand.equals("broadcast") && player.isOnline() && !player.hasPermission("smptools.music.broadcast")) {
+                            return;
+                        }
+
+                        UUID targetKey = subCommand.equals("broadcast") ? BROADCAST_UUID : player.getUniqueId();
+                        SongPlayer existing = playingTasks.remove(targetKey);
                         if (existing != null) {
                             try { existing.cancel(); } catch (Exception ignored) {}
                         }
@@ -133,16 +179,18 @@ public class MusicCommand extends AbstractPlayerCommand {
                             songPlayer = new SongPlayer(song, player.getWorld().getPlayers());
                         }
                         
-                        playingTasks.put(player.getUniqueId(), songPlayer);
+                        playingTasks.put(targetKey, songPlayer);
                         songPlayer.play(plugin);
-                        player.sendMessage(plugin.getMessageManager().getMessage("music.now-playing", player, Map.of("title", song.getTitle())));
+                        if (player.isOnline()) {
+                            player.sendMessage(plugin.getMessageManager().getMessage("music.now-playing", player, Map.of("title", song.getTitle())));
+                        }
                     });
                 }
             } catch (Exception e) {
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    if (java.util.Objects.equals(activeRequestGen.get(player.getUniqueId()), requestId)) {
+                    if (java.util.Objects.equals(activeRequestGen.get(requestKey), requestId)) {
                         player.sendMessage(plugin.getMessageManager().getMessage("music.download-failed"));
-                        activeRequestGen.remove(player.getUniqueId(), requestId);
+                        activeRequestGen.remove(requestKey, requestId);
                     }
                 });
                 plugin.getLogger().log(Level.SEVERE, "Failed to download song", e);

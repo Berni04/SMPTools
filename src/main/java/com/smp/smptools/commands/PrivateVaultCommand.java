@@ -4,14 +4,17 @@ import com.smp.smptools.SMPTools;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.util.io.BukkitObjectInputStream;
 import org.bukkit.util.io.BukkitObjectOutputStream;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.UUID;
@@ -20,6 +23,54 @@ public class PrivateVaultCommand extends AbstractPlayerCommand {
 
     public PrivateVaultCommand(SMPTools plugin) {
         super(plugin);
+    }
+
+    public static File getVaultsFile(SMPTools plugin) {
+        return new File(plugin != null ? plugin.getDataFolder() : new File("plugins/SMPTools"), "vaults.yml");
+    }
+
+    private static volatile YamlConfiguration cachedVaultsConfig = null;
+    private static volatile boolean vaultsConfigLoadFailed = false;
+
+    public static synchronized YamlConfiguration getVaultsConfig(SMPTools plugin) {
+        if (cachedVaultsConfig != null) {
+            return cachedVaultsConfig;
+        }
+        File file = getVaultsFile(plugin);
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+            } catch (IOException ignored) {}
+        }
+        try {
+            YamlConfiguration config = new YamlConfiguration();
+            if (file.exists()) {
+                config.load(file);
+            }
+            cachedVaultsConfig = config;
+            vaultsConfigLoadFailed = false;
+        } catch (Exception e) {
+            vaultsConfigLoadFailed = true;
+            if (plugin != null) {
+                plugin.getLogger().severe("Failed to load vaults.yml! Aborting vault saves to prevent file overwrite: " + e.getMessage());
+            }
+            cachedVaultsConfig = new YamlConfiguration();
+        }
+        return cachedVaultsConfig;
+    }
+
+    public static synchronized void invalidateCache() {
+        cachedVaultsConfig = null;
+        vaultsConfigLoadFailed = false;
+    }
+
+    public static boolean isVaultsConfigLoadFailed() {
+        return vaultsConfigLoadFailed;
+    }
+
+    public static synchronized void resetCachedConfig() {
+        cachedVaultsConfig = null;
+        vaultsConfigLoadFailed = false;
     }
 
     @Override
@@ -38,15 +89,34 @@ public class PrivateVaultCommand extends AbstractPlayerCommand {
             Inventory vault = Bukkit.createInventory(holder, vaultSize, plugin.getMessageManager().getMessage("vault.gui-title", player));
             holder.setInventory(vault);
 
-            String encodedInventory = config.getString("privatevaults." + playerUUID.toString());
+            YamlConfiguration vaultsConfig = getVaultsConfig(plugin);
+            if (isVaultsConfigLoadFailed()) {
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to load vaults configuration safely. Please contact an administrator.</red>"));
+                return true;
+            }
+
+            String encodedInventory = vaultsConfig.getString("vaults." + playerUUID);
+            // Backwards compatibility migration check in main config
+            if (encodedInventory == null) {
+                encodedInventory = config.getString("privatevaults." + playerUUID);
+            }
+
             if (encodedInventory != null && !encodedInventory.isEmpty()) {
                 try {
                     vault.setContents(decodeInventory(encodedInventory));
                 } catch (IOException | ClassNotFoundException e) {
-                    plugin.getLogger().warning("Failed to decode inventory for player " + player.getName() + ": " + e.getMessage());
+                    holder.setDecodeFailed(true);
+                    plugin.getLogger().warning("Failed to decode vault for player " + player.getName() + ": " + e.getMessage());
+                    player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to decode vault contents safely. Vault will not open to prevent item loss.</red>"));
                 } catch (IllegalArgumentException e) {
+                    holder.setDecodeFailed(true);
                     plugin.getLogger().warning("Invalid Base64 string for player " + player.getName() + ": " + e.getMessage());
+                    player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to decode vault contents safely. Vault will not open to prevent item loss.</red>"));
                 }
+            }
+
+            if (holder.isDecodeFailed()) {
+                return true;
             }
 
             player.openInventory(vault);
@@ -73,7 +143,11 @@ public class PrivateVaultCommand extends AbstractPlayerCommand {
     public static ItemStack[] decodeInventory(String data) throws IOException, ClassNotFoundException {
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(Base64.getDecoder().decode(data));
              BukkitObjectInputStream dataInput = new BukkitObjectInputStream(inputStream)) {
-            ItemStack[] items = new ItemStack[dataInput.readInt()];
+            int length = dataInput.readInt();
+            if (length < 0 || length > 54) {
+                throw new IOException("Invalid vault item array length: " + length);
+            }
+            ItemStack[] items = new ItemStack[length];
             for (int i = 0; i < items.length; i++) {
                 items[i] = (ItemStack) dataInput.readObject();
             }

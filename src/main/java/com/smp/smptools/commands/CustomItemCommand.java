@@ -35,6 +35,12 @@ public class CustomItemCommand extends AbstractPlayerCommand {
             return true;
         }
 
+        if (!material.isItem() || material.isAir()) {
+            player.sendMessage(plugin.getMessageManager().getMessage("custom-item.invalid-type", player,
+                    java.util.Map.of("type", args[0])));
+            return true;
+        }
+
         int customModelData;
         try {
             customModelData = Integer.parseInt(args[1]);
@@ -46,12 +52,14 @@ public class CustomItemCommand extends AbstractPlayerCommand {
 
         ItemStack customItem = new ItemStack(material);
         ItemMeta meta = customItem.getItemMeta();
-        meta.setCustomModelData(customModelData);
-        customItem.setItemMeta(meta);
+        if (meta != null) {
+            meta.setCustomModelData(customModelData);
+            customItem.setItemMeta(meta);
+        }
 
         player.getInventory().addItem(customItem);
         player.sendMessage(plugin.getMessageManager().getMessage("custom-item.gave", player,
-                java.util.Map.of("material", material.name(), "data", String.valueOf(customModelData))));
+                    java.util.Map.of("material", material.name(), "data", String.valueOf(customModelData))));
 
         return true;
     }

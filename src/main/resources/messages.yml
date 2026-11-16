@@ -16,6 +16,7 @@ common:
   player-only: "<red>Only players can use this command!</red>"
   no-permission: "<red>You don't have permission to use this command.</red>"
   player-not-found: "<red>Player not found.</red>"
+  player-dead: "<red>Cannot perform teleportation while dead!</red>"
   invalid-url: "<red>Invalid URL: {error}</red>"
   usage: "<red>Usage: {usage}</red>"
   unknown-subcommand: "<red>Unknown subcommand. Usage: {usage}</red>"
@@ -51,6 +52,7 @@ homes:
   limit-reached: "<red>You have reached your home limit of {limit} homes.</red>"
   invalid-name: "<red>Invalid home name. Use only letters, numbers, _ and - (max {max} characters).</red>"
   world-not-found: "<red>Error: Home world not found.</red>"
+  caged: "<red>You cannot teleport while trapped in Krampus's cage!</red>"
   gui-title: "Your Homes"
   delete-confirm-title: "Delete home '{name}'?"
   confirm: "<green>Confirm</green>"
@@ -78,6 +80,9 @@ tpa:
   already-pending: "<gold>{target} already has a pending teleport request.</gold>"
   self-request: "<red>You cannot send a teleport request to yourself.</red>"
   target-toggled-off: "<red>{target} is not accepting teleport requests at this time.</red>"
+  caged: "<red>You cannot teleport while trapped in Krampus's cage!</red>"
+  target-caged: "<red>The player cannot teleport while trapped in Krampus's cage!</red>"
+  target-dead: "<red>{target} is currently dead!</red>"
   expired-other: "<red>Teleport request from {target} has expired.</red>"
 
 # Teleport
@@ -87,6 +92,7 @@ teleport:
   successful: "<green>Teleport successful!</green>"
   cancelled: "<red>Teleport cancelled: {reason}</red>"
   already-teleporting: "<red>You are already teleporting.</red>"
+  unsafe: "<red>Teleport destination is unsafe or obstructed!</red>"
 
 # Fly
 fly:
@@ -169,7 +175,7 @@ sleep:
   voted-yes: "<player_name_color> has voted to skip the night."
   voted-no: "<player_name_color> has voted against skipping the night."
   vote-cancelled-initiator-left: "<red>The sleep vote was cancelled because the initiator left the game.</red>"
-  combat-blocked: "<red>You can't sleep in this world!</red>"
+  not-overworld: "<red>You can't sleep in this world!</red>"
 
 # Music
 music:
@@ -251,6 +257,7 @@ daily:
   disabled: "<red>The daily reward system is currently disabled.</red>"
   cooldown: "<red>You have already claimed your daily reward. Please wait {hours}h {minutes}m.</red>"
   claimed: "<green>You have successfully claimed your daily reward!</green>"
+  corrupted: "<red>Could not verify daily reward status due to data corruption. Timestamp has been reset.</red>"
 
 # Private Vault
 vault:
@@ -375,6 +382,10 @@ secret-santa:
   deposit-save-failed: "<red>Failed to save gift deposit to disk. Please try again.</red>"
   confirm-deposit-button: "<green><b>Confirm Deposit</b></green>"
   confirm-deposit-lore: "<gray>Click to finalize deposit.</gray>"
+  admin-start-has-gifts: "<red>Cannot start Secret Santa: deposited gifts already exist from a previous round! Run <yellow>/secretsanta admin clear</yellow> first.</red>"
+  admin-cleared: "<green>Cleared all Secret Santa participants, matches, and gifts.</green>"
+  admin-clear-failed: "<red>Failed to clear Secret Santa data from disk.</red>"
+  admin-usage: "<yellow>Usage: /secretsanta admin <start|clear></yellow>"
 
 # Krampus
 krampus:
@@ -389,6 +400,7 @@ blackfriday:
   enabled: "<green>Black Friday event has been enabled!</green>"
   disabled: "<red>Black Friday event has been disabled!</red>"
   reloaded: "<green>Black Friday configuration reloaded!</green>"
+  sale-ended: "<red>This merchant's special sale has ended.</red>"
   status-header: "<gold>=== Black Friday Status ===</gold>"
   status-enabled: "<yellow>Enabled: </yellow>{status}"
   status-enabled-yes: "<green>YES</green>"

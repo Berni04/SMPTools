@@ -344,4 +344,23 @@ public class MiniEventSession {
     public int getPlayerScore(UUID uuid) {
         return playerScores.getOrDefault(uuid, 0);
     }
+
+    public void cleanPlayer(Player p) {
+        if (p == null) return;
+        if (bossBar != null) {
+            p.hideBossBar(bossBar);
+        }
+        Scoreboard orig = originalScoreboards.remove(p.getUniqueId());
+        if (orig != null) {
+            p.setScoreboard(orig);
+        } else {
+            Scoreboard current = p.getScoreboard();
+            if (current != null) {
+                Objective obj = current.getObjective("smpevent");
+                if (obj != null) {
+                    obj.unregister();
+                }
+            }
+        }
+    }
 }

@@ -4,6 +4,7 @@ import com.smp.smptools.SMPTools;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -14,6 +15,9 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Transformation;
 import org.joml.AxisAngle4f;
@@ -24,7 +28,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class DialogueManager {
+public class DialogueManager implements Listener {
 
     private final SMPTools plugin;
     private FileConfiguration dialogueConfig;
@@ -32,9 +36,11 @@ public class DialogueManager {
     private final Map<UUID, String> playerCurrentLine = new ConcurrentHashMap<>(); // Player UUID -> Line ID
     private final Map<UUID, UUID> activeTextDisplays = new ConcurrentHashMap<>(); // Player UUID -> TextDisplay Entity UUID
     private final Map<UUID, UUID> playerNPC = new ConcurrentHashMap<>(); // Player UUID -> NPC Entity UUID
+    private final Map<UUID, org.bukkit.scheduler.BukkitTask> scheduledCallbacks = new ConcurrentHashMap<>();
 
     public DialogueManager(SMPTools plugin) {
         this.plugin = plugin;
+        Bukkit.getPluginManager().registerEvents(this, plugin);
         loadDialogues();
     }
 
@@ -177,9 +183,10 @@ public class DialogueManager {
 
         if (nextLine != null && !nextLine.equalsIgnoreCase("end")) {
             // Delay the next NPC line to allow reading the player's text
-            new BukkitRunnable() {
+            org.bukkit.scheduler.BukkitTask task = new BukkitRunnable() {
                 @Override
                 public void run() {
+                    scheduledCallbacks.remove(player.getUniqueId());
                     UUID npcUUID = playerNPC.get(player.getUniqueId());
                     if (npcUUID != null) {
                         Entity npc = Bukkit.getEntity(npcUUID);
@@ -193,37 +200,37 @@ public class DialogueManager {
                     }
                 }
             }.runTaskLater(plugin, 60L); // 3 seconds delay
+            org.bukkit.scheduler.BukkitTask old = scheduledCallbacks.put(player.getUniqueId(), task);
+            if (old != null) {
+                try { old.cancel(); } catch (Exception ignored) {}
+            }
         } else {
-            // If it's the end, just remove the player text after a delay
-            new BukkitRunnable() {
+            // End of dialogue reached
+            org.bukkit.scheduler.BukkitTask endTask = new BukkitRunnable() {
                 @Override
                 public void run() {
+                    scheduledCallbacks.remove(player.getUniqueId());
                     stopDialogue(player);
                 }
             }.runTaskLater(plugin, 60L);
+            org.bukkit.scheduler.BukkitTask old = scheduledCallbacks.put(player.getUniqueId(), endTask);
+            if (old != null) {
+                try { old.cancel(); } catch (Exception ignored) {}
+            }
         }
     }
 
     private void showPlayerText(Player player, String text) {
-        // Remove old display (NPC's or previous)
-        removeTextDisplay(player);
+        if (player == null || !player.isOnline()) return;
 
-        // Spawn new TextDisplay above Player
-        Location displayLoc = player.getLocation().add(0, player.getHeight() + 0.9, 0);
-        TextDisplay display = (TextDisplay) player.getWorld().spawnEntity(displayLoc, EntityType.TEXT_DISPLAY);
+        // Spawn a TextDisplay right above the player's head
+        Location loc = player.getLocation().add(0, 2.2, 0);
+        TextDisplay display = (TextDisplay) player.getWorld().spawn(loc, TextDisplay.class);
 
         display.text(LegacyComponentSerializer.legacyAmpersand().deserialize(text));
-        display.setBillboard(Display.Billboard.VERTICAL); // Always face camera
-        display.setBackgroundColor(org.bukkit.Color.fromARGB(100, 0, 0, 255)); // Blueish background for player
-        display.setSeeThrough(false);
-        display.setShadowed(true);
-
-        // Make it visible to everyone or just player? User said "shows over the player
-        // head", implying others might see it,
-        // but the system is currently per-player (using setVisibleByDefault(false) and
-        // player.showEntity).
-        // For consistency with the current system, let's keep it private to the player
-        // for now.
+        display.setBillboard(Display.Billboard.CENTER);
+        display.setDefaultBackground(true);
+        display.setAlignment(TextDisplay.TextAlignment.CENTER);
         display.setVisibleByDefault(false);
         player.showEntity(plugin, display);
 
@@ -231,15 +238,19 @@ public class DialogueManager {
 
         // Mount it on the player
         player.addPassenger(display);
-        // Adjust translation to be above head
-        display.setTransformation(new Transformation(
-                new Vector3f(0, 0.5f, 0), // Translation
-                new AxisAngle4f(),
-                new Vector3f(1, 1, 1),
-                new AxisAngle4f()));
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        stopDialogue(event.getPlayer());
     }
 
     public void stopDialogue(Player player) {
+        if (player == null) return;
+        org.bukkit.scheduler.BukkitTask task = scheduledCallbacks.remove(player.getUniqueId());
+        if (task != null) {
+            try { task.cancel(); } catch (Exception ignored) {}
+        }
         playerCurrentDialogue.remove(player.getUniqueId());
         playerCurrentLine.remove(player.getUniqueId());
         playerNPC.remove(player.getUniqueId());
@@ -247,6 +258,7 @@ public class DialogueManager {
     }
 
     private void removeTextDisplay(Player player) {
+        if (player == null) return;
         UUID displayUUID = activeTextDisplays.remove(player.getUniqueId());
         if (displayUUID != null) {
             Entity entity = Bukkit.getEntity(displayUUID);
@@ -256,7 +268,24 @@ public class DialogueManager {
         }
     }
 
+    public void cleanupAll() {
+        for (org.bukkit.scheduler.BukkitTask task : scheduledCallbacks.values()) {
+            try { task.cancel(); } catch (Exception ignored) {}
+        }
+        scheduledCallbacks.clear();
+        for (UUID displayUUID : activeTextDisplays.values()) {
+            Entity entity = Bukkit.getEntity(displayUUID);
+            if (entity != null) {
+                entity.remove();
+            }
+        }
+        activeTextDisplays.clear();
+        playerCurrentDialogue.clear();
+        playerCurrentLine.clear();
+        playerNPC.clear();
+    }
+
     public boolean isInDialogue(Player player) {
-        return playerCurrentDialogue.containsKey(player.getUniqueId());
+        return player != null && playerCurrentDialogue.containsKey(player.getUniqueId());
     }
 }

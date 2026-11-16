@@ -2,11 +2,14 @@ package com.smp.smptools.commands;
 
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.utils.CommandBlacklist;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+
+import java.util.Arrays;
 
 public class SudoCommand implements CommandExecutor {
 
@@ -26,7 +29,7 @@ public class SudoCommand implements CommandExecutor {
         if (args.length < 2) {
             sender.sendMessage(plugin.getMessageManager().getMessage("common.usage",
                     sender instanceof Player ? (Player) sender : null,
-                    java.util.Map.of("usage", "/sudo <player> <command or chat message>")));
+                    java.util.Map.of("usage", "/sudo <player> [--confirm] <command or chat message>")));
             return true;
         }
 
@@ -37,7 +40,20 @@ public class SudoCommand implements CommandExecutor {
             return true;
         }
 
-        String commandToExecute = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length));
+        int commandStartIndex = 1;
+        boolean confirmed = false;
+        if (args.length > 2 && args[1].equalsIgnoreCase("--confirm")) {
+            confirmed = true;
+            commandStartIndex = 2;
+        }
+
+        // Target protection: If target is OP or has smptools.sudo, require --confirm flag
+        if ((target.isOp() || target.hasPermission("smptools.sudo")) && !confirmed) {
+            sender.sendMessage(MiniMessage.miniMessage().deserialize("<red>Target player is an Operator or Administrator. Add '--confirm' flag to force command execution.</red>"));
+            return true;
+        }
+
+        String commandToExecute = String.join(" ", Arrays.copyOfRange(args, commandStartIndex, args.length));
 
         if (commandToExecute.startsWith("/")) {
             String stripped = commandToExecute.substring(1);

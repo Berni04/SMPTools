@@ -65,6 +65,7 @@ public class MapCommand extends AbstractPlayerCommand {
 
         player.sendMessage(plugin.getMessageManager().getMessage("map.downloading", player));
 
+        String playerName = player.getName();
         int finalWidthGrid = widthGrid;
         int finalHeightGrid = heightGrid;
 
@@ -120,9 +121,19 @@ public class MapCommand extends AbstractPlayerCommand {
 
             } catch (Exception e) {
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    player.sendMessage(plugin.getMessageManager().getMessage("map.error", player, Map.of("message", e.getMessage())));
+                    player.sendMessage(plugin.getMessageManager().getMessage("map.download-failed", player));
                 });
-                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to create map", e);
+                String sanitizedUrl;
+                try {
+                    java.net.URI uri = java.net.URI.create(urlString);
+                    sanitizedUrl = (uri.getScheme() != null ? uri.getScheme() + "://" : "") +
+                            (uri.getHost() != null ? uri.getHost() : "") +
+                            (uri.getPort() != -1 ? ":" + uri.getPort() : "") +
+                            (uri.getRawPath() != null ? uri.getRawPath() : "");
+                } catch (Exception ignored) {
+                    sanitizedUrl = "[invalid-url]";
+                }
+                plugin.getLogger().log(java.util.logging.Level.WARNING, "Failed to create map for " + playerName + " from " + sanitizedUrl, e);
             }
         });
 

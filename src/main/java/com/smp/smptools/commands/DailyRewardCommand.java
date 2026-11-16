@@ -32,16 +32,24 @@ public class DailyRewardCommand extends AbstractPlayerCommand {
         long cooldownHours = plugin.getConfig().getLong("features.daily-rewards.cooldown-hours");
 
         if (lastClaimedString != null) {
-            Instant lastClaimed = Instant.parse(lastClaimedString);
-            Instant now = Instant.now();
-            Duration timeSinceClaimed = Duration.between(lastClaimed, now);
+            try {
+                Instant lastClaimed = Instant.parse(lastClaimedString);
+                Instant now = Instant.now();
+                Duration timeSinceClaimed = Duration.between(lastClaimed, now);
 
-            if (timeSinceClaimed.toHours() < cooldownHours) {
-                long totalRemainingMinutes = (cooldownHours * 60) - timeSinceClaimed.toMinutes();
-                long hoursRemaining = totalRemainingMinutes / 60;
-                long minutesRemaining = totalRemainingMinutes % 60;
-                player.sendMessage(plugin.getMessageManager().getMessage("daily.cooldown", player,
-                        Map.of("hours", String.valueOf(hoursRemaining), "minutes", String.valueOf(minutesRemaining))));
+                if (timeSinceClaimed.toHours() < cooldownHours) {
+                    long totalRemainingMinutes = (cooldownHours * 60) - timeSinceClaimed.toMinutes();
+                    long hoursRemaining = totalRemainingMinutes / 60;
+                    long minutesRemaining = totalRemainingMinutes % 60;
+                    player.sendMessage(plugin.getMessageManager().getMessage("daily.cooldown", player,
+                            Map.of("hours", String.valueOf(hoursRemaining), "minutes", String.valueOf(minutesRemaining))));
+                    return true;
+                }
+            } catch (java.time.format.DateTimeParseException e) {
+                plugin.getLogger().warning("Corrupted daily reward timestamp for player " + uuid + ": " + lastClaimedString);
+                plugin.getRewardsConfig().set("players." + uuid + ".last-claimed", null);
+                plugin.saveRewardsConfig();
+                player.sendMessage(plugin.getMessageManager().getMessage("daily.corrupted", player));
                 return true;
             }
         }

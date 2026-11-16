@@ -42,7 +42,8 @@ public class NameTagListener implements Listener {
         Component finalName = prefixComponent.append(nameComponent);
 
         if (plugin.getTagManager() != null) {
-            String playerTitle = plugin.getTagManager().getPlayerTitle(player);
+            String rawTitle = plugin.getTagManager().getPlayerTitle(player);
+            String playerTitle = rawTitle != null ? InputValidator.sanitizeMiniMessage(rawTitle) : null;
             if (playerTitle != null && !playerTitle.isEmpty()) {
                 Component titleComponent = MiniMessage.miniMessage().deserialize((nameColor != null ? nameColor : "") + "[" + playerTitle + "]");
                 finalName = finalName.append(Component.space()).append(titleComponent);

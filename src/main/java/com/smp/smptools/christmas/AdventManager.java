@@ -33,7 +33,7 @@ public class AdventManager {
 
     public void saveConfig() {
         try {
-            config.save(configFile);
+            com.smp.smptools.utils.AtomicFileWriter.save(config, configFile);
         } catch (IOException e) {
             plugin.getLogger().log(java.util.logging.Level.SEVERE, "Could not save advent.yml!", e);
         }

@@ -108,7 +108,7 @@ public class MissionManager {
         }
 
         try {
-            playerMissionsConfig.save(playerMissionsFile);
+            com.smp.smptools.utils.AtomicFileWriter.save(playerMissionsConfig, playerMissionsFile);
             return true;
         } catch (IOException e) {
             if (plugin != null) {
@@ -124,7 +124,7 @@ public class MissionManager {
         if (data == null) return false;
         serializePlayerMissionData(uuid, data);
         try {
-            playerMissionsConfig.save(playerMissionsFile);
+            com.smp.smptools.utils.AtomicFileWriter.save(playerMissionsConfig, playerMissionsFile);
             return true;
         } catch (IOException e) {
             if (plugin != null) {
@@ -152,7 +152,6 @@ public class MissionManager {
         int droppedCount = 0;
 
         for (String reward : pending) {
-            List<String> snapshotBefore = new ArrayList<>(data.getPendingRewards());
             String baseReward = reward != null ? reward.trim() : "";
             int retryCount = 0;
             if (reward != null) {
@@ -177,22 +176,16 @@ public class MissionManager {
                 }
                 droppedCount++;
                 data.getPendingRewards().remove(reward);
-                if (!saveSinglePlayerData(player.getUniqueId())) {
-                    data.getPendingRewards().clear();
-                    data.getPendingRewards().addAll(snapshotBefore);
-                    break;
-                }
+                saveSinglePlayerData(player.getUniqueId());
                 continue;
             }
 
-            // Persist removal from pending queue BEFORE delivering reward to prevent duplicates on crash or save failure
             data.getPendingRewards().remove(reward);
             if (!saveSinglePlayerData(player.getUniqueId())) {
                 if (plugin != null) {
-                    plugin.getLogger().severe("Failed to persist pending mission reward removal for " + player.getName() + ", aborting claim execution.");
+                    plugin.getLogger().severe("Failed to persist pending reward removal for " + player.getName() + ", aborting remaining queue.");
                 }
-                data.getPendingRewards().clear();
-                data.getPendingRewards().addAll(snapshotBefore);
+                data.getPendingRewards().add(reward);
                 break;
             }
 
@@ -219,15 +212,12 @@ public class MissionManager {
                     if (plugin != null) {
                         plugin.getLogger().warning("Transient delivery failure for pending mission reward '" + baseReward + "' for " + player.getName() + " (attempt " + nextRetry + "/3), retaining for retry.");
                     }
-                    if (!saveSinglePlayerData(player.getUniqueId())) {
-                        if (plugin != null) {
-                            plugin.getLogger().severe("Failed to persist retry state for pending mission reward for " + player.getName() + ", aborting remaining queue.");
-                        }
-                        data.getPendingRewards().clear();
-                        data.getPendingRewards().addAll(snapshotBefore);
-                        saveSinglePlayerData(player.getUniqueId());
-                        break;
+                }
+                if (!saveSinglePlayerData(player.getUniqueId())) {
+                    if (plugin != null) {
+                        plugin.getLogger().warning("Failed to save player data while recording pending reward retry for " + player.getName() + "; stopping reward queue processing.");
                     }
+                    break;
                 }
             }
         }

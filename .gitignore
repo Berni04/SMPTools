@@ -13,3 +13,11 @@ target/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Documentation & Audit plans
+AUDIT_FINDINGS.md
+BUG_REPORT_FIX_PLAN.md
+BUG_REPORT_FIX_PLAN_PASS2.md
+FINAL_FIX_PLAN.md
+FIX_PLAN.md
+

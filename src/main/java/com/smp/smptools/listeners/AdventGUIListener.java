@@ -27,10 +27,12 @@ public class AdventGUIListener implements Listener {
     private final SMPTools plugin;
     private final AdventManager adventManager;
     private static final String GUI_TITLE = "Advent Calendar";
+    private final org.bukkit.NamespacedKey adventDayKey;
 
     public AdventGUIListener(SMPTools plugin, AdventManager adventManager) {
         this.plugin = plugin;
         this.adventManager = adventManager;
+        this.adventDayKey = new org.bukkit.NamespacedKey(plugin, "advent_day");
     }
 
     public void openAdventGUI(Player player) {
@@ -39,25 +41,27 @@ public class AdventGUIListener implements Listener {
             return;
         }
 
-        Inventory gui = Bukkit.createInventory(null, 45, Component.text(GUI_TITLE));
+        com.smp.smptools.gui.GuiHolder holder = new com.smp.smptools.gui.GuiHolder(com.smp.smptools.gui.GuiHolder.MenuType.ADVENT, player.getUniqueId());
+        Inventory gui = Bukkit.createInventory(holder, 45, Component.text(GUI_TITLE));
+        holder.setInventory(gui);
         int currentDay = adventManager.getCurrentDay();
 
         for (int day = 1; day <= 25; day++) {
             ItemStack item;
             if (adventManager.hasClaimed(player.getUniqueId(), day)) {
                 // Gold Present (Claimed)
-                item = createGuiItem(HeadUtils.getCustomHead(
+                item = createGuiItem(day, HeadUtils.getCustomHead(
                         "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDBkM2MzMDRmZjAxOGZjZTY1MDk5ZWFlZDlkNjhhNGM0OTAxNGFlNzA2MTc2ZjhlZTE4NzcyYTdiMzYyZjU4NSJ9fX0="),
                         "<gold>Day " + day + "</gold>", "<gray>Status: <green>Claimed</green></gray>");
             } else if (day <= currentDay || player.hasPermission("smptools.advent.bypass")) {
                 // Green Present (Available)
-                item = createGuiItem(HeadUtils.getCustomHead(
+                item = createGuiItem(day, HeadUtils.getCustomHead(
                         "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOWNmYWJiMzU1OTAzYzJiYzUzZjg4ODUyZDRkZjA5NjZjOTQ5OWI3NGMyNDczODk5ZGRkNWY3NzI3M2U2ODY4MSJ9fX0="),
                         "<green>Day " + day + "</green>", "<gray>Status: <yellow>Available!</yellow></gray>",
                         "<gray>Click to claim!</gray>");
             } else {
                 // Red Present (Locked)
-                item = createGuiItem(HeadUtils.getCustomHead(
+                item = createGuiItem(day, HeadUtils.getCustomHead(
                         "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjVjOWQzMTc0M2Y0ZDM2YzVhODkxN2ExODE5ZjJmYWUwYWIwODM4MjJlNGZhYmYxNmU4ODkxMjgxMWU2NzZlMCJ9fX0="),
                         "<red>Day " + day + "</red>", "<gray>Status: <red>Locked</red></gray>",
                         "<gray>Come back later!</gray>");
@@ -68,9 +72,10 @@ public class AdventGUIListener implements Listener {
         player.openInventory(gui);
     }
 
-    private ItemStack createGuiItem(ItemStack item, String name, String... loreLines) {
+    private ItemStack createGuiItem(int day, ItemStack item, String name, String... loreLines) {
         ItemMeta meta = item.getItemMeta();
         meta.displayName(MiniMessage.miniMessage().deserialize(name));
+        meta.getPersistentDataContainer().set(adventDayKey, org.bukkit.persistence.PersistentDataType.INTEGER, day);
         List<Component> lore = new ArrayList<>();
         for (String line : loreLines) {
             lore.add(MiniMessage.miniMessage().deserialize(line));
@@ -80,25 +85,30 @@ public class AdventGUIListener implements Listener {
         return item;
     }
 
-    @EventHandler
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!event.getView().title().equals(Component.text(GUI_TITLE))) {
+        if (!(event.getView().getTopInventory().getHolder() instanceof com.smp.smptools.gui.GuiHolder holder) ||
+                holder.getType() != com.smp.smptools.gui.GuiHolder.MenuType.ADVENT) {
             return;
         }
 
         event.setCancelled(true);
 
-        if (event.getCurrentItem() == null || event.getCurrentItem().getType() == Material.AIR) {
+        if (event.getClickedInventory() != event.getView().getTopInventory()) {
+            return;
+        }
+
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || clicked.getType() == Material.AIR || !clicked.hasItemMeta()) {
+            return;
+        }
+
+        Integer day = clicked.getItemMeta().getPersistentDataContainer().get(adventDayKey, org.bukkit.persistence.PersistentDataType.INTEGER);
+        if (day == null || day < 1 || day > 25) {
             return;
         }
 
         Player player = (Player) event.getWhoClicked();
-        int slot = event.getSlot();
-        int day = slot + 1;
-
-        if (day < 1 || day > 25) {
-            return;
-        }
 
         int currentDay = adventManager.getCurrentDay();
 

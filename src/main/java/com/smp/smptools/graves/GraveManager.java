@@ -30,6 +30,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -37,16 +39,103 @@ public class GraveManager implements Listener {
 
     private final SMPTools plugin;
     private final Map<Location, Grave> graves = new ConcurrentHashMap<>();
+    private final Set<Location> legacyGraveLocations = ConcurrentHashMap.newKeySet();
+    private final long initializationTime = System.currentTimeMillis();
     private File gravesFile;
     private FileConfiguration gravesConfig;
+
+    public static final org.bukkit.NamespacedKey GRAVE_OWNER_KEY = new org.bukkit.NamespacedKey("smptools", "grave_owner");
 
     public GraveManager(SMPTools plugin) {
         this.plugin = plugin;
         setupGravesConfig();
         loadGraves();
+        startGraveExpiryTask();
     }
 
-    @EventHandler
+    private void startGraveExpiryTask() {
+        if (plugin == null || !plugin.isEnabled()) return;
+        long expireHours = plugin.getConfig().getLong("features.player-graves.expire-hours", 72);
+        if (expireHours <= 0) return;
+
+        long cappedHours = Math.min(expireHours, 876_000L); // Bound to ~100 years to prevent long overflow
+        long expireMillis = cappedHours * 3600_000L;
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            long now = System.currentTimeMillis();
+            List<Location> expired = new ArrayList<>();
+            for (Map.Entry<Location, Grave> entry : graves.entrySet()) {
+                if (now - entry.getValue().getTimeOfDeath() > expireMillis) {
+                    expired.add(entry.getKey());
+                }
+            }
+
+            List<Map.Entry<Location, Grave>> toDrop = new ArrayList<>();
+            for (Location loc : expired) {
+                if (loc == null || !loc.isWorldLoaded() || loc.getWorld() == null) {
+                    continue; // Skip unloaded/invalid world to prevent exception and preserve record
+                }
+                Grave g = graves.remove(loc);
+                if (g != null) {
+                    toDrop.add(Map.entry(loc, g));
+                }
+            }
+
+            if (!toDrop.isEmpty()) {
+                // Persist the removal to disk before releasing items to prevent duplicate drops on crash
+                boolean saved = false;
+                try {
+                    saved = saveGraves();
+                } catch (Throwable t) {
+                    if (plugin != null) {
+                        plugin.getLogger().log(java.util.logging.Level.SEVERE, "Exception while saving graves during expiry cleanup", t);
+                    }
+                    saved = false;
+                }
+
+                if (!saved) {
+                    if (plugin != null) {
+                        plugin.getLogger().warning("Failed to persist grave removal during expiry, aborting expiry cleanup.");
+                    }
+                    for (Map.Entry<Location, Grave> entry : toDrop) {
+                        graves.put(entry.getKey(), entry.getValue());
+                    }
+                    return;
+                }
+
+                for (Map.Entry<Location, Grave> entry : toDrop) {
+                    Location loc = entry.getKey();
+                    Grave g = entry.getValue();
+                    legacyGraveLocations.remove(loc);
+
+                    // Expire grave: drop items and clear holograms
+                    for (ItemStack item : g.getItems()) {
+                        if (item != null && item.getType() != Material.AIR) {
+                            loc.getWorld().dropItemNaturally(loc, item);
+                        }
+                    }
+                    Block b = loc.getBlock();
+                    boolean isSkull = b.getType() == Material.PLAYER_HEAD || b.getType() == Material.PLAYER_WALL_HEAD;
+                    if (isSkull) {
+                        if (b.getState() instanceof org.bukkit.block.Skull skull) {
+                            String ownerKey = skull.getPersistentDataContainer().get(GRAVE_OWNER_KEY, org.bukkit.persistence.PersistentDataType.STRING);
+                            if (ownerKey != null) {
+                                if (ownerKey.equals(g.getOwner().toString())) {
+                                    b.setType(Material.AIR);
+                                }
+                            } else {
+                                b.setType(Material.AIR);
+                            }
+                        } else {
+                            b.setType(Material.AIR);
+                        }
+                    }
+                    removeHolograms(loc);
+                }
+            }
+        }, 1200L, 1200L); // Check every minute
+    }
+
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
     public void onPlayerDeath(PlayerDeathEvent event) {
         if (!plugin.getConfig().getBoolean("features.player-graves.enabled")) {
             return;
@@ -74,6 +163,7 @@ public class GraveManager implements Listener {
             for (int y : candidates) {
                 if (y <= world.getMinHeight() || y >= world.getMaxHeight()) continue;
                 Location checkLoc = new Location(world, baseX, y, baseZ);
+                if (graves.containsKey(checkLoc)) continue; // Avoid grave collision
                 Block b = checkLoc.getBlock();
                 Block below = checkLoc.clone().add(0, -1, 0).getBlock();
                 if (b.getType().isAir() && !b.isLiquid() && !below.getType().isAir() && !below.isLiquid() && below.getType().isSolid()) {
@@ -84,13 +174,13 @@ public class GraveManager implements Listener {
             if (validLocation != null) break;
         }
 
-        // If not found near death location (e.g. drowning in ocean, lava, mid-air, or void),
-        // search upward from death/surface for the first non-liquid air block
+        // If not found near death location, search upward for the first unoccupied dry air block
         if (validLocation == null) {
             int topY = world.getHighestBlockYAt(baseX, baseZ);
             int searchStartY = Math.max(world.getMinHeight() + 1, Math.min(startY, topY));
             for (int y = searchStartY; y < world.getMaxHeight() - 1; y++) {
                 Location candidate = new Location(world, baseX, y, baseZ);
+                if (graves.containsKey(candidate)) continue;
                 Block candBlock = candidate.getBlock();
                 if (candBlock.getType().isAir() && !candBlock.isLiquid()) {
                     validLocation = candidate;
@@ -99,11 +189,36 @@ public class GraveManager implements Listener {
             }
         }
 
-        // If still no dry air block found, fallback to clamped location above highest block
-        if (validLocation == null) {
+        // Clamped fallback with horizontal search if column is full
+        if (validLocation == null || graves.containsKey(validLocation)) {
             int topY = world.getHighestBlockYAt(baseX, baseZ);
             int clampedY = Math.max(world.getMinHeight() + 1, Math.min(world.getMaxHeight() - 1, topY + 1));
-            validLocation = new Location(world, baseX, clampedY, baseZ);
+            Location candidate = new Location(world, baseX, clampedY, baseZ);
+            while (graves.containsKey(candidate) && candidate.getBlockY() < world.getMaxHeight() - 1) {
+                candidate.add(0, 1, 0);
+            }
+            if (!graves.containsKey(candidate) && candidate.getBlock().getType().isAir() && !candidate.getBlock().isLiquid()) {
+                validLocation = candidate;
+            } else {
+                for (int dx = -2; dx <= 2 && (validLocation == null || graves.containsKey(validLocation)); dx++) {
+                    for (int dz = -2; dz <= 2 && (validLocation == null || graves.containsKey(validLocation)); dz++) {
+                        int hx = baseX + dx;
+                        int hz = baseZ + dz;
+                        int topH = world.getHighestBlockYAt(hx, hz);
+                        if (topH >= world.getMaxHeight() - 1) continue;
+                        int hy = Math.max(world.getMinHeight() + 1, topH + 1);
+                        Location hCand = new Location(world, hx, hy, hz);
+                        Block candBlock = hCand.getBlock();
+                        if (!graves.containsKey(hCand) && candBlock.getType().isAir() && !candBlock.isLiquid()) {
+                            validLocation = hCand;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (validLocation == null || graves.containsKey(validLocation)) {
+            return;
         }
 
         // Remove drops from the event only after safe location is confirmed
@@ -121,14 +236,14 @@ public class GraveManager implements Listener {
         player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("grave.stored", player, Map.of("location", graveLocation)));
     }
 
-    @EventHandler
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
     public void onPlayerInteract(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) {
             return;
         }
 
         Block block = event.getClickedBlock();
-        if (block == null || block.getType() != Material.PLAYER_HEAD && block.getType() != Material.PLAYER_WALL_HEAD) {
+        if (block == null || (block.getType() != Material.PLAYER_HEAD && block.getType() != Material.PLAYER_WALL_HEAD)) {
             return;
         }
 
@@ -137,12 +252,79 @@ public class GraveManager implements Listener {
             return;
         }
 
-        event.setCancelled(true); // Prevent normal interaction
         Grave grave = graves.get(location);
+        if (!isMatchingGraveBlock(block, grave)) {
+            return;
+        }
+
+        event.setCancelled(true); // Prevent normal interaction
         Player player = event.getPlayer();
+
+        if (!player.getUniqueId().equals(grave.getOwner()) && !player.hasPermission("smptools.graves.admin")) {
+            player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>🔒 You cannot open someone else's grave!</red>"));
+            return;
+        }
 
         // Loot the grave
         lootGrave(grave, player);
+    }
+
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
+    public void onBlockBreak(org.bukkit.event.block.BlockBreakEvent event) {
+        Location loc = event.getBlock().getLocation();
+        if (!graves.containsKey(loc)) return;
+
+        Grave grave = graves.get(loc);
+        if (!isMatchingGraveBlock(event.getBlock(), grave)) {
+            return;
+        }
+
+        Player player = event.getPlayer();
+        if (!player.getUniqueId().equals(grave.getOwner()) && !player.hasPermission("smptools.graves.admin")) {
+            event.setCancelled(true);
+            player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>🔒 You cannot break someone else's grave!</red>"));
+            return;
+        }
+
+        event.setCancelled(true);
+        lootGrave(grave, player);
+    }
+
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
+    public void onBlockExplode(org.bukkit.event.block.BlockExplodeEvent event) {
+        event.blockList().removeIf(b -> graves.containsKey(b.getLocation()));
+    }
+
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
+    public void onEntityExplode(org.bukkit.event.entity.EntityExplodeEvent event) {
+        event.blockList().removeIf(b -> graves.containsKey(b.getLocation()));
+    }
+
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
+    public void onPistonExtend(org.bukkit.event.block.BlockPistonExtendEvent event) {
+        for (Block b : event.getBlocks()) {
+            if (graves.containsKey(b.getLocation())) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+    }
+
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
+    public void onPistonRetract(org.bukkit.event.block.BlockPistonRetractEvent event) {
+        for (Block b : event.getBlocks()) {
+            if (graves.containsKey(b.getLocation())) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+    }
+
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
+    public void onLiquidFlow(org.bukkit.event.block.BlockFromToEvent event) {
+        if (graves.containsKey(event.getToBlock().getLocation())) {
+            event.setCancelled(true);
+        }
     }
 
     private void createGraveBlock(Grave grave) {
@@ -152,10 +334,21 @@ public class GraveManager implements Listener {
 
         if (block.getState() instanceof Skull skull) {
             skull.setOwningPlayer(Bukkit.getOfflinePlayer(grave.getOwner()));
+            skull.getPersistentDataContainer().set(GRAVE_OWNER_KEY, org.bukkit.persistence.PersistentDataType.STRING, grave.getOwner().toString());
             skull.update();
         }
 
         spawnHologram(grave);
+    }
+
+    private void removeHolograms(Location loc) {
+        if (loc == null || !loc.isWorldLoaded() || loc.getWorld() == null) return;
+        String graveTag = "grave_" + loc.getBlockX() + "_" + loc.getBlockY() + "_" + loc.getBlockZ();
+        loc.getWorld().getNearbyEntities(loc, 3, 3, 3).forEach(entity -> {
+            if (entity instanceof ArmorStand && entity.getScoreboardTags().contains(graveTag)) {
+                entity.remove();
+            }
+        });
     }
 
     private void spawnHologram(Grave grave) {
@@ -191,8 +384,66 @@ public class GraveManager implements Listener {
         as.addScoreboardTag(graveTag);
     }
 
+    private boolean isSameBlockLocation(Location loc1, Location loc2) {
+        if (loc1 == null || loc2 == null) return false;
+        String w1 = null;
+        try {
+            if (loc1.isWorldLoaded() && loc1.getWorld() != null) {
+                w1 = loc1.getWorld().getName();
+            }
+        } catch (Exception ignored) {
+        }
+        String w2 = null;
+        try {
+            if (loc2.isWorldLoaded() && loc2.getWorld() != null) {
+                w2 = loc2.getWorld().getName();
+            }
+        } catch (Exception ignored) {
+        }
+        return loc1.getBlockX() == loc2.getBlockX()
+                && loc1.getBlockY() == loc2.getBlockY()
+                && loc1.getBlockZ() == loc2.getBlockZ()
+                && Objects.equals(w1, w2);
+    }
+
+    boolean isMatchingGraveBlock(Block block, Grave grave) {
+        if (block == null || grave == null) return false;
+        if (block.getType() != Material.PLAYER_HEAD && block.getType() != Material.PLAYER_WALL_HEAD) {
+            return false;
+        }
+        if (block.getState() instanceof Skull skull) {
+            String ownerKey = skull.getPersistentDataContainer().get(GRAVE_OWNER_KEY, org.bukkit.persistence.PersistentDataType.STRING);
+            if (ownerKey != null) {
+                return ownerKey.equals(grave.getOwner().toString());
+            }
+            if (isSameBlockLocation(block.getLocation(), grave.getLocation()) && isLegacyGrave(grave)) {
+                org.bukkit.OfflinePlayer owningPlayer = skull.getOwningPlayer();
+                if (owningPlayer != null && owningPlayer.getUniqueId() != null) {
+                    return grave.getOwner().equals(owningPlayer.getUniqueId());
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isLegacyGrave(Grave grave) {
+        if (grave == null) return false;
+        return legacyGraveLocations.contains(grave.getLocation()) || grave.getTimeOfDeath() <= initializationTime;
+    }
+
+    public void markLegacyGraveForTest(Location location) {
+        if (location != null) {
+            legacyGraveLocations.add(location);
+        }
+    }
+
     private void lootGrave(Grave grave, Player looter) {
         Location loc = grave.getLocation();
+        if (loc == null || !loc.isWorldLoaded() || loc.getWorld() == null) return;
+
+        Block block = loc.getBlock();
+        boolean isGraveBlock = isMatchingGraveBlock(block, grave);
 
         // Drop items
         for (ItemStack item : grave.getItems()) {
@@ -201,24 +452,23 @@ public class GraveManager implements Listener {
             }
         }
 
-        // Remove block
-        loc.getBlock().setType(Material.AIR);
+        // Only remove block if it is indeed the original grave skull
+        if (isGraveBlock) {
+            block.setType(Material.AIR);
+        }
 
         // Remove holograms
-        loc.getWorld().getNearbyEntities(loc, 2, 2, 2).forEach(entity -> {
-            if (entity instanceof ArmorStand && entity.getScoreboardTags()
-                    .contains("grave_" + loc.getBlockX() + "_" + loc.getBlockY() + "_" + loc.getBlockZ())) {
-                entity.remove();
-            }
-        });
+        removeHolograms(loc);
 
         graves.remove(loc);
+        legacyGraveLocations.remove(loc);
         saveGraves();
 
         looter.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("grave.looted", looter, Map.of("player", grave.getOwnerName())));
     }
 
     private void setupGravesConfig() {
+        if (plugin == null) return;
         gravesFile = new File(plugin.getDataFolder(), "graves.yml");
         if (!gravesFile.exists()) {
             try {
@@ -230,33 +480,52 @@ public class GraveManager implements Listener {
         gravesConfig = YamlConfiguration.loadConfiguration(gravesFile);
     }
 
-    private void saveGraves() {
-        gravesConfig.set("graves", null); // Clear existing
-        List<Map<String, Object>> gravesList = new ArrayList<>();
-
-        for (Grave grave : graves.values()) {
-            Map<String, Object> data = new HashMap<>();
-            data.put("owner", grave.getOwner().toString());
-            data.put("ownerName", grave.getOwnerName());
-            data.put("location", grave.getLocation());
-            data.put("items", grave.getItems());
-            data.put("time", grave.getTimeOfDeath());
-            data.put("cause", grave.getCauseOfDeath());
-            gravesList.add(data);
-        }
-
-        gravesConfig.set("graves", gravesList);
-
+    private boolean saveGraves() {
+        if (gravesConfig == null || gravesFile == null) return false;
         try {
-            gravesConfig.save(gravesFile);
-        } catch (IOException e) {
-            plugin.getLogger().severe("Could not save graves.yml!");
+            gravesConfig.set("graves", null); // Clear existing
+            List<Map<String, Object>> gravesList = new ArrayList<>();
+
+            for (Grave grave : graves.values()) {
+                Map<String, Object> data = new HashMap<>();
+                data.put("owner", grave.getOwner().toString());
+                data.put("ownerName", grave.getOwnerName());
+                data.put("worldName", grave.getWorldName());
+
+                Location loc = grave.getLocation();
+                Map<String, Object> locMap = new HashMap<>();
+                if (grave.getWorldName() != null) {
+                    locMap.put("world", grave.getWorldName());
+                }
+                if (loc != null) {
+                    locMap.put("x", loc.getX());
+                    locMap.put("y", loc.getY());
+                    locMap.put("z", loc.getZ());
+                    locMap.put("yaw", (double) loc.getYaw());
+                    locMap.put("pitch", (double) loc.getPitch());
+                }
+                data.put("location", locMap);
+                data.put("items", grave.getItems());
+                data.put("time", grave.getTimeOfDeath());
+                data.put("cause", grave.getCauseOfDeath());
+                gravesList.add(data);
+            }
+
+            gravesConfig.set("graves", gravesList);
+
+            com.smp.smptools.utils.AtomicFileWriter.save(gravesConfig, gravesFile);
+            return true;
+        } catch (Throwable e) {
+            if (plugin != null) {
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Could not save graves.yml!", e);
+            }
+            return false;
         }
     }
 
     @SuppressWarnings("unchecked")
     private void loadGraves() {
-        if (!gravesConfig.contains("graves"))
+        if (gravesConfig == null || !gravesConfig.contains("graves"))
             return;
 
         List<Map<?, ?>> list = gravesConfig.getMapList("graves");
@@ -264,15 +533,66 @@ public class GraveManager implements Listener {
             try {
                 UUID owner = UUID.fromString((String) map.get("owner"));
                 String ownerName = (String) map.get("ownerName");
-                Location location = (Location) map.get("location");
+                String worldName = (String) map.get("worldName");
+
+                Object rawLoc = map.get("location");
+                Location location = null;
+                if (rawLoc instanceof Location l) {
+                    location = l;
+                    if (worldName == null) {
+                        try {
+                            if (l.isWorldLoaded() && l.getWorld() != null) {
+                                worldName = l.getWorld().getName();
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    }
+                } else if (rawLoc instanceof Map<?, ?> locMap) {
+                    Object rawX = locMap.get("x");
+                    Object rawY = locMap.get("y");
+                    Object rawZ = locMap.get("z");
+                    if (!(rawX instanceof Number nx && rawY instanceof Number ny && rawZ instanceof Number nz)) {
+                        if (plugin != null) {
+                            plugin.getLogger().warning("Skipping grave with missing or non-numeric coordinates: " + locMap);
+                        }
+                        continue;
+                    }
+                    if (worldName == null && locMap.get("world") instanceof String w) {
+                        worldName = w;
+                    }
+                    double x = nx.doubleValue();
+                    double y = ny.doubleValue();
+                    double z = nz.doubleValue();
+                    float yaw = locMap.get("yaw") instanceof Number nyaw ? nyaw.floatValue() : 0.0f;
+                    float pitch = locMap.get("pitch") instanceof Number npitch ? npitch.floatValue() : 0.0f;
+                    org.bukkit.World w = null;
+                    if (worldName != null && org.bukkit.Bukkit.getServer() != null) {
+                        try {
+                            w = org.bukkit.Bukkit.getWorld(worldName);
+                        } catch (Exception ignored) {
+                        }
+                    }
+                    location = new Location(w, x, y, z, yaw, pitch);
+                } else {
+                    if (plugin != null) {
+                        plugin.getLogger().warning("Skipping grave with unrecognized location format: " + rawLoc);
+                    }
+                    continue;
+                }
+
                 List<ItemStack> items = (List<ItemStack>) map.get("items");
                 long time = (long) map.get("time");
                 String cause = (String) map.get("cause");
 
-                Grave grave = new Grave(owner, ownerName, location, items, time, cause);
-                graves.put(location, grave);
+                Grave grave = new Grave(owner, ownerName, location, worldName, items, time, cause);
+                if (location != null) {
+                    graves.put(location, grave);
+                    legacyGraveLocations.add(location);
+                }
             } catch (Exception e) {
-                plugin.getLogger().warning("Failed to load a grave: " + e.getMessage());
+                if (plugin != null) {
+                    plugin.getLogger().warning("Failed to load a grave: " + e.getMessage());
+                }
             }
         }
     }

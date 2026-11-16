@@ -10,14 +10,20 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ChunkLoaderManager {
 
@@ -71,16 +77,25 @@ public class ChunkLoaderManager {
         chunkLoadersConfig = YamlConfiguration.loadConfiguration(chunkLoadersFile);
     }
 
+    private final Map<Location, UUID> loaderOwners = new ConcurrentHashMap<>();
+
     public void loadChunkLoaders() {
         activeChunkLoaders.clear();
+        loaderOwners.clear();
         if (chunkLoadersConfig.contains("loaders")) {
             List<String> loaderStrings = chunkLoadersConfig.getStringList("loaders");
             for (String loaderString : loaderStrings) {
                 try {
+                    String[] parts = loaderString.split(";");
                     Location loc = deserializeLocation(loaderString);
                     if (loc != null) {
                         forceLoadChunk(loc);
                         activeChunkLoaders.add(loc);
+                        if (parts.length >= 5) {
+                            try {
+                                loaderOwners.put(loc, UUID.fromString(parts[4]));
+                            } catch (IllegalArgumentException ignored) {}
+                        }
                     } else {
                         plugin.getLogger().warning("Skipping invalid chunk loader entry: '" + loaderString + "'");
                     }
@@ -99,29 +114,82 @@ public class ChunkLoaderManager {
         }
         chunkLoadersConfig.set("loaders", loaderStrings);
         try {
-            chunkLoadersConfig.save(chunkLoadersFile);
+            com.smp.smptools.utils.AtomicFileWriter.save(chunkLoadersConfig, chunkLoadersFile);
         } catch (IOException e) {
             plugin.getLogger().severe("Could not save chunkloaders.yml file!");
         }
     }
 
-    public void addChunkLoader(Location loc) {
+    public boolean canPlaceChunkLoader(UUID owner, Player player) {
+        int maxGlobal = plugin != null ? plugin.getConfig().getInt("features.chunk-loaders.max-global", 128) : 128;
+        int maxPerPlayer = plugin != null ? plugin.getConfig().getInt("features.chunk-loaders.max-per-player", 8) : 8;
+
+        if (activeChunkLoaders.size() >= maxGlobal) {
+            if (player != null) {
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Global chunk loader limit reached (" + maxGlobal + ")!</red>"));
+            }
+            return false;
+        }
+
+        if (owner != null && player != null && !player.hasPermission("smptools.chunkloaders.admin")) {
+            if (getPlayerLoaderCount(owner) >= maxPerPlayer) {
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>You have reached your chunk loader limit (" + maxPerPlayer + ")!</red>"));
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public boolean addChunkLoader(Location loc, UUID owner, Player player) {
+        if (!canPlaceChunkLoader(owner, player)) {
+            return false;
+        }
+
         if (!activeChunkLoaders.contains(loc)) {
             forceLoadChunk(loc);
             activeChunkLoaders.add(loc);
+            if (owner != null) {
+                loaderOwners.put(loc, owner);
+            }
             saveChunkLoaders();
+            return true;
         }
+        return false;
+    }
+
+    public void addChunkLoader(Location loc) {
+        addChunkLoader(loc, null, null);
     }
 
     public void removeChunkLoader(Location loc) {
+        removeChunkLoader(loc, true);
+    }
+
+    public void removeChunkLoader(Location loc, boolean save) {
         if (activeChunkLoaders.remove(loc)) {
+            loaderOwners.remove(loc);
             unforceLoadChunk(loc);
-            saveChunkLoaders();
+            if (save) {
+                saveChunkLoaders();
+            }
         }
     }
 
     public boolean isChunkLoader(Location loc) {
         return activeChunkLoaders.contains(loc);
+    }
+
+    public UUID getOwner(Location loc) {
+        return loaderOwners.get(loc);
+    }
+
+    public int getPlayerLoaderCount(UUID playerUuid) {
+        if (playerUuid == null) return 0;
+        int count = 0;
+        for (UUID owner : loaderOwners.values()) {
+            if (playerUuid.equals(owner)) count++;
+        }
+        return count;
     }
 
     private void forceLoadChunk(Location loc) {
@@ -131,21 +199,42 @@ public class ChunkLoaderManager {
     }
 
     private void unforceLoadChunk(Location loc) {
+        if (loc.getWorld() == null) return;
         Chunk chunk = loc.getChunk();
-        chunk.setForceLoaded(false);
-        plugin.getLogger().info("Unforce loaded chunk: " + chunk.getX() + ", " + chunk.getZ() + " in world " + Objects.requireNonNull(chunk.getWorld()).getName());
+        int cx = chunk.getX();
+        int cz = chunk.getZ();
+        String worldName = loc.getWorld().getName();
+
+        // Check if any other active loader shares this chunk
+        boolean hasOther = false;
+        for (Location other : activeChunkLoaders) {
+            if (other.getWorld() != null && other.getWorld().getName().equals(worldName)
+                    && (other.getBlockX() >> 4) == cx && (other.getBlockZ() >> 4) == cz) {
+                hasOther = true;
+                break;
+            }
+        }
+
+        if (!hasOther) {
+            chunk.setForceLoaded(false);
+            plugin.getLogger().info("Unforce loaded chunk: " + chunk.getX() + ", " + chunk.getZ() + " in world " + Objects.requireNonNull(chunk.getWorld()).getName());
+        }
     }
 
     public void unloadAllChunks() {
-        for (Location loc : activeChunkLoaders) {
+        Set<Location> snapshot = new HashSet<>(activeChunkLoaders);
+        activeChunkLoaders.clear();
+        loaderOwners.clear();
+        for (Location loc : snapshot) {
             unforceLoadChunk(loc);
         }
-        activeChunkLoaders.clear();
         plugin.getLogger().info("Unloaded all chunk loaders.");
     }
 
     private String serializeLocation(Location loc) {
-        return Objects.requireNonNull(loc.getWorld()).getName() + ";" + loc.getBlockX() + ";" + loc.getBlockY() + ";" + loc.getBlockZ();
+        UUID owner = loaderOwners.get(loc);
+        String base = Objects.requireNonNull(loc.getWorld()).getName() + ";" + loc.getBlockX() + ";" + loc.getBlockY() + ";" + loc.getBlockZ();
+        return owner != null ? base + ";" + owner : base;
     }
 
     public static class ParsedLocation {
@@ -163,7 +252,14 @@ public class ChunkLoaderManager {
     public static ParsedLocation parseCoordinates(String s) {
         if (s == null || s.isBlank()) return null;
         String[] parts = s.split(";");
-        if (parts.length != 4) return null;
+        if (parts.length != 4 && parts.length != 5) return null;
+        if (parts.length == 5) {
+            try {
+                UUID.fromString(parts[4]);
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+        }
         try {
             int x = Integer.parseInt(parts[1]);
             int y = Integer.parseInt(parts[2]);
@@ -221,10 +317,6 @@ public class ChunkLoaderManager {
         }
 
         ItemMeta meta = item.getItemMeta();
-        if (meta.getPersistentDataContainer().has(CHUNK_LOADER_KEY, org.bukkit.persistence.PersistentDataType.BYTE)) {
-            return true;
-        }
-
-        return Objects.equals(meta.displayName(), cachedName) && Objects.equals(meta.lore(), cachedLore);
+        return meta.getPersistentDataContainer().has(CHUNK_LOADER_KEY, org.bukkit.persistence.PersistentDataType.BYTE);
     }
 }

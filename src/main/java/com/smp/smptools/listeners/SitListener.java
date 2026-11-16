@@ -29,8 +29,12 @@ public class SitListener implements Listener {
         this.plugin = plugin;
     }
 
-    @EventHandler
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
     public void onPlayerInteract(PlayerInteractEvent event) {
+        if (event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND) {
+            return;
+        }
+
         if (!plugin.getConfig().getBoolean("features.sit-on-stairs.enabled", true)) {
             return;
         }

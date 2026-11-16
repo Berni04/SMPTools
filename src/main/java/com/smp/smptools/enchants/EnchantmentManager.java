@@ -5,7 +5,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -32,10 +31,14 @@ public class EnchantmentManager {
         }
 
         NamespacedKey key = new NamespacedKey(plugin, enchant.getKey());
+        if (meta.getPersistentDataContainer().has(key, PersistentDataType.INTEGER)) {
+            return; // Already applied
+        }
+
         meta.getPersistentDataContainer().set(key, PersistentDataType.INTEGER, 1);
 
         List<Component> lore = meta.hasLore() ? meta.lore() : new ArrayList<>();
-        lore.add(0, Component.text(enchant.getDisplayName(), NamedTextColor.GRAY)); // Add enchant name to lore
+        lore.add(0, Component.text(enchant.getDisplayName(), NamedTextColor.GRAY));
         meta.lore(lore);
 
         item.setItemMeta(meta);

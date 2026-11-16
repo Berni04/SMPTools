@@ -102,6 +102,7 @@ public class SMPTools extends JavaPlugin {
     private NPCManager npcManager;
     private DialogueManager dialogueManager;
     private BlackFridayManager blackFridayManager;
+    private com.smp.smptools.listeners.BlackFridayListener blackFridayListener;
     private MessageManager messageManager;
     private StorageManager storageManager;
     private com.smp.smptools.afk.AFKManager afkManager;
@@ -124,6 +125,7 @@ public class SMPTools extends JavaPlugin {
     private HalloweenGUI halloweenGUI;
     private EasterGUI easterGUI;
     private com.smp.smptools.christmas.KrampusManager krampusManager;
+    private com.smp.smptools.music.MusicCommand musicCommand;
 
 
     @Override
@@ -285,8 +287,8 @@ public class SMPTools extends JavaPlugin {
 
         // Black Friday (conditional)
         if (getConfig().getBoolean("features.blackfriday.enabled", true)) {
-            Bukkit.getPluginManager()
-                    .registerEvents(new com.smp.smptools.listeners.BlackFridayListener(this, blackFridayManager), this);
+            this.blackFridayListener = new com.smp.smptools.listeners.BlackFridayListener(this, blackFridayManager);
+            Bukkit.getPluginManager().registerEvents(this.blackFridayListener, this);
             Objects.requireNonNull(getCommand("blackfriday"))
                     .setExecutor(new com.smp.smptools.commands.BlackFridayCommand(blackFridayManager));
         }
@@ -361,6 +363,9 @@ public class SMPTools extends JavaPlugin {
         if (tradeManager != null) {
             tradeManager.cleanup();
         }
+        if (tpaManager != null) {
+            tpaManager.cleanup();
+        }
         if (chunkLoaderManager != null) {
             chunkLoaderManager.unloadAllChunks(); // Unload all force-loaded chunks
         }
@@ -370,6 +375,9 @@ public class SMPTools extends JavaPlugin {
         if (npcManager != null) {
             npcManager.removeAllNPCs();
         }
+        if (dialogueManager != null) {
+            dialogueManager.cleanupAll();
+        }
         if (eventManager != null) {
             eventManager.shutdown();
         }
@@ -378,6 +386,9 @@ public class SMPTools extends JavaPlugin {
         }
         if (krampusManager != null) {
             krampusManager.cleanupAll();
+        }
+        if (blackFridayListener != null) {
+            blackFridayListener.restoreAllActive();
         }
         if (seasonalManager != null) {
             seasonalManager.saveLocations();
@@ -389,6 +400,10 @@ public class SMPTools extends JavaPlugin {
         if (bountyManager != null) {
             bountyManager.shutdown();
         }
+        if (musicCommand != null) {
+            musicCommand.cleanup();
+        }
+        com.smp.smptools.commands.PrivateVaultCommand.invalidateCache();
         // Save configs
         saveStatsConfig();
         saveTagsConfig();
@@ -681,6 +696,14 @@ public class SMPTools extends JavaPlugin {
             saveResource("events.yml", false);
         }
         eventsConfig = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(eventsFile);
+        try (java.io.InputStream defEventsStream = getResource("events.yml")) {
+            if (defEventsStream != null) {
+                try (java.io.InputStreamReader reader = new java.io.InputStreamReader(defEventsStream, java.nio.charset.StandardCharsets.UTF_8)) {
+                    eventsConfig.setDefaults(org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(reader));
+                }
+            }
+        } catch (java.io.IOException ignored) {
+        }
     }
 
     public FileConfiguration getEventsConfig() {
@@ -688,6 +711,14 @@ public class SMPTools extends JavaPlugin {
             setupEventsConfig();
         }
         return eventsConfig;
+    }
+
+    public com.smp.smptools.music.MusicCommand getMusicCommand() {
+        return musicCommand;
+    }
+
+    public void setMusicCommand(com.smp.smptools.music.MusicCommand musicCommand) {
+        this.musicCommand = musicCommand;
     }
 
     public EventManager getEventManager() {
@@ -716,5 +747,9 @@ public class SMPTools extends JavaPlugin {
 
     public SeasonalManager getSeasonalManager() {
         return seasonalManager;
+    }
+
+    public com.smp.smptools.christmas.KrampusManager getKrampusManager() {
+        return krampusManager;
     }
 }

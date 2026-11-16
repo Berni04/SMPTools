@@ -2,7 +2,6 @@ package com.smp.smptools.storage;
 
 import com.smp.smptools.SMPTools;
 import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.*;
@@ -15,6 +14,54 @@ public class FlatFileStorageProvider implements StorageProvider {
         this.plugin = plugin;
     }
 
+    private final Object taskLock = new Object();
+    private final List<Runnable> pendingTasks = new ArrayList<>();
+    private volatile boolean isShutdown = false;
+
+    private void runSyncOrNow(Runnable task) {
+        synchronized (taskLock) {
+            if (isShutdown) {
+                return; // Reject late writes after shutdown to prevent off-thread mutation
+            }
+            if (Bukkit.getServer() == null || plugin == null || !plugin.isEnabled()) {
+                drainQueueLocked();
+                task.run();
+                return;
+            }
+            pendingTasks.add(task);
+            if (Bukkit.isPrimaryThread()) {
+                drainQueueLocked();
+            } else {
+                try {
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        synchronized (taskLock) {
+                            if (!isShutdown) {
+                                drainQueueLocked();
+                            }
+                        }
+                    });
+                } catch (Exception e) {
+                    if (!isShutdown) {
+                        drainQueueLocked();
+                    }
+                }
+            }
+        }
+    }
+
+    private void drainQueueLocked() {
+        while (!pendingTasks.isEmpty()) {
+            Runnable task = pendingTasks.remove(0);
+            try {
+                task.run();
+            } catch (Exception e) {
+                if (plugin != null) {
+                    plugin.getLogger().warning("Error executing pending flat-file task: " + e.getMessage());
+                }
+            }
+        }
+    }
+
     @Override
     public void init() {
         plugin.getLogger().info("Storage provider set to FLATFILE (YAML).");
@@ -22,14 +69,20 @@ public class FlatFileStorageProvider implements StorageProvider {
 
     @Override
     public void shutdown() {
+        synchronized (taskLock) {
+            isShutdown = true;
+            drainQueueLocked();
+        }
         plugin.saveStatsConfig();
         plugin.saveTagsConfig();
     }
 
     @Override
     public void saveStat(UUID uuid, String statKey, Object value) {
-        plugin.getStatsConfig().set("stats." + uuid + "." + statKey, value);
-        plugin.saveStatsConfig();
+        runSyncOrNow(() -> {
+            plugin.getStatsConfig().set("stats." + uuid + "." + statKey, value);
+            plugin.saveStatsConfig();
+        });
     }
 
     @Override
@@ -50,7 +103,6 @@ public class FlatFileStorageProvider implements StorageProvider {
             return defaultValue;
         }
     }
-
 
     @Override
     public Map<String, Object> getAllPlayerStats(UUID uuid) {
@@ -83,18 +135,22 @@ public class FlatFileStorageProvider implements StorageProvider {
 
     @Override
     public void clearPlayerStats(UUID uuid) {
-        String activeTrail = plugin.getStatsConfig().getString("stats." + uuid + ".active_trail");
-        plugin.getStatsConfig().set("stats." + uuid, null);
-        if (activeTrail != null) {
-            plugin.getStatsConfig().set("stats." + uuid + ".active_trail", activeTrail);
-        }
-        plugin.saveStatsConfig();
+        runSyncOrNow(() -> {
+            String activeTrail = plugin.getStatsConfig().getString("stats." + uuid + ".active_trail");
+            plugin.getStatsConfig().set("stats." + uuid, null);
+            if (activeTrail != null) {
+                plugin.getStatsConfig().set("stats." + uuid + ".active_trail", activeTrail);
+            }
+            plugin.saveStatsConfig();
+        });
     }
 
     @Override
     public void savePlayerTitle(UUID uuid, String title) {
-        plugin.getTagsConfig().set("player-titles." + uuid, title);
-        plugin.saveTagsConfig();
+        runSyncOrNow(() -> {
+            plugin.getTagsConfig().set("player-titles." + uuid, title);
+            plugin.saveTagsConfig();
+        });
     }
 
     @Override
@@ -104,8 +160,10 @@ public class FlatFileStorageProvider implements StorageProvider {
 
     @Override
     public void removePlayerTitle(UUID uuid) {
-        plugin.getTagsConfig().set("player-titles." + uuid, null);
-        plugin.saveTagsConfig();
+        runSyncOrNow(() -> {
+            plugin.getTagsConfig().set("player-titles." + uuid, null);
+            plugin.saveTagsConfig();
+        });
     }
 
     @Override

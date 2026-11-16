@@ -98,21 +98,173 @@ public class LockManagerTest {
         // Now pair into a double chest
         createDoubleChestPair(leftBlock, rightBlock);
 
+        // getBlockKey must be a pure function and NOT mutate containerOwners on read path (CRIT-01)
         String doubleKey = manager.getBlockKey(leftBlock);
         assertNotNull(doubleKey);
         assertEquals(leftKey, doubleKey); // canonical key is leftKey (x=10)
+        assertEquals(ownerA, manager.getContainerOwners().get(leftKey));
+        assertEquals(ownerB, manager.getContainerOwners().get(rightKey));
+
+        // Explicit migration moves rightKey to canonical key safely
+        manager.migrateToDoubleChest(rightBlock, leftBlock);
+
+        assertFalse(manager.getContainerOwners().containsKey(rightKey), "Right key must be removed after migration.");
 
         // Verify primary owner is ownerA
         assertEquals(ownerA, manager.getContainerOwners().get(doubleKey));
-
-        // Verify rightKey lock entry was removed from containerOwners
-        assertFalse(manager.getContainerOwners().containsKey(rightKey));
 
         // Verify both owners and trusted players retain access via canAccess
         assertTrue(manager.canAccess(leftBlock, createPlayerProxy(ownerA)), "Owner A must retain access.");
         assertTrue(manager.canAccess(leftBlock, createPlayerProxy(ownerB)), "Owner B must retain access (merged as trusted).");
         assertTrue(manager.canAccess(leftBlock, createPlayerProxy(trustedA)), "Trusted A must retain access.");
         assertTrue(manager.canAccess(leftBlock, createPlayerProxy(trustedB)), "Trusted B must retain access.");
+    }
+
+    @Test
+    public void testDoubleChestUntrustRemovesFromBothHalves() {
+        World world = createWorldProxy("world");
+        Block leftBlock = createBlockProxy(world, 20, 64, 20);
+        Block rightBlock = createBlockProxy(world, 21, 64, 20);
+
+        setSingleChest(leftBlock);
+        setSingleChest(rightBlock);
+
+        LockManager manager = createTestLockManager();
+
+        java.util.UUID owner = java.util.UUID.randomUUID();
+        java.util.UUID untrustedUser = java.util.UUID.randomUUID();
+
+        String leftKey = manager.getLocationKey(leftBlock.getLocation());
+        String rightKey = manager.getLocationKey(rightBlock.getLocation());
+
+        // Legacy state: two separate records for each half, both trusting untrustedUser
+        manager.getContainerOwners().put(leftKey, owner);
+        manager.trustPlayer(leftBlock, createPlayerProxy(owner), createOfflinePlayerProxy(untrustedUser));
+
+        manager.getContainerOwners().put(rightKey, owner);
+        manager.trustPlayer(rightBlock, createPlayerProxy(owner), createOfflinePlayerProxy(untrustedUser));
+
+        createDoubleChestPair(leftBlock, rightBlock);
+
+        // Untrust user
+        boolean revoked = manager.untrustPlayer(leftBlock, createPlayerProxy(owner), createOfflinePlayerProxy(untrustedUser));
+        assertTrue(revoked, "untrustPlayer should succeed.");
+
+        // Simulate breaking left half; right half survives as single chest
+        setSingleChest(rightBlock);
+        manager.removeOrMigrateLock(leftBlock, rightBlock);
+
+        // Verify surviving chest does not restore untrustedUser
+        assertFalse(manager.canAccess(rightBlock, createPlayerProxy(untrustedUser)), "Revoked user must not retain access on surviving half.");
+    }
+
+    @Test
+    public void testRemoveOrMigrateLockPreservesDisplacedOwner() {
+        World world = createWorldProxy("world");
+        Block leftBlock = createBlockProxy(world, 30, 64, 30);
+        Block rightBlock = createBlockProxy(world, 31, 64, 30);
+
+        setSingleChest(leftBlock);
+        setSingleChest(rightBlock);
+
+        LockManager manager = createTestLockManager();
+
+        java.util.UUID ownerLeft = java.util.UUID.randomUUID();
+        java.util.UUID ownerRight = java.util.UUID.randomUUID();
+
+        String leftKey = manager.getLocationKey(leftBlock.getLocation());
+        String rightKey = manager.getLocationKey(rightBlock.getLocation());
+
+        manager.getContainerOwners().put(leftKey, ownerLeft);
+        manager.getContainerOwners().put(rightKey, ownerRight);
+
+        createDoubleChestPair(leftBlock, rightBlock);
+
+        // Break left half; right half survives
+        setSingleChest(rightBlock);
+        manager.removeOrMigrateLock(leftBlock, rightBlock);
+
+        // The surviving half should retain ownerRight as primary owner, but ownerLeft must be preserved in trusted
+        assertTrue(manager.canAccess(rightBlock, createPlayerProxy(ownerRight)), "Surviving block owner must retain access.");
+        assertTrue(manager.canAccess(rightBlock, createPlayerProxy(ownerLeft)), "Displaced owner must be preserved as trusted on surviving block.");
+    }
+
+    @Test
+    public void testUntrustPlayerConsolidatesAndSavesEvenWhenTargetNotFound() {
+        World world = createWorldProxy("world");
+        Block leftBlock = createBlockProxy(world, 40, 64, 40);
+        Block rightBlock = createBlockProxy(world, 41, 64, 40);
+
+        setSingleChest(leftBlock);
+        setSingleChest(rightBlock);
+
+        final int[] saveCount = {0};
+        LockManager manager = new LockManager(null) {
+            @Override
+            public void saveLocks() {
+                saveCount[0]++;
+            }
+        };
+
+        java.util.UUID owner = java.util.UUID.randomUUID();
+        java.util.UUID unTargetedUser = java.util.UUID.randomUUID();
+
+        String leftKey = manager.getLocationKey(leftBlock.getLocation());
+        String rightKey = manager.getLocationKey(rightBlock.getLocation());
+
+        manager.getContainerOwners().put(leftKey, owner);
+        manager.getContainerOwners().put(rightKey, owner);
+
+        createDoubleChestPair(leftBlock, rightBlock);
+
+        // untrustPlayer for someone who is not trusted
+        boolean removed = manager.untrustPlayer(leftBlock, createPlayerProxy(owner), createOfflinePlayerProxy(unTargetedUser));
+        assertFalse(removed, "Should return false when user is not trusted.");
+        assertFalse(manager.getContainerOwners().containsKey(rightKey), "The non-canonical half record must be consolidated.");
+        assertEquals(owner, manager.getContainerOwners().get(leftKey), "The canonical record must retain the owner.");
+        assertTrue(saveCount[0] > 0, "saveLocks must be called due to consolidation even when removed is false.");
+    }
+
+    @Test
+    public void testUnauthorizedTrustUntrustDoesNotConsolidateOrSave() {
+        World world = createWorldProxy("world");
+        Block leftBlock = createBlockProxy(world, 50, 64, 50);
+        Block rightBlock = createBlockProxy(world, 51, 64, 50);
+
+        setSingleChest(leftBlock);
+        setSingleChest(rightBlock);
+
+        final int[] saveCount = {0};
+        LockManager manager = new LockManager(null) {
+            @Override
+            public void saveLocks() {
+                saveCount[0]++;
+            }
+        };
+
+        java.util.UUID realOwner = java.util.UUID.randomUUID();
+        java.util.UUID intruder = java.util.UUID.randomUUID();
+        java.util.UUID target = java.util.UUID.randomUUID();
+
+        String leftKey = manager.getLocationKey(leftBlock.getLocation());
+        String rightKey = manager.getLocationKey(rightBlock.getLocation());
+
+        manager.getContainerOwners().put(leftKey, realOwner);
+        manager.getContainerOwners().put(rightKey, realOwner);
+
+        createDoubleChestPair(leftBlock, rightBlock);
+
+        // Intruder attempts to untrust
+        boolean removed = manager.untrustPlayer(leftBlock, createPlayerProxy(intruder), createOfflinePlayerProxy(target));
+        assertFalse(removed, "Unauthorized player must not untrust.");
+        assertEquals(0, saveCount[0], "No save should occur for unauthorized untrust.");
+        assertTrue(manager.getContainerOwners().containsKey(rightKey), "No consolidation should occur for unauthorized untrust.");
+
+        // Intruder attempts to trust
+        boolean trusted = manager.trustPlayer(leftBlock, createPlayerProxy(intruder), createOfflinePlayerProxy(target));
+        assertFalse(trusted, "Unauthorized player must not trust.");
+        assertEquals(0, saveCount[0], "No save should occur for unauthorized trust.");
+        assertTrue(manager.getContainerOwners().containsKey(rightKey), "No consolidation should occur for unauthorized trust.");
     }
 
     private LockManager createTestLockManager() {

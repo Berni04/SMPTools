@@ -85,7 +85,7 @@ public class LockManager {
             AsyncConfigHelper.saveConfigAsync(plugin, config, locksFile, "locks.yml");
         } else {
             try {
-                config.save(locksFile);
+                com.smp.smptools.utils.AtomicFileWriter.save(config, locksFile);
             } catch (IOException e) {
                 // Ignore in unit tests
             }
@@ -117,49 +117,7 @@ public class LockManager {
                         loc = rightLoc;
                     }
 
-                    String doubleKey = getLocationKey(loc);
-                    String leftKey = getLocationKey(leftLoc);
-                    String rightKey = getLocationKey(rightLoc);
-
-                    // Check single-half lock migration when chest is paired into a double chest
-                    boolean modified = false;
-                    String otherKey = doubleKey.equals(leftKey) ? rightKey : leftKey;
-
-                    if (!containerOwners.containsKey(doubleKey)) {
-                        if (containerOwners.containsKey(otherKey)) {
-                            UUID owner = containerOwners.remove(otherKey);
-                            Set<UUID> trusted = containerTrusted.remove(otherKey);
-                            containerOwners.put(doubleKey, owner);
-                            if (trusted != null && !trusted.isEmpty()) {
-                                containerTrusted.put(doubleKey, trusted);
-                            }
-                            modified = true;
-                        }
-                    } else {
-                        if (containerOwners.containsKey(otherKey)) {
-                            UUID doubleOwner = containerOwners.get(doubleKey);
-                            UUID otherOwner = containerOwners.remove(otherKey);
-                            Set<UUID> otherTrusted = containerTrusted.remove(otherKey);
-
-                            Set<UUID> doubleTrusted = containerTrusted.computeIfAbsent(doubleKey, k -> ConcurrentHashMap.newKeySet());
-                            if (otherOwner != null && !otherOwner.equals(doubleOwner)) {
-                                doubleTrusted.add(otherOwner);
-                            }
-                            if (otherTrusted != null && !otherTrusted.isEmpty()) {
-                                doubleTrusted.addAll(otherTrusted);
-                            }
-                            if (doubleTrusted.isEmpty()) {
-                                containerTrusted.remove(doubleKey);
-                            }
-                            modified = true;
-                        }
-                    }
-
-                    if (modified) {
-                        saveLocks();
-                    }
-
-                    return doubleKey;
+                    return getLocationKey(loc);
                 }
             }
         }
@@ -173,6 +131,61 @@ public class LockManager {
                 ? loc.getWorld().getUID().toString()
                 : loc.getWorld().getName();
         return worldIdentifier + ":" + loc.getBlockX() + ":" + loc.getBlockY() + ":" + loc.getBlockZ();
+    }
+
+    public String getLockKey(Block block) {
+        if (block == null) return null;
+        String canonicalKey = getBlockKey(block);
+        if (canonicalKey != null && containerOwners.containsKey(canonicalKey)) {
+            return canonicalKey;
+        }
+        String directKey = getLocationKey(block.getLocation());
+        if (directKey != null && containerOwners.containsKey(directKey)) {
+            return directKey;
+        }
+        Block otherHalf = getSurvivingDoubleChestHalf(block);
+        if (otherHalf != null) {
+            String otherKey = getLocationKey(otherHalf.getLocation());
+            if (otherKey != null && containerOwners.containsKey(otherKey)) {
+                return otherKey;
+            }
+        }
+        return canonicalKey;
+    }
+
+    private void consolidateHalfRecord(String canonicalKey, String halfKey) {
+        if (canonicalKey == null || halfKey == null || canonicalKey.equals(halfKey)) return;
+        UUID oldOwner = containerOwners.remove(halfKey);
+        Set<UUID> oldTrusted = containerTrusted.remove(halfKey);
+        if (oldOwner != null) {
+            if (!containerOwners.containsKey(canonicalKey)) {
+                containerOwners.put(canonicalKey, oldOwner);
+            } else {
+                UUID existingOwner = containerOwners.get(canonicalKey);
+                if (!existingOwner.equals(oldOwner)) {
+                    containerTrusted.computeIfAbsent(canonicalKey, k -> ConcurrentHashMap.newKeySet()).add(oldOwner);
+                }
+            }
+            if (oldTrusted != null && !oldTrusted.isEmpty()) {
+                containerTrusted.computeIfAbsent(canonicalKey, k -> ConcurrentHashMap.newKeySet()).addAll(oldTrusted);
+            }
+        }
+    }
+
+    public boolean areDoubleChestHalves(Block block1, Block block2) {
+        if (block1 == null || block2 == null) return false;
+        Block other = getSurvivingDoubleChestHalf(block1);
+        return other != null && isSameBlockLocation(other.getLocation(), block2.getLocation());
+    }
+
+    public void migrateToDoubleChest(Block existingBlock, Block newBlock) {
+        if (existingBlock == null || newBlock == null) return;
+        if (!areDoubleChestHalves(existingBlock, newBlock)) return;
+        String singleKey = getLocationKey(existingBlock.getLocation());
+        String canonicalKey = getBlockKey(existingBlock);
+        consolidateHalfRecord(canonicalKey, singleKey);
+        consolidateHalfRecord(canonicalKey, getLocationKey(newBlock.getLocation()));
+        saveLocks();
     }
 
     public Block getSurvivingDoubleChestHalf(Block brokenBlock) {
@@ -202,18 +215,50 @@ public class LockManager {
     }
 
     public void removeOrMigrateLock(Block brokenBlock, Block survivingBlock) {
-        String oldKey = getBlockKey(brokenBlock);
-        if (oldKey == null || !containerOwners.containsKey(oldKey)) return;
+        if (brokenBlock == null) return;
+        String oldKey = getLockKey(brokenBlock);
+        String brokenDirectKey = getLocationKey(brokenBlock.getLocation());
 
-        UUID owner = containerOwners.remove(oldKey);
-        Set<UUID> trusted = containerTrusted.remove(oldKey);
+        UUID owner = null;
+        Set<UUID> trusted = new HashSet<>();
+
+        if (oldKey != null && containerOwners.containsKey(oldKey)) {
+            owner = containerOwners.remove(oldKey);
+            Set<UUID> t = containerTrusted.remove(oldKey);
+            if (t != null) trusted.addAll(t);
+        }
+        if (brokenDirectKey != null && !brokenDirectKey.equals(oldKey) && containerOwners.containsKey(brokenDirectKey)) {
+            UUID directOwner = containerOwners.remove(brokenDirectKey);
+            if (owner == null) {
+                owner = directOwner;
+            } else if (!owner.equals(directOwner)) {
+                trusted.add(directOwner);
+            }
+            Set<UUID> t = containerTrusted.remove(brokenDirectKey);
+            if (t != null) trusted.addAll(t);
+        }
 
         if (survivingBlock != null) {
             String newKey = getLocationKey(survivingBlock.getLocation());
-            if (newKey != null && owner != null) {
-                containerOwners.put(newKey, owner);
-                if (trusted != null && !trusted.isEmpty()) {
-                    containerTrusted.put(newKey, trusted);
+            if (newKey != null) {
+                UUID existingOwner = containerOwners.get(newKey);
+                if (existingOwner != null) {
+                    if (owner != null && !existingOwner.equals(owner)) {
+                        trusted.add(owner);
+                    }
+                    owner = existingOwner;
+                }
+                Set<UUID> existingTrusted = containerTrusted.get(newKey);
+                if (existingTrusted != null) {
+                    trusted.addAll(existingTrusted);
+                }
+
+                if (owner != null) {
+                    trusted.remove(owner);
+                    containerOwners.put(newKey, owner);
+                    if (!trusted.isEmpty()) {
+                        containerTrusted.put(newKey, trusted);
+                    }
                 }
             }
         }
@@ -238,6 +283,7 @@ public class LockManager {
     public boolean isContainer(Block block) {
         if (block == null) return false;
         Material type = block.getType();
+        if (type == Material.ENDER_CHEST) return false;
         return type.name().contains("CHEST") ||
                type.name().contains("BARREL") ||
                type.name().contains("SHULKER_BOX") ||
@@ -247,19 +293,29 @@ public class LockManager {
                type.name().contains("DROPPER") ||
                type.name().contains("DISPENSER") ||
                type.name().contains("BREWING_STAND") ||
-               type.name().contains("CHISELED_BOOKSHELF");
+               type.name().contains("CHISELED_BOOKSHELF") ||
+               type.name().contains("CRAFTER") ||
+               type.name().contains("LECTERN") ||
+               type.name().contains("DECORATED_POT");
     }
 
     public boolean isLocked(Block block) {
-        String key = getBlockKey(block);
+        if (block == null) return false;
+        String key = getLockKey(block);
         return key != null && containerOwners.containsKey(key);
+    }
+
+    public UUID getOwnerUUID(Block block) {
+        if (block == null) return null;
+        String key = getLockKey(block);
+        return key != null ? containerOwners.get(key) : null;
     }
 
     public boolean canAccess(Block block, Player player) {
         if (player == null || block == null) return false;
         if (player.hasPermission("smptools.locks.admin")) return true;
 
-        String key = getBlockKey(block);
+        String key = getLockKey(block);
         if (key == null || !containerOwners.containsKey(key)) return true;
 
         UUID owner = containerOwners.get(key);
@@ -274,17 +330,35 @@ public class LockManager {
         String key = getBlockKey(block);
         if (key == null) return false;
 
+        if (isLocked(block)) {
+            UUID currentOwner = getOwnerUUID(block);
+            if (currentOwner != null && !currentOwner.equals(owner.getUniqueId()) && !owner.hasPermission("smptools.locks.admin")) {
+                return false;
+            }
+        }
+
+        String directKey = getLocationKey(block.getLocation());
+        consolidateHalfRecord(key, directKey);
+        Block otherHalf = getSurvivingDoubleChestHalf(block);
+        if (otherHalf != null) {
+            consolidateHalfRecord(key, getLocationKey(otherHalf.getLocation()));
+        }
+
+        UUID prevOwner = containerOwners.get(key);
+        if (prevOwner != null && !prevOwner.equals(owner.getUniqueId())) {
+            containerTrusted.computeIfAbsent(key, k -> ConcurrentHashMap.newKeySet()).add(prevOwner);
+        }
+
         containerOwners.put(key, owner.getUniqueId());
         saveLocks();
         return true;
     }
 
     public boolean unlockContainer(Block block, Player player) {
-        String key = getBlockKey(block);
-        if (key == null || !containerOwners.containsKey(key)) return false;
+        if (!isLocked(block)) return false;
 
-        UUID owner = containerOwners.get(key);
-        if (!player.getUniqueId().equals(owner) && !player.hasPermission("smptools.locks.admin")) {
+        UUID owner = getOwnerUUID(block);
+        if (owner != null && !player.getUniqueId().equals(owner) && !player.hasPermission("smptools.locks.admin")) {
             return false;
         }
 
@@ -292,21 +366,78 @@ public class LockManager {
     }
 
     public boolean removeLock(Block block) {
-        String key = getBlockKey(block);
-        if (key == null || !containerOwners.containsKey(key)) return false;
+        if (block == null) return false;
+        String resolvedKey = getLockKey(block);
+        String canonicalKey = getBlockKey(block);
+        String directKey = getLocationKey(block.getLocation());
 
-        containerOwners.remove(key);
-        containerTrusted.remove(key);
-        saveLocks();
-        return true;
+        boolean removed = false;
+        if (resolvedKey != null && containerOwners.remove(resolvedKey) != null) {
+            containerTrusted.remove(resolvedKey);
+            removed = true;
+        }
+        if (canonicalKey != null && containerOwners.remove(canonicalKey) != null) {
+            containerTrusted.remove(canonicalKey);
+            removed = true;
+        }
+        if (directKey != null && containerOwners.remove(directKey) != null) {
+            containerTrusted.remove(directKey);
+            removed = true;
+        }
+
+        Block otherHalf = getSurvivingDoubleChestHalf(block);
+        if (otherHalf != null) {
+            String otherKey = getLocationKey(otherHalf.getLocation());
+            if (otherKey != null && containerOwners.remove(otherKey) != null) {
+                containerTrusted.remove(otherKey);
+                removed = true;
+            }
+        }
+
+        if (removed) {
+            saveLocks();
+        }
+        return removed;
+    }
+
+    /**
+     * Resolves the canonical key for a double chest and consolidates any legacy half-records,
+     * immediately persisting changes to disk if consolidation occurred.
+     */
+    private String canonicalizeAndConsolidateDoubleChestKey(Block block) {
+        if (block == null) return null;
+        String key = getLockKey(block);
+        Block otherHalf = getSurvivingDoubleChestHalf(block);
+        if (otherHalf != null) {
+            String canonicalKey = getBlockKey(block);
+            String directKey = getLocationKey(block.getLocation());
+            String otherKey = getLocationKey(otherHalf.getLocation());
+            boolean consolidated = false;
+            if (canonicalKey != null) {
+                if (directKey != null && !directKey.equals(canonicalKey) && containerOwners.containsKey(directKey)) {
+                    consolidateHalfRecord(canonicalKey, directKey);
+                    consolidated = true;
+                }
+                if (otherKey != null && !otherKey.equals(canonicalKey) && containerOwners.containsKey(otherKey)) {
+                    consolidateHalfRecord(canonicalKey, otherKey);
+                    consolidated = true;
+                }
+                key = canonicalKey;
+            }
+            if (consolidated) {
+                saveLocks();
+            }
+        }
+        return key;
     }
 
     public boolean trustPlayer(Block block, Player owner, OfflinePlayer target) {
-        String key = getBlockKey(block);
+        String key = getLockKey(block);
         if (key == null || !containerOwners.containsKey(key)) return false;
         if (!containerOwners.get(key).equals(owner.getUniqueId()) && !owner.hasPermission("smptools.locks.admin")) {
             return false;
         }
+        key = canonicalizeAndConsolidateDoubleChestKey(block);
 
         containerTrusted.computeIfAbsent(key, k -> ConcurrentHashMap.newKeySet()).add(target.getUniqueId());
         saveLocks();
@@ -314,23 +445,46 @@ public class LockManager {
     }
 
     public boolean untrustPlayer(Block block, Player owner, OfflinePlayer target) {
-        String key = getBlockKey(block);
+        String key = getLockKey(block);
         if (key == null || !containerOwners.containsKey(key)) return false;
         if (!containerOwners.get(key).equals(owner.getUniqueId()) && !owner.hasPermission("smptools.locks.admin")) {
             return false;
         }
+        key = canonicalizeAndConsolidateDoubleChestKey(block);
 
+        boolean removed = false;
         Set<UUID> set = containerTrusted.get(key);
-        if (set != null) {
-            set.remove(target.getUniqueId());
-            saveLocks();
-            return true;
+        if (set != null && set.remove(target.getUniqueId())) {
+            removed = true;
         }
-        return false;
+
+        String directKey = getLocationKey(block.getLocation());
+        if (directKey != null && !directKey.equals(key)) {
+            Set<UUID> directSet = containerTrusted.get(directKey);
+            if (directSet != null && directSet.remove(target.getUniqueId())) {
+                removed = true;
+            }
+        }
+
+        Block otherHalf = getSurvivingDoubleChestHalf(block);
+        if (otherHalf != null) {
+            String otherKey = getLocationKey(otherHalf.getLocation());
+            if (otherKey != null && !otherKey.equals(key)) {
+                Set<UUID> otherSet = containerTrusted.get(otherKey);
+                if (otherSet != null && otherSet.remove(target.getUniqueId())) {
+                    removed = true;
+                }
+            }
+        }
+
+        if (removed) {
+            saveLocks();
+        }
+        return removed;
     }
 
     public String getOwnerName(Block block) {
-        String key = getBlockKey(block);
+        String key = getLockKey(block);
         if (key == null || !containerOwners.containsKey(key)) return "Unknown";
         UUID uuid = containerOwners.get(key);
         OfflinePlayer p = Bukkit.getOfflinePlayer(uuid);

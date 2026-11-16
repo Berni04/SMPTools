@@ -39,6 +39,10 @@ public class MessageManager {
      * Loads the messages.yml configuration file.
      */
     private void loadMessages() {
+        if (plugin == null) {
+            messagesConfig = new YamlConfiguration();
+            return;
+        }
         File file = new File(plugin.getDataFolder(), "messages.yml");
         if (!file.exists()) {
             plugin.saveResource("messages.yml", false);
@@ -49,6 +53,7 @@ public class MessageManager {
             if (defaultStream != null) {
                 YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(defaultStream, java.nio.charset.StandardCharsets.UTF_8));
                 messagesConfig.setDefaults(defaultConfig);
+                messagesConfig.options().copyDefaults(true);
             }
         } catch (java.io.IOException e) {
             plugin.getLogger().warning("Could not load default messages.yml stream: " + e.getMessage());
@@ -64,7 +69,26 @@ public class MessageManager {
      * @return the formatted Component message
      */
     public Component getMessage(String path, Player player, Map<String, String> placeholders) {
-        String msg = messagesConfig.getString(path, "Missing message: " + path);
+        return getMessage(path, null, player, placeholders);
+    }
+
+    /**
+     * Gets a message from the configuration with a fallback path, player context, and placeholders.
+     *
+     * @param path the primary message path in messages.yml
+     * @param fallbackPath the fallback message path if primary path is missing (can be null)
+     * @param player the player context (can be null)
+     * @param placeholders the placeholder values to replace
+     * @return the formatted Component message
+     */
+    public Component getMessage(String path, String fallbackPath, Player player, Map<String, String> placeholders) {
+        String msg = messagesConfig.getString(path);
+        if (msg == null && fallbackPath != null) {
+            msg = messagesConfig.getString(fallbackPath);
+        }
+        if (msg == null) {
+            msg = "Missing message: " + path;
+        }
 
         java.util.List<TagResolver> resolvers = new java.util.ArrayList<>();
         resolvers.add(buildPlayerTagResolver(player));
@@ -86,7 +110,10 @@ public class MessageManager {
     }
 
     public Component getMessage(String path, Player context, Map<String, String> placeholders, Player secondary) {
-        String msg = messagesConfig.getString(path, "Missing message: " + path);
+        String msg = messagesConfig.getString(path);
+        if (msg == null) {
+            msg = "Missing message: " + path;
+        }
 
         java.util.List<TagResolver> resolvers = new java.util.ArrayList<>();
         resolvers.add(buildPlayerTagResolver(context));
@@ -154,8 +181,20 @@ public class MessageManager {
      * @return the raw MiniMessage template string, or empty string if not found
      */
     public String getRawMessage(String path) {
-        String msg = messagesConfig.getString(path, "");
+        String msg = messagesConfig.getString(path);
         return msg == null ? "" : msg;
+    }
+
+    /**
+     * Checks if a message exists in the configuration or bundled defaults.
+     *
+     * @param path the message path in messages.yml
+     * @return true if the message path exists and is not empty
+     */
+    public boolean hasMessage(String path) {
+        if (messagesConfig == null || path == null) return false;
+        String msg = messagesConfig.getString(path);
+        return msg != null && !msg.isEmpty();
     }
 
     /**
@@ -169,6 +208,10 @@ public class MessageManager {
         return list == null ? java.util.Collections.emptyList() : list;
     }
 
+    void setConfigForTesting(FileConfiguration config) {
+        this.messagesConfig = config;
+    }
+
     /**
      * Builds a TagResolver with all player-related dynamic tags.
      *
@@ -176,7 +219,7 @@ public class MessageManager {
      * @return the TagResolver with player tags
      */
     private TagResolver buildPlayerTagResolver(Player player) {
-        if (player == null) {
+        if (player == null || plugin == null) {
             return TagResolver.empty();
         }
 
@@ -230,7 +273,7 @@ public class MessageManager {
      * @return the TagResolver with {@code <requester*...>} tags
      */
     private TagResolver buildSecondaryPlayerTagResolver(Player player) {
-        if (player == null) {
+        if (player == null || plugin == null) {
             return TagResolver.empty();
         }
 

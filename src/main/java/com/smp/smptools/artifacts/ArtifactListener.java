@@ -230,10 +230,18 @@ public class ArtifactListener implements Listener {
                             for (int z = -2; z <= 2; z++) {
                                 Block crop = clicked.getRelative(x, 0, z);
                                 if (crop.getBlockData() instanceof Ageable ageable && ageable.getAge() == ageable.getMaximumAge()) {
-                                    crop.breakNaturally(main);
-                                    ageable.setAge(0);
-                                    crop.setBlockData(ageable);
-                                    harvested++;
+                                    org.bukkit.event.block.BlockBreakEvent breakEvent = new org.bukkit.event.block.BlockBreakEvent(crop, player);
+                                    Bukkit.getPluginManager().callEvent(breakEvent);
+                                    if (!breakEvent.isCancelled()) {
+                                        if (breakEvent.isDropItems()) {
+                                            crop.breakNaturally(main);
+                                        } else {
+                                            crop.setType(Material.AIR);
+                                        }
+                                        ageable.setAge(0);
+                                        crop.setBlockData(ageable);
+                                        harvested++;
+                                    }
                                 }
                             }
                         }

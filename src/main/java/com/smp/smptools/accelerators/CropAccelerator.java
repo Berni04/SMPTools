@@ -24,8 +24,8 @@ public class CropAccelerator extends BukkitRunnable {
     // List of materials that are ageable crops
     private static final List<Material> AGEABLE_CROPS = Arrays.asList(
             Material.WHEAT, Material.CARROTS, Material.POTATOES, Material.BEETROOTS, Material.NETHER_WART,
-            Material.COCOA_BEANS, Material.PUMPKIN_STEM, Material.MELON_STEM, Material.SUGAR_CANE, Material.CACTUS,
-            Material.BAMBOO, Material.KELP_PLANT, Material.KELP
+            Material.COCOA, Material.PUMPKIN_STEM, Material.MELON_STEM, Material.SUGAR_CANE, Material.CACTUS,
+            Material.BAMBOO, Material.KELP_PLANT, Material.KELP, Material.SWEET_BERRY_BUSH, Material.TORCHFLOWER_CROP, Material.PITCHER_CROP
     );
 
     // List of materials that are saplings
@@ -54,6 +54,8 @@ public class CropAccelerator extends BukkitRunnable {
             int minHeight = world.getMinHeight();
 
             for (Chunk chunk : world.getLoadedChunks()) {
+                if (!chunk.isLoaded()) continue;
+
                 int chunkBaseX = chunk.getX() << 4;
                 int chunkBaseZ = chunk.getZ() << 4;
 
@@ -69,20 +71,25 @@ public class CropAccelerator extends BukkitRunnable {
                     int y = minY + (maxY > minY ? random.nextInt(maxY - minY + 1) : 0);
 
                     Block block = chunk.getBlock(x, y, z);
+                    Material mat = block.getType();
+
+                    if (!AGEABLE_CROPS.contains(mat) && !SAPLINGS.contains(mat)) {
+                        continue;
+                    }
+
                     BlockData blockData = block.getBlockData();
 
                     if (blockData instanceof Ageable ageable) {
                         if (ageable.getAge() < ageable.getMaximumAge()) {
-                            int newAge = Math.min(ageable.getMaximumAge(), ageable.getAge() + 1); // Increment age by 1 per "tick"
+                            int newAge = Math.min(ageable.getMaximumAge(), ageable.getAge() + 1);
                             ageable.setAge(newAge);
                             block.setBlockData(ageable);
                         }
-                    } else if (SAPLINGS.contains(block.getType())) {
-                        if (random.nextInt(10) == 0) { // Balanced growth rate for saplings
+                    } else if (SAPLINGS.contains(mat)) {
+                        if (random.nextInt(10) == 0) {
                             block.applyBoneMeal(BlockFace.UP);
                         }
-                    } else if (AGEABLE_CROPS.contains(block.getType())) {
-                        // For non-ageable crops that grow (like sugar cane, cactus, bamboo)
+                    } else if (AGEABLE_CROPS.contains(mat)) {
                         block.applyBoneMeal(BlockFace.UP);
                     }
                 }

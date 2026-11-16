@@ -23,7 +23,7 @@ public class LeaderboardManager {
     private final SMPTools plugin;
     private final Map<String, Map<String, Long>> cachedLeaderboards = new ConcurrentHashMap<>();
     private final AtomicBoolean isRefreshing = new AtomicBoolean(false);
-    private long lastCacheTime = 0;
+    private volatile long lastCacheTime = 0;
 
     public LeaderboardManager(SMPTools plugin) {
         this.plugin = plugin;

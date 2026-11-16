@@ -60,6 +60,8 @@ events:
         boss_mobs: 50     # Warden, Wither, Ender Dragon
       buffs:
         double-mob-drops: true
+      # Whether mobs from monster spawners yield event points
+      allow-spawner-mobs: false
 
     double_xp:
       enabled: true

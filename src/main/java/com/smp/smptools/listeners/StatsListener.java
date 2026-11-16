@@ -122,7 +122,7 @@ public class StatsListener implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         if (com.smp.smptools.artifacts.ArtifactListener.isFelling(event.getBlock())) {
             return;

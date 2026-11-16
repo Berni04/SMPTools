@@ -29,12 +29,23 @@ public class TradeListener implements Listener {
         this.tradeManager = plugin.getTradeManager();
     }
 
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
 
+        boolean isTradeHolder = event.getView().getTopInventory().getHolder() instanceof TradeSession.TradeHolder;
         TradeSession session = tradeManager.getSession(player);
-        if (session == null) return;
+        if (session == null) {
+            if (isTradeHolder) {
+                event.setCancelled(true);
+            }
+            return;
+        }
+
+        if (session.getState() != TradeSession.State.ACTIVE) {
+            event.setCancelled(true);
+            return;
+        }
 
         if (event.getAction() == InventoryAction.COLLECT_TO_CURSOR || event.getAction() == InventoryAction.CLONE_STACK) {
             event.setCancelled(true);
@@ -142,12 +153,23 @@ public class TradeListener implements Listener {
         return movedAny;
     }
 
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onInventoryDrag(InventoryDragEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
 
+        boolean isTradeHolder = event.getView().getTopInventory().getHolder() instanceof TradeSession.TradeHolder;
         TradeSession session = tradeManager.getSession(player);
-        if (session == null) return;
+        if (session == null) {
+            if (isTradeHolder) {
+                event.setCancelled(true);
+            }
+            return;
+        }
+
+        if (session.getState() != TradeSession.State.ACTIVE) {
+            event.setCancelled(true);
+            return;
+        }
 
         boolean isP1 = player.equals(session.getPlayer1());
         Set<Integer> allowedSlots = isP1 ? TradeSession.P1_SLOTS : TradeSession.P2_SLOTS;

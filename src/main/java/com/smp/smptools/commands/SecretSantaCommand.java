@@ -115,8 +115,26 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
                     return true;
                 }
                 if (args.length > 1 && args[1].equalsIgnoreCase("start")) {
+                    if (manager.hasAnyGiftsDeposited()) {
+                        player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.admin-start-has-gifts"));
+                        return true;
+                    }
                     manager.generateMatches();
                     player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.matches-generated"));
+                } else if (args.length > 1 && args[1].equalsIgnoreCase("clear")) {
+                    for (Player online : Bukkit.getOnlinePlayers()) {
+                        if (online.getOpenInventory().getTopInventory().getHolder() instanceof com.smp.smptools.christmas.SecretSantaHolder) {
+                            online.closeInventory();
+                        }
+                    }
+                    boolean cleared = manager.clearAllData();
+                    if (cleared) {
+                        player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.admin-cleared"));
+                    } else {
+                        player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.admin-clear-failed"));
+                    }
+                } else {
+                    player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.admin-usage"));
                 }
                 break;
 
@@ -181,6 +199,10 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
                             items.add(item.clone());
                         }
                     }
+                    ItemStack cursorItem = event.getCursor() != null ? event.getCursor().clone() : null;
+                    if (cursorItem != null && cursorItem.getType() != Material.AIR) {
+                        items.add(cursorItem);
+                    }
                     if (items.isEmpty()) {
                         player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.empty-deposit", player));
                         return;
@@ -192,6 +214,7 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
                         player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.deposit-save-failed", player));
                         return;
                     }
+                    event.getWhoClicked().setItemOnCursor(null);
                     inv.clear();
                     Bukkit.getScheduler().runTask(plugin, (Runnable) player::closeInventory);
                     player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.gift-deposited", player));

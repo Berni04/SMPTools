@@ -86,7 +86,7 @@ public class TrailManager {
             try {
                 val = Bukkit.getScheduler().callSyncMethod(plugin, () ->
                         plugin.getStorageManager().getProvider().getStat(uuid, "active_trail", null)
-                ).get();
+                ).get(5, java.util.concurrent.TimeUnit.SECONDS);
             } catch (Exception e) {
                 return;
             }

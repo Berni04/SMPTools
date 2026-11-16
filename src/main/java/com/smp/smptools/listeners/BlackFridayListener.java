@@ -2,6 +2,8 @@ package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.managers.BlackFridayManager;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.AbstractVillager;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -30,12 +32,32 @@ public class BlackFridayListener implements Listener {
         this.manager = manager;
     }
 
+    public void restoreAllActive() {
+        for (Map.Entry<UUID, List<MerchantRecipe>> entry : new java.util.HashMap<>(originalRecipes).entrySet()) {
+            org.bukkit.entity.Entity entity = Bukkit.getEntity(entry.getKey());
+            if (entity instanceof Merchant merchant) {
+                restoreOriginalRecipes(merchant, entry.getValue());
+                originalRecipes.remove(entry.getKey());
+            }
+        }
+        activeViewers.clear();
+    }
+
+    @EventHandler
+    public void onEntitiesLoad(org.bukkit.event.world.EntitiesLoadEvent event) {
+        if (originalRecipes.isEmpty()) return;
+        for (org.bukkit.entity.Entity entity : event.getEntities()) {
+            if (entity instanceof Merchant merchant) {
+                List<MerchantRecipe> original = originalRecipes.remove(entity.getUniqueId());
+                if (original != null) {
+                    restoreOriginalRecipes(merchant, original);
+                }
+            }
+        }
+    }
+
     @EventHandler
     public void onInventoryOpen(InventoryOpenEvent event) {
-        if (!manager.isEnabled() || event.isCancelled()) {
-            return;
-        }
-
         if (!(event.getPlayer() instanceof Player player)) {
             return;
         }
@@ -52,6 +74,24 @@ public class BlackFridayListener implements Listener {
         Merchant merchant = (Merchant) villager;
         UUID villagerUUID = villager.getUniqueId();
         UUID playerUUID = player.getUniqueId();
+        if (event.isCancelled()) {
+            return;
+        }
+
+        if (!manager.isEnabled()) {
+            java.util.Set<UUID> viewers = activeViewers.get(villagerUUID);
+            if (viewers != null && !viewers.isEmpty()) {
+                event.setCancelled(true);
+                player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("blackfriday.sale-ended", player));
+                return;
+            }
+            List<MerchantRecipe> original = originalRecipes.remove(villagerUUID);
+            if (original != null) {
+                restoreOriginalRecipes(merchant, original);
+            }
+            activeViewers.remove(villagerUUID);
+            return;
+        }
 
         java.util.Set<UUID> viewers = activeViewers.computeIfAbsent(villagerUUID, k -> ConcurrentHashMap.newKeySet());
         boolean isFirstViewer = viewers.isEmpty();

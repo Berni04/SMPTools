@@ -85,7 +85,9 @@ public class TrollGUIListener implements Listener {
     }
 
     public static void openTrollGUI(Player opener, Player target) {
-        Inventory gui = Bukkit.createInventory(null, 54, GUI_TITLE + " - " + target.getName());
+        com.smp.smptools.gui.GuiHolder holder = new com.smp.smptools.gui.GuiHolder(com.smp.smptools.gui.GuiHolder.MenuType.TROLL, opener.getUniqueId());
+        Inventory gui = Bukkit.createInventory(holder, 54, GUI_TITLE + " - " + target.getName());
+        holder.setInventory(gui);
 
         // Troll Options (10-15 items)
         // Row 1
@@ -161,19 +163,26 @@ public class TrollGUIListener implements Listener {
         return item;
     }
 
-    @EventHandler
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
     public void onInventoryClick(InventoryClickEvent event) {
-        // Get the plain text title of the inventory
-        String clickedTitle = event.getView().getTitle();
-
-        // Check if it's our Troll Menu
-        if (!clickedTitle.startsWith(GUI_TITLE + " - ")) {
+        if (!(event.getView().getTopInventory().getHolder() instanceof com.smp.smptools.gui.GuiHolder holder) ||
+                holder.getType() != com.smp.smptools.gui.GuiHolder.MenuType.TROLL) {
             return;
         }
 
         event.setCancelled(true);
 
+        if (event.getClickedInventory() == null || !event.getClickedInventory().equals(event.getView().getTopInventory())) {
+            return;
+        }
+
         Player opener = (Player) event.getWhoClicked();
+        if (!opener.hasPermission("smptools.troll")) {
+            opener.closeInventory();
+            return;
+        }
+
+        String clickedTitle = event.getView().getTitle();
         ItemStack clickedItem = event.getCurrentItem();
 
         if (clickedItem == null || !clickedItem.hasItemMeta() || !clickedItem.getItemMeta().hasCustomModelData()) {
@@ -200,6 +209,12 @@ public class TrollGUIListener implements Listener {
         if (originalTrollId == null) { // Should not happen if trollIdMap is correctly populated
             opener.sendMessage(plugin.getMessageManager().getMessage("troll.unknown-option-id", opener,
                     Map.of("id", String.valueOf(trollId))));
+            opener.closeInventory();
+            return;
+        }
+
+        if (!target.isOnline() || !target.isValid()) {
+            opener.sendMessage(plugin.getMessageManager().getMessage("common.player-not-found"));
             opener.closeInventory();
             return;
         }
@@ -318,9 +333,11 @@ public class TrollGUIListener implements Listener {
     }
 
     private void spawnTemporaryBlock(Player player, Material blockType) {
+        if (!player.isOnline()) return;
         Block targetBlock = player.getLocation().getBlock().getRelative(BlockFace.DOWN);
         if (targetBlock.getType().isSolid()) {
             Block tempBlock = targetBlock.getRelative(BlockFace.UP);
+            if (!tempBlock.getType().isAir()) return;
             Material originalType = tempBlock.getType();
             tempBlock.setType(blockType);
             new BukkitRunnable() {
@@ -360,11 +377,13 @@ public class TrollGUIListener implements Listener {
     }
 
     private void teleportRandomly(Player player) {
+        if (!player.isOnline()) return;
         int radius = 10;
         int x = player.getLocation().getBlockX() + random.nextInt(radius * 2) - radius;
         int z = player.getLocation().getBlockZ() + random.nextInt(radius * 2) - radius;
-        int y = player.getWorld().getHighestBlockYAt(x, z) + 1; // Teleport to highest block + 1
-        player.teleport(new Location(player.getWorld(), x + 0.5, y, z + 0.5));
+        int surfaceY = player.getWorld().getHighestBlockYAt(x, z);
+        Location targetLoc = new Location(player.getWorld(), x + 0.5, surfaceY + 1, z + 0.5);
+        com.smp.smptools.teleport.SafeLocationFinder.findSafeLocation(targetLoc).ifPresent(player::teleport);
     }
 
     private void sendFakeAdvancement(Player player) {
