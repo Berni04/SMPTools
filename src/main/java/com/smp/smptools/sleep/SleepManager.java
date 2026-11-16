@@ -8,6 +8,7 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -121,16 +122,25 @@ public class SleepManager {
         WorldVoteState state = activeVotes.get(world.getUID());
         if (state == null) return;
 
-        int onlinePlayers = world.getPlayers().size();
+        List<Player> worldPlayers = world.getPlayers();
+        int onlinePlayers = worldPlayers.size();
         int requiredVotes = (int) Math.ceil(onlinePlayers / 2.0);
 
-        if (state.getYesVotes().size() >= requiredVotes) {
+        Set<UUID> currentWorldPlayerUuids = new HashSet<>();
+        for (Player p : worldPlayers) {
+            currentWorldPlayerUuids.add(p.getUniqueId());
+        }
+
+        long eligibleYesVotes = state.getYesVotes().stream().filter(currentWorldPlayerUuids::contains).count();
+        long eligibleNoVotes = state.getNoVotes().stream().filter(currentWorldPlayerUuids::contains).count();
+
+        if (eligibleYesVotes >= requiredVotes) {
             world.sendMessage(plugin.getMessageManager().getMessage("sleep.vote-accepted"));
             world.setTime(0);
             world.setThundering(false);
             world.setStorm(false);
             endVote(world);
-        } else if (state.getNoVotes().size() >= (onlinePlayers - requiredVotes + 1)) {
+        } else if (eligibleNoVotes >= (onlinePlayers - requiredVotes + 1)) {
             world.sendMessage(plugin.getMessageManager().getMessage("sleep.vote-failed"));
             endVote(world);
         }

@@ -120,6 +120,14 @@ public class KrampusListener implements Listener {
     }
 
     @EventHandler
+    public void onPlayerDeath(org.bukkit.event.entity.PlayerDeathEvent event) {
+        Player player = event.getEntity();
+        if (krampusManager.isKidnapped(player)) {
+            krampusManager.cleanupPlayerKidnapping(player.getUniqueId());
+        }
+    }
+
+    @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         if (krampusManager.isKidnapped(event.getPlayer())) {
             krampusManager.releasePlayer(event.getPlayer());

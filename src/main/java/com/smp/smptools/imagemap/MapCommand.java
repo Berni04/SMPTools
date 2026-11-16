@@ -129,7 +129,7 @@ public class MapCommand extends AbstractPlayerCommand {
                     sanitizedUrl = (uri.getScheme() != null ? uri.getScheme() + "://" : "") +
                             (uri.getHost() != null ? uri.getHost() : "") +
                             (uri.getPort() != -1 ? ":" + uri.getPort() : "") +
-                            (uri.getPath() != null ? uri.getPath() : "");
+                            (uri.getRawPath() != null ? uri.getRawPath() : "");
                 } catch (Exception ignored) {
                     sanitizedUrl = "[invalid-url]";
                 }

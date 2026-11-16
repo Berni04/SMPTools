@@ -172,14 +172,19 @@ public class LockManager {
         }
     }
 
+    public boolean areDoubleChestHalves(Block block1, Block block2) {
+        if (block1 == null || block2 == null) return false;
+        Block other = getSurvivingDoubleChestHalf(block1);
+        return other != null && isSameBlockLocation(other.getLocation(), block2.getLocation());
+    }
+
     public void migrateToDoubleChest(Block existingBlock, Block newBlock) {
-        if (existingBlock == null) return;
+        if (existingBlock == null || newBlock == null) return;
+        if (!areDoubleChestHalves(existingBlock, newBlock)) return;
         String singleKey = getLocationKey(existingBlock.getLocation());
         String canonicalKey = getBlockKey(existingBlock);
         consolidateHalfRecord(canonicalKey, singleKey);
-        if (newBlock != null) {
-            consolidateHalfRecord(canonicalKey, getLocationKey(newBlock.getLocation()));
-        }
+        consolidateHalfRecord(canonicalKey, getLocationKey(newBlock.getLocation()));
         saveLocks();
     }
 

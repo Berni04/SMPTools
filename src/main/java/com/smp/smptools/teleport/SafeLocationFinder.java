@@ -135,7 +135,7 @@ public final class SafeLocationFinder {
         if (block == null) return false;
         Material type = block.getType();
         if (UNSAFE_GROUND.contains(type)) return false;
-        if (Tag.FENCES.isTagged(type) || Tag.WALLS.isTagged(type)) return false;
+        if (Tag.FENCES.isTagged(type) || Tag.WALLS.isTagged(type) || Tag.FENCE_GATES.isTagged(type)) return false;
         if (block.isLiquid()) return false;
         return type.isSolid();
     }

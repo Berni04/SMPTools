@@ -365,20 +365,28 @@ public class KrampusManager implements Listener {
         releasePlayer(player.getUniqueId());
     }
 
-    public void releasePlayer(UUID uuid) {
+    public void cleanupPlayerKidnapping(UUID uuid) {
         if (!kidnappedPlayers.containsKey(uuid) && !playerCages.containsKey(uuid))
             return;
 
         Location cageLoc = playerCages.remove(uuid);
-        Location originalLoc = kidnappedPlayers.remove(uuid);
+        kidnappedPlayers.remove(uuid);
         despawnGuards(uuid);
 
         if (cageLoc != null) {
             removeCage(uuid, cageLoc);
         }
+    }
+
+    public void releasePlayer(UUID uuid) {
+        if (!kidnappedPlayers.containsKey(uuid) && !playerCages.containsKey(uuid))
+            return;
+
+        Location originalLoc = kidnappedPlayers.get(uuid);
+        cleanupPlayerKidnapping(uuid);
 
         Player player = Bukkit.getPlayer(uuid);
-        if (player != null && player.isOnline() && originalLoc != null) {
+        if (player != null && player.isOnline() && originalLoc != null && !player.isDead()) {
             player.teleport(originalLoc);
             player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("krampus.escaped"));
         }

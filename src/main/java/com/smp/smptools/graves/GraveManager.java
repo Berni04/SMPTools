@@ -78,7 +78,13 @@ public class GraveManager implements Listener {
 
             if (!toDrop.isEmpty()) {
                 // Persist the removal to disk before releasing items to prevent duplicate drops on crash
-                saveGraves();
+                if (!saveGraves()) {
+                    plugin.getLogger().warning("Failed to persist grave removal during expiry, aborting expiry cleanup.");
+                    for (Map.Entry<Location, Grave> entry : toDrop) {
+                        graves.put(entry.getKey(), entry.getValue());
+                    }
+                    return;
+                }
 
                 for (Map.Entry<Location, Grave> entry : toDrop) {
                     Location loc = entry.getKey();
@@ -419,7 +425,7 @@ public class GraveManager implements Listener {
         gravesConfig = YamlConfiguration.loadConfiguration(gravesFile);
     }
 
-    private void saveGraves() {
+    private boolean saveGraves() {
         gravesConfig.set("graves", null); // Clear existing
         List<Map<String, Object>> gravesList = new ArrayList<>();
 
@@ -438,8 +444,10 @@ public class GraveManager implements Listener {
 
         try {
             com.smp.smptools.utils.AtomicFileWriter.save(gravesConfig, gravesFile);
+            return true;
         } catch (IOException e) {
             plugin.getLogger().severe("Could not save graves.yml!");
+            return false;
         }
     }
 

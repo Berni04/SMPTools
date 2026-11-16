@@ -17,9 +17,11 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -220,11 +222,12 @@ public class ChunkLoaderManager {
     }
 
     public void unloadAllChunks() {
-        for (Location loc : activeChunkLoaders) {
-            unforceLoadChunk(loc);
-        }
+        Set<Location> snapshot = new HashSet<>(activeChunkLoaders);
         activeChunkLoaders.clear();
         loaderOwners.clear();
+        for (Location loc : snapshot) {
+            unforceLoadChunk(loc);
+        }
         plugin.getLogger().info("Unloaded all chunk loaders.");
     }
 

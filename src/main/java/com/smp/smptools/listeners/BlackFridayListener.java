@@ -44,9 +44,9 @@ public class BlackFridayListener implements Listener {
     }
 
     @EventHandler
-    public void onChunkLoad(org.bukkit.event.world.ChunkLoadEvent event) {
+    public void onEntitiesLoad(org.bukkit.event.world.EntitiesLoadEvent event) {
         if (originalRecipes.isEmpty()) return;
-        for (org.bukkit.entity.Entity entity : event.getChunk().getEntities()) {
+        for (org.bukkit.entity.Entity entity : event.getEntities()) {
             if (entity instanceof Merchant merchant) {
                 List<MerchantRecipe> original = originalRecipes.remove(entity.getUniqueId());
                 if (original != null) {
