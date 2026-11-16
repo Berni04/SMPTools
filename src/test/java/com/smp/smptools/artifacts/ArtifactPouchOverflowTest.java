@@ -42,8 +42,8 @@ public class ArtifactPouchOverflowTest {
     public void testClaimPouchOverflowDeliversAndClears() {
         ArtifactManager manager = new ArtifactManager(null) {
             @Override
-            public void savePouchData() {
-                // No-op for test without plugin instance
+            public boolean savePouchData() {
+                return true;
             }
         };
 
@@ -92,5 +92,60 @@ public class ArtifactPouchOverflowTest {
         assertFalse(manager.hasPouchOverflow(playerUuid), "Overflow should be cleared after claim");
         assertEquals(0, manager.getPouchOverflow(playerUuid).size());
         assertEquals(1, inventoryContents.size());
+    }
+
+    @Test
+    public void testClaimPouchOverflowAbortsAndPreservesOnSaveFailure() {
+        ArtifactManager manager = new ArtifactManager(null) {
+            @Override
+            public boolean savePouchData() {
+                return false; // Simulate persistent storage failure
+            }
+        };
+
+        UUID playerUuid = UUID.randomUUID();
+        ItemStack testItem = new DummyItemStack(Material.FEATHER, 1);
+
+        try {
+            java.lang.reflect.Field overflowField = ArtifactManager.class.getDeclaredField("pouchOverflow");
+            overflowField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            Map<UUID, List<ItemStack>> overflowMap = (Map<UUID, List<ItemStack>>) overflowField.get(manager);
+            overflowMap.computeIfAbsent(playerUuid, k -> new ArrayList<>()).add(testItem);
+        } catch (ReflectiveOperationException e) {
+            fail("Failed to access pouchOverflow field: " + e.getMessage());
+        }
+
+        assertTrue(manager.hasPouchOverflow(playerUuid));
+
+        List<ItemStack> inventoryContents = new ArrayList<>();
+        PlayerInventory invProxy = (PlayerInventory) Proxy.newProxyInstance(
+                PlayerInventory.class.getClassLoader(),
+                new Class<?>[]{PlayerInventory.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("addItem")) {
+                        ItemStack[] items = (ItemStack[]) args[0];
+                        inventoryContents.addAll(Arrays.asList(items));
+                        return new HashMap<Integer, ItemStack>();
+                    }
+                    return null;
+                }
+        );
+
+        Player playerProxy = (Player) Proxy.newProxyInstance(
+                Player.class.getClassLoader(),
+                new Class<?>[]{Player.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getUniqueId")) return playerUuid;
+                    if (method.getName().equals("getInventory")) return invProxy;
+                    return null;
+                }
+        );
+
+        List<ItemStack> delivered = manager.claimPouchOverflow(playerProxy);
+        assertTrue(delivered.isEmpty(), "Should not deliver any items when persistence fails");
+        assertTrue(inventoryContents.isEmpty(), "Inventory must not receive items when persistence fails");
+        assertTrue(manager.hasPouchOverflow(playerUuid), "Overflow entitlement must remain preserved in memory");
+        assertEquals(1, manager.getPouchOverflow(playerUuid).size());
     }
 }

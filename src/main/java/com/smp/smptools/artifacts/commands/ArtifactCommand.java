@@ -88,9 +88,13 @@ public class ArtifactCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(MiniMessage.miniMessage().deserialize("<red>Only players can claim overflow artifacts.</red>"));
                 return true;
             }
+            if (!artifactManager.hasPouchOverflow(player.getUniqueId())) {
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>No overflow artifacts to claim.</yellow>"));
+                return true;
+            }
             List<ItemStack> recovered = artifactManager.claimPouchOverflow(player);
             if (recovered.isEmpty()) {
-                player.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>No overflow artifacts to claim.</yellow>"));
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to claim overflow artifacts due to a storage error. Please try again later.</red>"));
             } else {
                 player.sendMessage(MiniMessage.miniMessage().deserialize("<green>Successfully claimed " + recovered.size() + " recovered artifact(s) (check your inventory or nearby ground)!</green>"));
             }
@@ -111,9 +115,13 @@ public class ArtifactCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(MiniMessage.miniMessage().deserialize("<red>Player not found: " + args[1] + "</red>"));
                 return true;
             }
+            if (!artifactManager.hasPouchOverflow(target.getUniqueId())) {
+                sender.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>No overflow artifacts found for " + target.getName() + ".</yellow>"));
+                return true;
+            }
             List<ItemStack> recovered = artifactManager.claimPouchOverflow(target);
             if (recovered.isEmpty()) {
-                sender.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>No overflow artifacts found for " + target.getName() + ".</yellow>"));
+                sender.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to recover artifacts due to a storage error. Please try again later.</red>"));
             } else {
                 sender.sendMessage(MiniMessage.miniMessage().deserialize("<green>Recovered and delivered " + recovered.size() + " artifact(s) to " + target.getName() + " (check inventory or nearby ground).</green>"));
                 target.sendMessage(MiniMessage.miniMessage().deserialize("<green>An administrator recovered " + recovered.size() + " artifact(s) for you; check your inventory or nearby ground.</green>"));

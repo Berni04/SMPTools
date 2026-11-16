@@ -71,8 +71,8 @@ public class GraveManager implements Listener {
 
             List<Map.Entry<Location, Grave>> toDrop = new ArrayList<>();
             for (Location loc : expired) {
-                if (loc == null || loc.getWorld() == null) {
-                    continue; // Skip unloaded/invalid world to prevent NPE and preserve record
+                if (loc == null || !loc.isWorldLoaded() || loc.getWorld() == null) {
+                    continue; // Skip unloaded/invalid world to prevent exception and preserve record
                 }
                 Grave g = graves.remove(loc);
                 if (g != null) {
@@ -330,7 +330,7 @@ public class GraveManager implements Listener {
     }
 
     private void removeHolograms(Location loc) {
-        if (loc.getWorld() == null) return;
+        if (loc == null || !loc.isWorldLoaded() || loc.getWorld() == null) return;
         String graveTag = "grave_" + loc.getBlockX() + "_" + loc.getBlockY() + "_" + loc.getBlockZ();
         loc.getWorld().getNearbyEntities(loc, 3, 3, 3).forEach(entity -> {
             if (entity instanceof ArmorStand && entity.getScoreboardTags().contains(graveTag)) {
@@ -414,7 +414,7 @@ public class GraveManager implements Listener {
 
     private void lootGrave(Grave grave, Player looter) {
         Location loc = grave.getLocation();
-        if (loc.getWorld() == null) return;
+        if (loc == null || !loc.isWorldLoaded() || loc.getWorld() == null) return;
 
         Block block = loc.getBlock();
         boolean isGraveBlock = isMatchingGraveBlock(block, grave);

@@ -239,9 +239,10 @@ public class ArtifactManager {
     /**
      * Claims and delivers any overflow artifacts to the player.
      * Delivered items are removed from pouchOverflow and persisted.
+     * If persistence fails, state is rolled back and no items are delivered.
      *
      * @param player the player receiving the overflow items
-     * @return the list of delivered ItemStacks
+     * @return the list of delivered ItemStacks, or empty if none or persistence failed
      */
     public List<ItemStack> claimPouchOverflow(Player player) {
         if (player == null) return Collections.emptyList();
@@ -251,10 +252,20 @@ public class ArtifactManager {
             return Collections.emptyList();
         }
 
-        List<ItemStack> delivered = new ArrayList<>();
-        List<ItemStack> remaining = new ArrayList<>();
+        List<ItemStack> toDeliver = new ArrayList<>(list);
 
-        for (ItemStack item : list) {
+        // Stage removal and verify persistence before delivering items
+        pouchOverflow.remove(uuid);
+        if (!savePouchData()) {
+            // Restore in-memory state on persistence failure and abort claim
+            pouchOverflow.put(uuid, list);
+            return Collections.emptyList();
+        }
+
+        List<ItemStack> delivered = new ArrayList<>();
+        List<ItemStack> undelivered = new ArrayList<>();
+
+        for (ItemStack item : toDeliver) {
             if (item == null || item.getType() == Material.AIR) continue;
             Map<Integer, ItemStack> leftover = player.getInventory().addItem(item.clone());
             if (leftover.isEmpty()) {
@@ -266,7 +277,7 @@ public class ArtifactManager {
                         if (player.getWorld() != null) {
                             player.getWorld().dropItemNaturally(player.getLocation(), drop);
                         } else {
-                            remaining.add(drop);
+                            undelivered.add(drop);
                             droppedAll = false;
                         }
                     }
@@ -277,17 +288,16 @@ public class ArtifactManager {
             }
         }
 
-        if (remaining.isEmpty()) {
-            pouchOverflow.remove(uuid);
-        } else {
-            pouchOverflow.put(uuid, remaining);
+        if (!undelivered.isEmpty()) {
+            pouchOverflow.computeIfAbsent(uuid, k -> new ArrayList<>()).addAll(undelivered);
+            savePouchData();
         }
-        savePouchData();
+
         return delivered;
     }
 
-    public void savePouchData() {
-        if (artifactsConfig == null || artifactsFile == null) return;
+    public boolean savePouchData() {
+        if (artifactsConfig == null || artifactsFile == null) return true;
         artifactsConfig.set("pouch", null);
 
         for (Map.Entry<UUID, Map<Integer, ItemStack>> entry : equippedPouchMap.entrySet()) {
@@ -309,8 +319,12 @@ public class ArtifactManager {
 
         try {
             com.smp.smptools.utils.AtomicFileWriter.save(artifactsConfig, artifactsFile);
+            return true;
         } catch (IOException e) {
-            plugin.getLogger().log(java.util.logging.Level.SEVERE, "Could not save artifacts.yml", e);
+            if (plugin != null) {
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Could not save artifacts.yml", e);
+            }
+            return false;
         }
     }
 }
