@@ -143,6 +143,20 @@ public class TpaManager {
             return;
         }
 
+        if (acceptor.isDead()) {
+            acceptor.sendMessage(plugin.getMessageManager().getMessage("common.player-dead", acceptor));
+            requester.sendMessage(plugin.getMessageManager().getMessage("tpa.target-dead", "common.player-dead", requester,
+                    Map.of("target", acceptor.getName())));
+            return;
+        }
+
+        if (requester.isDead()) {
+            acceptor.sendMessage(plugin.getMessageManager().getMessage("tpa.target-dead", "common.player-dead", acceptor,
+                    Map.of("target", requester.getName())));
+            requester.sendMessage(plugin.getMessageManager().getMessage("common.player-dead", requester));
+            return;
+        }
+
         if (plugin.getKrampusManager() != null) {
             if (plugin.getKrampusManager().isKidnapped(acceptor)) {
                 acceptor.sendMessage(plugin.getMessageManager().getMessage("tpa.caged", acceptor));

@@ -229,7 +229,11 @@ public class LockManager {
         }
         if (brokenDirectKey != null && !brokenDirectKey.equals(oldKey) && containerOwners.containsKey(brokenDirectKey)) {
             UUID directOwner = containerOwners.remove(brokenDirectKey);
-            if (owner == null) owner = directOwner;
+            if (owner == null) {
+                owner = directOwner;
+            } else if (!owner.equals(directOwner)) {
+                trusted.add(directOwner);
+            }
             Set<UUID> t = containerTrusted.remove(brokenDirectKey);
             if (t != null) trusted.addAll(t);
         }
@@ -239,6 +243,9 @@ public class LockManager {
             if (newKey != null) {
                 UUID existingOwner = containerOwners.get(newKey);
                 if (existingOwner != null) {
+                    if (owner != null && !existingOwner.equals(owner)) {
+                        trusted.add(owner);
+                    }
                     owner = existingOwner;
                 }
                 Set<UUID> existingTrusted = containerTrusted.get(newKey);
@@ -247,6 +254,7 @@ public class LockManager {
                 }
 
                 if (owner != null) {
+                    trusted.remove(owner);
                     containerOwners.put(newKey, owner);
                     if (!trusted.isEmpty()) {
                         containerTrusted.put(newKey, trusted);
@@ -399,6 +407,22 @@ public class LockManager {
             return false;
         }
 
+        Block otherHalf = getSurvivingDoubleChestHalf(block);
+        if (otherHalf != null) {
+            String canonicalKey = getBlockKey(block);
+            String directKey = getLocationKey(block.getLocation());
+            String otherKey = getLocationKey(otherHalf.getLocation());
+            if (canonicalKey != null) {
+                if (directKey != null && !directKey.equals(canonicalKey)) {
+                    consolidateHalfRecord(canonicalKey, directKey);
+                }
+                if (otherKey != null && !otherKey.equals(canonicalKey)) {
+                    consolidateHalfRecord(canonicalKey, otherKey);
+                }
+                key = canonicalKey;
+            }
+        }
+
         containerTrusted.computeIfAbsent(key, k -> ConcurrentHashMap.newKeySet()).add(target.getUniqueId());
         saveLocks();
         return true;
@@ -411,9 +435,47 @@ public class LockManager {
             return false;
         }
 
+        Block otherHalf = getSurvivingDoubleChestHalf(block);
+        if (otherHalf != null) {
+            String canonicalKey = getBlockKey(block);
+            String directKey = getLocationKey(block.getLocation());
+            String otherKey = getLocationKey(otherHalf.getLocation());
+            if (canonicalKey != null) {
+                if (directKey != null && !directKey.equals(canonicalKey)) {
+                    consolidateHalfRecord(canonicalKey, directKey);
+                }
+                if (otherKey != null && !otherKey.equals(canonicalKey)) {
+                    consolidateHalfRecord(canonicalKey, otherKey);
+                }
+                key = canonicalKey;
+            }
+        }
+
+        boolean removed = false;
         Set<UUID> set = containerTrusted.get(key);
-        if (set != null) {
-            set.remove(target.getUniqueId());
+        if (set != null && set.remove(target.getUniqueId())) {
+            removed = true;
+        }
+
+        String directKey = getLocationKey(block.getLocation());
+        if (directKey != null && !directKey.equals(key)) {
+            Set<UUID> directSet = containerTrusted.get(directKey);
+            if (directSet != null && directSet.remove(target.getUniqueId())) {
+                removed = true;
+            }
+        }
+
+        if (otherHalf != null) {
+            String otherKey = getLocationKey(otherHalf.getLocation());
+            if (otherKey != null && !otherKey.equals(key)) {
+                Set<UUID> otherSet = containerTrusted.get(otherKey);
+                if (otherSet != null && otherSet.remove(target.getUniqueId())) {
+                    removed = true;
+                }
+            }
+        }
+
+        if (removed) {
             saveLocks();
             return true;
         }

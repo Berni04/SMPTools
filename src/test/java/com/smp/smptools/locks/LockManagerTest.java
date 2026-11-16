@@ -120,6 +120,75 @@ public class LockManagerTest {
         assertTrue(manager.canAccess(leftBlock, createPlayerProxy(trustedB)), "Trusted B must retain access.");
     }
 
+    @Test
+    public void testDoubleChestUntrustRemovesFromBothHalves() {
+        World world = createWorldProxy("world");
+        Block leftBlock = createBlockProxy(world, 20, 64, 20);
+        Block rightBlock = createBlockProxy(world, 21, 64, 20);
+
+        setSingleChest(leftBlock);
+        setSingleChest(rightBlock);
+
+        LockManager manager = createTestLockManager();
+
+        java.util.UUID owner = java.util.UUID.randomUUID();
+        java.util.UUID untrustedUser = java.util.UUID.randomUUID();
+
+        String leftKey = manager.getLocationKey(leftBlock.getLocation());
+        String rightKey = manager.getLocationKey(rightBlock.getLocation());
+
+        // Legacy state: two separate records for each half, both trusting untrustedUser
+        manager.getContainerOwners().put(leftKey, owner);
+        manager.trustPlayer(leftBlock, createPlayerProxy(owner), createOfflinePlayerProxy(untrustedUser));
+
+        manager.getContainerOwners().put(rightKey, owner);
+        manager.trustPlayer(rightBlock, createPlayerProxy(owner), createOfflinePlayerProxy(untrustedUser));
+
+        createDoubleChestPair(leftBlock, rightBlock);
+
+        // Untrust user
+        boolean revoked = manager.untrustPlayer(leftBlock, createPlayerProxy(owner), createOfflinePlayerProxy(untrustedUser));
+        assertTrue(revoked, "untrustPlayer should succeed.");
+
+        // Simulate breaking left half; right half survives as single chest
+        setSingleChest(rightBlock);
+        manager.removeOrMigrateLock(leftBlock, rightBlock);
+
+        // Verify surviving chest does not restore untrustedUser
+        assertFalse(manager.canAccess(rightBlock, createPlayerProxy(untrustedUser)), "Revoked user must not retain access on surviving half.");
+    }
+
+    @Test
+    public void testRemoveOrMigrateLockPreservesDisplacedOwner() {
+        World world = createWorldProxy("world");
+        Block leftBlock = createBlockProxy(world, 30, 64, 30);
+        Block rightBlock = createBlockProxy(world, 31, 64, 30);
+
+        setSingleChest(leftBlock);
+        setSingleChest(rightBlock);
+
+        LockManager manager = createTestLockManager();
+
+        java.util.UUID ownerLeft = java.util.UUID.randomUUID();
+        java.util.UUID ownerRight = java.util.UUID.randomUUID();
+
+        String leftKey = manager.getLocationKey(leftBlock.getLocation());
+        String rightKey = manager.getLocationKey(rightBlock.getLocation());
+
+        manager.getContainerOwners().put(leftKey, ownerLeft);
+        manager.getContainerOwners().put(rightKey, ownerRight);
+
+        createDoubleChestPair(leftBlock, rightBlock);
+
+        // Break left half; right half survives
+        setSingleChest(rightBlock);
+        manager.removeOrMigrateLock(leftBlock, rightBlock);
+
+        // The surviving half should retain ownerRight as primary owner, but ownerLeft must be preserved in trusted
+        assertTrue(manager.canAccess(rightBlock, createPlayerProxy(ownerRight)), "Surviving block owner must retain access.");
+        assertTrue(manager.canAccess(rightBlock, createPlayerProxy(ownerLeft)), "Displaced owner must be preserved as trusted on surviving block.");
+    }
+
     private LockManager createTestLockManager() {
         return new LockManager(null) {
             @Override
