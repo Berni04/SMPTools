@@ -213,7 +213,12 @@ public class MissionManager {
                         plugin.getLogger().warning("Transient delivery failure for pending mission reward '" + baseReward + "' for " + player.getName() + " (attempt " + nextRetry + "/3), retaining for retry.");
                     }
                 }
-                saveSinglePlayerData(player.getUniqueId());
+                if (!saveSinglePlayerData(player.getUniqueId())) {
+                    if (plugin != null) {
+                        plugin.getLogger().warning("Failed to save player data while recording pending reward retry for " + player.getName() + "; stopping reward queue processing.");
+                    }
+                    break;
+                }
             }
         }
 

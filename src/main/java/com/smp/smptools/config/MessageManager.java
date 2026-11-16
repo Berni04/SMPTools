@@ -64,7 +64,10 @@ public class MessageManager {
      * @return the formatted Component message
      */
     public Component getMessage(String path, Player player, Map<String, String> placeholders) {
-        String msg = messagesConfig.getString(path, "Missing message: " + path);
+        String msg = messagesConfig.getString(path);
+        if (msg == null) {
+            msg = "Missing message: " + path;
+        }
 
         java.util.List<TagResolver> resolvers = new java.util.ArrayList<>();
         resolvers.add(buildPlayerTagResolver(player));
@@ -86,7 +89,10 @@ public class MessageManager {
     }
 
     public Component getMessage(String path, Player context, Map<String, String> placeholders, Player secondary) {
-        String msg = messagesConfig.getString(path, "Missing message: " + path);
+        String msg = messagesConfig.getString(path);
+        if (msg == null) {
+            msg = "Missing message: " + path;
+        }
 
         java.util.List<TagResolver> resolvers = new java.util.ArrayList<>();
         resolvers.add(buildPlayerTagResolver(context));
@@ -154,7 +160,7 @@ public class MessageManager {
      * @return the raw MiniMessage template string, or empty string if not found
      */
     public String getRawMessage(String path) {
-        String msg = messagesConfig.getString(path, "");
+        String msg = messagesConfig.getString(path);
         return msg == null ? "" : msg;
     }
 

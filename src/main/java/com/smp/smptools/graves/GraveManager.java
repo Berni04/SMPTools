@@ -30,6 +30,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -37,10 +39,12 @@ public class GraveManager implements Listener {
 
     private final SMPTools plugin;
     private final Map<Location, Grave> graves = new ConcurrentHashMap<>();
+    private final Set<Location> legacyGraveLocations = ConcurrentHashMap.newKeySet();
+    private final long initializationTime = System.currentTimeMillis();
     private File gravesFile;
     private FileConfiguration gravesConfig;
 
-    public static final org.bukkit.NamespacedKey GRAVE_OWNER_KEY = new org.bukkit.NamespacedKey(SMPTools.getInstance(), "grave_owner");
+    public static final org.bukkit.NamespacedKey GRAVE_OWNER_KEY = new org.bukkit.NamespacedKey("smptools", "grave_owner");
 
     public GraveManager(SMPTools plugin) {
         this.plugin = plugin;
@@ -237,9 +241,6 @@ public class GraveManager implements Listener {
 
         Grave grave = graves.get(location);
         if (!isMatchingGraveBlock(block, grave)) {
-            graves.remove(location);
-            removeHolograms(location);
-            saveGraves();
             return;
         }
 
@@ -262,9 +263,6 @@ public class GraveManager implements Listener {
 
         Grave grave = graves.get(loc);
         if (!isMatchingGraveBlock(event.getBlock(), grave)) {
-            graves.remove(loc);
-            removeHolograms(loc);
-            saveGraves();
             return;
         }
 
@@ -373,16 +371,44 @@ public class GraveManager implements Listener {
         as.addScoreboardTag(graveTag);
     }
 
-    private boolean isMatchingGraveBlock(Block block, Grave grave) {
+    private boolean isSameBlockLocation(Location loc1, Location loc2) {
+        if (loc1 == null || loc2 == null) return false;
+        return loc1.getBlockX() == loc2.getBlockX()
+                && loc1.getBlockY() == loc2.getBlockY()
+                && loc1.getBlockZ() == loc2.getBlockZ()
+                && Objects.equals(loc1.getWorld(), loc2.getWorld());
+    }
+
+    boolean isMatchingGraveBlock(Block block, Grave grave) {
         if (block == null || grave == null) return false;
         if (block.getType() != Material.PLAYER_HEAD && block.getType() != Material.PLAYER_WALL_HEAD) {
             return false;
         }
         if (block.getState() instanceof Skull skull) {
             String ownerKey = skull.getPersistentDataContainer().get(GRAVE_OWNER_KEY, org.bukkit.persistence.PersistentDataType.STRING);
-            return ownerKey != null && ownerKey.equals(grave.getOwner().toString());
+            if (ownerKey != null) {
+                return ownerKey.equals(grave.getOwner().toString());
+            }
+            if (isSameBlockLocation(block.getLocation(), grave.getLocation()) && isLegacyGrave(grave)) {
+                org.bukkit.OfflinePlayer owningPlayer = skull.getOwningPlayer();
+                if (owningPlayer != null && owningPlayer.getUniqueId() != null) {
+                    return grave.getOwner().equals(owningPlayer.getUniqueId());
+                }
+                return true;
+            }
         }
         return false;
+    }
+
+    public boolean isLegacyGrave(Grave grave) {
+        if (grave == null) return false;
+        return legacyGraveLocations.contains(grave.getLocation()) || grave.getTimeOfDeath() <= initializationTime;
+    }
+
+    public void markLegacyGraveForTest(Location location) {
+        if (location != null) {
+            legacyGraveLocations.add(location);
+        }
     }
 
     private void lootGrave(Grave grave, Player looter) {
@@ -408,12 +434,14 @@ public class GraveManager implements Listener {
         removeHolograms(loc);
 
         graves.remove(loc);
+        legacyGraveLocations.remove(loc);
         saveGraves();
 
         looter.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("grave.looted", looter, Map.of("player", grave.getOwnerName())));
     }
 
     private void setupGravesConfig() {
+        if (plugin == null) return;
         gravesFile = new File(plugin.getDataFolder(), "graves.yml");
         if (!gravesFile.exists()) {
             try {
@@ -426,6 +454,7 @@ public class GraveManager implements Listener {
     }
 
     private boolean saveGraves() {
+        if (gravesConfig == null || gravesFile == null) return false;
         gravesConfig.set("graves", null); // Clear existing
         List<Map<String, Object>> gravesList = new ArrayList<>();
 
@@ -453,7 +482,7 @@ public class GraveManager implements Listener {
 
     @SuppressWarnings("unchecked")
     private void loadGraves() {
-        if (!gravesConfig.contains("graves"))
+        if (gravesConfig == null || !gravesConfig.contains("graves"))
             return;
 
         List<Map<?, ?>> list = gravesConfig.getMapList("graves");
@@ -468,6 +497,9 @@ public class GraveManager implements Listener {
 
                 Grave grave = new Grave(owner, ownerName, location, items, time, cause);
                 graves.put(location, grave);
+                if (location != null) {
+                    legacyGraveLocations.add(location);
+                }
             } catch (Exception e) {
                 plugin.getLogger().warning("Failed to load a grave: " + e.getMessage());
             }

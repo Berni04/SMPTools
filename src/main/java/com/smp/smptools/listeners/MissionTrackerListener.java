@@ -29,9 +29,6 @@ public class MissionTrackerListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
-        if (com.smp.smptools.artifacts.ArtifactListener.isFelling(event.getBlock())) {
-            return;
-        }
         Player player = event.getPlayer();
         updateMissionProgress(player, MissionType.BREAK_BLOCK, event.getBlock().getType().name(), 1);
     }

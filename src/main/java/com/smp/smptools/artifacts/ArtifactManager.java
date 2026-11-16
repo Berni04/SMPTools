@@ -24,6 +24,7 @@ public class ArtifactManager {
     private final SMPTools plugin;
     private final NamespacedKey artifactKey;
     private final Map<UUID, Map<Integer, ItemStack>> equippedPouchMap = new HashMap<>();
+    private final Map<UUID, List<ItemStack>> pouchOverflow = new HashMap<>();
     private File artifactsFile;
     private FileConfiguration artifactsConfig;
 
@@ -137,6 +138,30 @@ public class ArtifactManager {
         }
         artifactsConfig = YamlConfiguration.loadConfiguration(artifactsFile);
 
+        pouchOverflow.clear();
+        if (artifactsConfig.isConfigurationSection("pouch-overflow")) {
+            org.bukkit.configuration.ConfigurationSection overflowSec = artifactsConfig.getConfigurationSection("pouch-overflow");
+            if (overflowSec != null) {
+                for (String uuidStr : overflowSec.getKeys(false)) {
+                    try {
+                        UUID uuid = UUID.fromString(uuidStr);
+                        List<?> rawList = artifactsConfig.getList("pouch-overflow." + uuidStr);
+                        if (rawList != null) {
+                            List<ItemStack> items = new ArrayList<>();
+                            for (Object obj : rawList) {
+                                if (obj instanceof ItemStack is) items.add(is);
+                            }
+                            if (!items.isEmpty()) {
+                                pouchOverflow.put(uuid, items);
+                            }
+                        }
+                    } catch (Exception ex) {
+                        plugin.getLogger().warning("Failed to load pouch overflow for UUID '" + uuidStr + "': " + ex.getMessage());
+                    }
+                }
+            }
+        }
+
         if (artifactsConfig.isConfigurationSection("pouch")) {
             org.bukkit.configuration.ConfigurationSection pouchSec = artifactsConfig.getConfigurationSection("pouch");
             if (pouchSec != null) {
@@ -180,8 +205,11 @@ public class ArtifactManager {
                                     if (plugin != null) {
                                         plugin.getLogger().info("Migrated pouch artifact for " + uuidStr + " from legacy slot " + legacySlot + " to slot " + freeSlot);
                                     }
-                                } else if (plugin != null) {
-                                    plugin.getLogger().warning("No free pouch slot for " + uuidStr + " to migrate legacy slot " + legacySlot);
+                                } else {
+                                    pouchOverflow.computeIfAbsent(uuid, k -> new ArrayList<>()).add(item);
+                                    if (plugin != null) {
+                                        plugin.getLogger().warning("No free pouch slot for " + uuidStr + " to migrate legacy slot " + legacySlot + "; preserved in recovery overflow storage.");
+                                    }
                                 }
                             }
                         }
@@ -192,6 +220,12 @@ public class ArtifactManager {
                 }
             }
         }
+    }
+
+    public List<ItemStack> getPouchOverflow(UUID uuid) {
+        if (uuid == null) return Collections.emptyList();
+        List<ItemStack> list = pouchOverflow.get(uuid);
+        return list != null ? Collections.unmodifiableList(list) : Collections.emptyList();
     }
 
     public void savePouchData() {
@@ -205,6 +239,13 @@ public class ArtifactManager {
                 if (slotEntry != null && slotEntry.getKey() != null && isAllowedPouchSlot(slotEntry.getKey())) {
                     artifactsConfig.set("pouch." + uuidStr + "." + slotEntry.getKey(), slotEntry.getValue());
                 }
+            }
+        }
+
+        artifactsConfig.set("pouch-overflow", null);
+        for (Map.Entry<UUID, List<ItemStack>> entry : pouchOverflow.entrySet()) {
+            if (entry.getKey() != null && entry.getValue() != null && !entry.getValue().isEmpty()) {
+                artifactsConfig.set("pouch-overflow." + entry.getKey(), entry.getValue());
             }
         }
 

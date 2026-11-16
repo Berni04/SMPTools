@@ -1,0 +1,133 @@
+package com.smp.smptools.graves;
+
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.block.Skull;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Proxy;
+import java.util.Collections;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+public class GraveManagerTest {
+
+    @Test
+    public void testIsLegacyGrave() {
+        GraveManager manager = new GraveManager(null);
+        UUID owner = UUID.randomUUID();
+        Location loc = new Location(null, 10, 64, 20);
+
+        // Grave with timestamp in past
+        Grave pastGrave = new Grave(owner, "Player1", loc, Collections.emptyList(), 1000L, "fall");
+        assertTrue(manager.isLegacyGrave(pastGrave));
+
+        // Future grave not in legacy list
+        Grave futureGrave = new Grave(owner, "Player2", loc, Collections.emptyList(), System.currentTimeMillis() + 100_000L, "drown");
+        assertFalse(manager.isLegacyGrave(futureGrave));
+
+        // Explicitly marked legacy grave
+        manager.markLegacyGraveForTest(loc);
+        assertTrue(manager.isLegacyGrave(futureGrave));
+    }
+
+    @Test
+    public void testIsMatchingGraveBlockLegacyAndPdc() {
+        GraveManager manager = new GraveManager(null);
+        UUID owner = UUID.randomUUID();
+        Location graveLoc = new Location(null, 100, 65, -50);
+        Location otherLoc = new Location(null, 200, 65, -50);
+
+        Grave legacyGrave = new Grave(owner, "Player1", graveLoc, Collections.emptyList(), 1000L, "fall");
+        Grave modernGrave = new Grave(owner, "Player1", graveLoc, Collections.emptyList(), System.currentTimeMillis() + 100_000L, "fall");
+
+        // 1. Unmarked legacy skull at correct location -> matches
+        Block legacySkullAtLoc = createMockSkullBlock(Material.PLAYER_HEAD, graveLoc, null, owner);
+        assertTrue(manager.isMatchingGraveBlock(legacySkullAtLoc, legacyGrave));
+
+        // 2. Unmarked legacy skull at wrong location -> rejects
+        Block legacySkullAtWrongLoc = createMockSkullBlock(Material.PLAYER_HEAD, otherLoc, null, owner);
+        assertFalse(manager.isMatchingGraveBlock(legacySkullAtWrongLoc, legacyGrave));
+
+        // 3. Unmarked non-legacy modern skull -> rejects because PDC key is absent
+        assertFalse(manager.isMatchingGraveBlock(legacySkullAtLoc, modernGrave));
+
+        // 4. Marked modern skull with matching owner -> matches
+        Block modernSkull = createMockSkullBlock(Material.PLAYER_HEAD, graveLoc, owner.toString(), owner);
+        assertTrue(manager.isMatchingGraveBlock(modernSkull, modernGrave));
+
+        // 5. Marked skull with mismatched owner -> rejects
+        Block mismatchedSkull = createMockSkullBlock(Material.PLAYER_HEAD, graveLoc, UUID.randomUUID().toString(), owner);
+        assertFalse(manager.isMatchingGraveBlock(mismatchedSkull, modernGrave));
+
+        // 6. Non-skull block -> rejects
+        Block stoneBlock = createMockBlock(Material.STONE, graveLoc);
+        assertFalse(manager.isMatchingGraveBlock(stoneBlock, legacyGrave));
+    }
+
+    private Block createMockBlock(Material material, Location loc) {
+        return (Block) Proxy.newProxyInstance(
+                Block.class.getClassLoader(),
+                new Class<?>[]{Block.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getType")) return material;
+                    if (method.getName().equals("getLocation")) return loc;
+                    return defaultValue(method.getReturnType());
+                }
+        );
+    }
+
+    private Block createMockSkullBlock(Material material, Location loc, String pdcOwner, UUID owningPlayerId) {
+        PersistentDataContainer pdc = (PersistentDataContainer) Proxy.newProxyInstance(
+                PersistentDataContainer.class.getClassLoader(),
+                new Class<?>[]{PersistentDataContainer.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("get")) {
+                        return pdcOwner;
+                    }
+                    return defaultValue(method.getReturnType());
+                }
+        );
+
+        org.bukkit.OfflinePlayer offlinePlayer = (org.bukkit.OfflinePlayer) Proxy.newProxyInstance(
+                org.bukkit.OfflinePlayer.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.OfflinePlayer.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getUniqueId")) return owningPlayerId;
+                    return defaultValue(method.getReturnType());
+                }
+        );
+
+        Skull skullState = (Skull) Proxy.newProxyInstance(
+                Skull.class.getClassLoader(),
+                new Class<?>[]{Skull.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getPersistentDataContainer")) return pdc;
+                    if (method.getName().equals("getOwningPlayer")) return offlinePlayer;
+                    return defaultValue(method.getReturnType());
+                }
+        );
+
+        return (Block) Proxy.newProxyInstance(
+                Block.class.getClassLoader(),
+                new Class<?>[]{Block.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getType")) return material;
+                    if (method.getName().equals("getLocation")) return loc;
+                    if (method.getName().equals("getState")) return skullState;
+                    return defaultValue(method.getReturnType());
+                }
+        );
+    }
+
+    private static Object defaultValue(Class<?> returnType) {
+        if (returnType.equals(boolean.class)) return false;
+        if (returnType.equals(int.class)) return 0;
+        if (returnType.equals(long.class)) return 0L;
+        if (returnType.equals(double.class)) return 0.0;
+        return null;
+    }
+}

@@ -241,8 +241,14 @@ public final class URLValidator {
                     break;
                 }
 
-                URL redirectUrl = new URL(currentUrl, location);
-                validateUrl(redirectUrl);
+                URL redirectUrl;
+                try {
+                    redirectUrl = new URL(currentUrl, location);
+                    validateUrl(redirectUrl);
+                } catch (Exception ex) {
+                    conn.disconnect();
+                    throw ex;
+                }
 
                 conn.disconnect();
                 currentUrl = redirectUrl;
@@ -386,6 +392,12 @@ public final class URLValidator {
                 }
                 String query = url.getQuery();
                 String target = (query != null && !query.isEmpty()) ? path + "?" + query : path;
+                for (int i = 0; i < target.length(); i++) {
+                    char c = target.charAt(i);
+                    if (c <= 0x1F || c == 0x7F || c == ' ') {
+                        throw new IOException("Invalid characters in request target: contains whitespace or control character");
+                    }
+                }
 
                 OutputStream os = socket.getOutputStream();
                 String request = "GET " + target + " HTTP/1.1\r\n" +

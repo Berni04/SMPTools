@@ -57,6 +57,9 @@ public final class ConfigDefaults {
         config.addDefault("features.events.enabled", true);
         config.addDefault("features.artifacts.enabled", true);
         config.addDefault("features.seasonal.enabled", true);
+        if (!config.contains("stats.save-on-quit") && config.contains("features.stats.save-on-quit")) {
+            config.set("stats.save-on-quit", config.getBoolean("features.stats.save-on-quit"));
+        }
         config.addDefault("stats.save-on-quit", true);
         config.addDefault("features.stats.save-on-quit", true);
 
