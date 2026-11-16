@@ -136,4 +136,51 @@ public class GraveManagerTest {
         if (returnType.equals(double.class)) return 0.0;
         return null;
     }
+
+    @Test
+    public void testUnloadedWorldGraveSerialization() throws Exception {
+        GraveManager manager = new GraveManager(null);
+        java.io.File tempFile = java.io.File.createTempFile("graves_test", ".yml");
+        tempFile.deleteOnExit();
+
+        org.bukkit.configuration.file.YamlConfiguration config =
+                org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(tempFile);
+
+        java.lang.reflect.Field fileField = GraveManager.class.getDeclaredField("gravesFile");
+        fileField.setAccessible(true);
+        fileField.set(manager, tempFile);
+
+        java.lang.reflect.Field configField = GraveManager.class.getDeclaredField("gravesConfig");
+        configField.setAccessible(true);
+        configField.set(manager, config);
+
+        java.lang.reflect.Field gravesMapField = GraveManager.class.getDeclaredField("graves");
+        gravesMapField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        java.util.Map<Location, Grave> gravesMap = (java.util.Map<Location, Grave>) gravesMapField.get(manager);
+
+        // Location with null world (simulating unloaded world)
+        Location unloadedLoc = new Location(null, 50, 70, -100);
+        UUID owner = UUID.randomUUID();
+        Grave grave = new Grave(owner, "TestPlayer", unloadedLoc, "custom_world", Collections.emptyList(), 5000L, "fall");
+        gravesMap.put(unloadedLoc, grave);
+
+        java.lang.reflect.Method saveMethod = GraveManager.class.getDeclaredMethod("saveGraves");
+        saveMethod.setAccessible(true);
+        boolean saved = (boolean) saveMethod.invoke(manager);
+        assertTrue(saved, "saveGraves must succeed even when Location.getWorld() is null");
+
+        // Verify loaded config contains stable coordinates and worldName
+        org.bukkit.configuration.file.YamlConfiguration reloadedConfig =
+                org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(tempFile);
+        java.util.List<java.util.Map<?, ?>> list = reloadedConfig.getMapList("graves");
+        assertEquals(1, list.size());
+        assertEquals("custom_world", list.get(0).get("worldName"));
+
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> locMap = (java.util.Map<String, Object>) list.get(0).get("location");
+        assertNotNull(locMap);
+        assertEquals("custom_world", locMap.get("world"));
+        assertEquals(50.0, ((Number) locMap.get("x")).doubleValue());
+    }
 }

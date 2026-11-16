@@ -203,4 +203,61 @@ public class ArtifactPouchOverflowTest {
         manager.savePouchData();
         assertTrue(called[0], "void savePouchData() must delegate to savePouchDataWithResult()");
     }
+
+    @Test
+    public void testClaimPouchOverflowExceptionRestoresUnprocessedItems() {
+        ArtifactManager manager = new ArtifactManager(null) {
+            @Override
+            public boolean savePouchDataWithResult() {
+                return true;
+            }
+        };
+
+        UUID playerUuid = UUID.randomUUID();
+        ItemStack item1 = new DummyItemStack(Material.FEATHER, 1);
+        ItemStack item2 = new DummyItemStack(Material.EMERALD, 1);
+
+        try {
+            java.lang.reflect.Field overflowField = ArtifactManager.class.getDeclaredField("pouchOverflow");
+            overflowField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            Map<UUID, List<ItemStack>> overflowMap = (Map<UUID, List<ItemStack>>) overflowField.get(manager);
+            overflowMap.computeIfAbsent(playerUuid, k -> new ArrayList<>()).addAll(List.of(item1, item2));
+        } catch (ReflectiveOperationException e) {
+            fail("Failed to access pouchOverflow field: " + e.getMessage());
+        }
+
+        PlayerInventory invProxy = (PlayerInventory) Proxy.newProxyInstance(
+                PlayerInventory.class.getClassLoader(),
+                new Class<?>[]{PlayerInventory.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("addItem")) {
+                        ItemStack[] items = (ItemStack[]) args[0];
+                        if (items[0].getType() == Material.EMERALD) {
+                            throw new IllegalStateException("Simulated delivery failure");
+                        }
+                        return new HashMap<Integer, ItemStack>();
+                    }
+                    return null;
+                }
+        );
+
+        Player playerProxy = (Player) Proxy.newProxyInstance(
+                Player.class.getClassLoader(),
+                new Class<?>[]{Player.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getUniqueId")) return playerUuid;
+                    if (method.getName().equals("getInventory")) return invProxy;
+                    return null;
+                }
+        );
+
+        assertThrows(IllegalStateException.class, () -> manager.claimPouchOverflow(playerProxy));
+
+        // After failure, unreached item2 must remain preserved in pouchOverflow
+        assertTrue(manager.hasPouchOverflow(playerUuid));
+        List<ItemStack> remaining = manager.getPouchOverflow(playerUuid);
+        assertEquals(1, remaining.size());
+        assertEquals(Material.EMERALD, remaining.get(0).getType());
+    }
 }

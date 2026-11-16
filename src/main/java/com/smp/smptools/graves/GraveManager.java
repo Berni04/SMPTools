@@ -82,8 +82,20 @@ public class GraveManager implements Listener {
 
             if (!toDrop.isEmpty()) {
                 // Persist the removal to disk before releasing items to prevent duplicate drops on crash
-                if (!saveGraves()) {
-                    plugin.getLogger().warning("Failed to persist grave removal during expiry, aborting expiry cleanup.");
+                boolean saved = false;
+                try {
+                    saved = saveGraves();
+                } catch (Throwable t) {
+                    if (plugin != null) {
+                        plugin.getLogger().log(java.util.logging.Level.SEVERE, "Exception while saving graves during expiry cleanup", t);
+                    }
+                    saved = false;
+                }
+
+                if (!saved) {
+                    if (plugin != null) {
+                        plugin.getLogger().warning("Failed to persist grave removal during expiry, aborting expiry cleanup.");
+                    }
                     for (Map.Entry<Location, Grave> entry : toDrop) {
                         graves.put(entry.getKey(), entry.getValue());
                     }
@@ -374,10 +386,24 @@ public class GraveManager implements Listener {
 
     private boolean isSameBlockLocation(Location loc1, Location loc2) {
         if (loc1 == null || loc2 == null) return false;
+        String w1 = null;
+        try {
+            if (loc1.isWorldLoaded() && loc1.getWorld() != null) {
+                w1 = loc1.getWorld().getName();
+            }
+        } catch (Exception ignored) {
+        }
+        String w2 = null;
+        try {
+            if (loc2.isWorldLoaded() && loc2.getWorld() != null) {
+                w2 = loc2.getWorld().getName();
+            }
+        } catch (Exception ignored) {
+        }
         return loc1.getBlockX() == loc2.getBlockX()
                 && loc1.getBlockY() == loc2.getBlockY()
                 && loc1.getBlockZ() == loc2.getBlockZ()
-                && Objects.equals(loc1.getWorld(), loc2.getWorld());
+                && Objects.equals(w1, w2);
     }
 
     boolean isMatchingGraveBlock(Block block, Grave grave) {
@@ -456,27 +482,43 @@ public class GraveManager implements Listener {
 
     private boolean saveGraves() {
         if (gravesConfig == null || gravesFile == null) return false;
-        gravesConfig.set("graves", null); // Clear existing
-        List<Map<String, Object>> gravesList = new ArrayList<>();
-
-        for (Grave grave : graves.values()) {
-            Map<String, Object> data = new HashMap<>();
-            data.put("owner", grave.getOwner().toString());
-            data.put("ownerName", grave.getOwnerName());
-            data.put("location", grave.getLocation());
-            data.put("items", grave.getItems());
-            data.put("time", grave.getTimeOfDeath());
-            data.put("cause", grave.getCauseOfDeath());
-            gravesList.add(data);
-        }
-
-        gravesConfig.set("graves", gravesList);
-
         try {
+            gravesConfig.set("graves", null); // Clear existing
+            List<Map<String, Object>> gravesList = new ArrayList<>();
+
+            for (Grave grave : graves.values()) {
+                Map<String, Object> data = new HashMap<>();
+                data.put("owner", grave.getOwner().toString());
+                data.put("ownerName", grave.getOwnerName());
+                data.put("worldName", grave.getWorldName());
+
+                Location loc = grave.getLocation();
+                Map<String, Object> locMap = new HashMap<>();
+                if (grave.getWorldName() != null) {
+                    locMap.put("world", grave.getWorldName());
+                }
+                if (loc != null) {
+                    locMap.put("x", loc.getX());
+                    locMap.put("y", loc.getY());
+                    locMap.put("z", loc.getZ());
+                    locMap.put("yaw", (double) loc.getYaw());
+                    locMap.put("pitch", (double) loc.getPitch());
+                }
+                data.put("location", locMap);
+                data.put("items", grave.getItems());
+                data.put("time", grave.getTimeOfDeath());
+                data.put("cause", grave.getCauseOfDeath());
+                gravesList.add(data);
+            }
+
+            gravesConfig.set("graves", gravesList);
+
             com.smp.smptools.utils.AtomicFileWriter.save(gravesConfig, gravesFile);
             return true;
-        } catch (IOException e) {
-            plugin.getLogger().severe("Could not save graves.yml!");
+        } catch (Throwable e) {
+            if (plugin != null) {
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Could not save graves.yml!", e);
+            }
             return false;
         }
     }
@@ -491,18 +533,52 @@ public class GraveManager implements Listener {
             try {
                 UUID owner = UUID.fromString((String) map.get("owner"));
                 String ownerName = (String) map.get("ownerName");
-                Location location = (Location) map.get("location");
+                String worldName = (String) map.get("worldName");
+
+                Object rawLoc = map.get("location");
+                Location location = null;
+                if (rawLoc instanceof Location l) {
+                    location = l;
+                    if (worldName == null) {
+                        try {
+                            if (l.isWorldLoaded() && l.getWorld() != null) {
+                                worldName = l.getWorld().getName();
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    }
+                } else if (rawLoc instanceof Map<?, ?> locMap) {
+                    if (worldName == null && locMap.get("world") instanceof String w) {
+                        worldName = w;
+                    }
+                    double x = locMap.get("x") instanceof Number n ? n.doubleValue() : 0.0;
+                    double y = locMap.get("y") instanceof Number n ? n.doubleValue() : 0.0;
+                    double z = locMap.get("z") instanceof Number n ? n.doubleValue() : 0.0;
+                    float yaw = locMap.get("yaw") instanceof Number n ? n.floatValue() : 0.0f;
+                    float pitch = locMap.get("pitch") instanceof Number n ? n.floatValue() : 0.0f;
+                    org.bukkit.World w = null;
+                    if (worldName != null && org.bukkit.Bukkit.getServer() != null) {
+                        try {
+                            w = org.bukkit.Bukkit.getWorld(worldName);
+                        } catch (Exception ignored) {
+                        }
+                    }
+                    location = new Location(w, x, y, z, yaw, pitch);
+                }
+
                 List<ItemStack> items = (List<ItemStack>) map.get("items");
                 long time = (long) map.get("time");
                 String cause = (String) map.get("cause");
 
-                Grave grave = new Grave(owner, ownerName, location, items, time, cause);
-                graves.put(location, grave);
+                Grave grave = new Grave(owner, ownerName, location, worldName, items, time, cause);
                 if (location != null) {
+                    graves.put(location, grave);
                     legacyGraveLocations.add(location);
                 }
             } catch (Exception e) {
-                plugin.getLogger().warning("Failed to load a grave: " + e.getMessage());
+                if (plugin != null) {
+                    plugin.getLogger().warning("Failed to load a grave: " + e.getMessage());
+                }
             }
         }
     }

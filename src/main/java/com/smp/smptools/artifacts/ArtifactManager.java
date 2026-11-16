@@ -26,6 +26,7 @@ public class ArtifactManager {
     private final NamespacedKey artifactKey;
     private final Map<UUID, Map<Integer, ItemStack>> equippedPouchMap = new HashMap<>();
     private final Map<UUID, List<ItemStack>> pouchOverflow = new HashMap<>();
+    private final Map<UUID, List<ItemStack>> pouchPendingClaims = new HashMap<>();
     private File artifactsFile;
     private FileConfiguration artifactsConfig;
 
@@ -164,6 +165,42 @@ public class ArtifactManager {
             }
         }
 
+        if (artifactsConfig.isConfigurationSection("pouch-pending-claim")) {
+            org.bukkit.configuration.ConfigurationSection pendingSec = artifactsConfig.getConfigurationSection("pouch-pending-claim");
+            if (pendingSec != null) {
+                boolean reconciledAny = false;
+                for (String uuidStr : pendingSec.getKeys(false)) {
+                    try {
+                        UUID uuid = UUID.fromString(uuidStr);
+                        List<?> rawList = artifactsConfig.getList("pouch-pending-claim." + uuidStr);
+                        if (rawList != null) {
+                            List<ItemStack> items = new ArrayList<>();
+                            for (Object obj : rawList) {
+                                if (obj instanceof ItemStack is && is.getType() != Material.AIR) {
+                                    items.add(is);
+                                }
+                            }
+                            if (!items.isEmpty()) {
+                                pouchOverflow.computeIfAbsent(uuid, k -> new ArrayList<>()).addAll(items);
+                                reconciledAny = true;
+                                if (plugin != null) {
+                                    plugin.getLogger().info("Reconciled " + items.size() + " unconfirmed claim artifact(s) for " + uuidStr + " into overflow recovery storage.");
+                                }
+                            }
+                        }
+                    } catch (Exception ex) {
+                        if (plugin != null) {
+                            plugin.getLogger().warning("Failed to reconcile pending claim for UUID '" + uuidStr + "': " + ex.getMessage());
+                        }
+                    }
+                }
+                artifactsConfig.set("pouch-pending-claim", null);
+                if (reconciledAny) {
+                    savePouchDataWithResult();
+                }
+            }
+        }
+
         if (artifactsConfig.isConfigurationSection("pouch")) {
             org.bukkit.configuration.ConfigurationSection pouchSec = artifactsConfig.getConfigurationSection("pouch");
             if (pouchSec != null) {
@@ -254,42 +291,56 @@ public class ArtifactManager {
 
         List<ItemStack> toDeliver = new ArrayList<>(list);
 
-        // Stage removal and verify persistence before delivering items
+        // Stage pending-claim record on disk before removing overflow to prevent item loss on abrupt shutdown
+        pouchPendingClaims.put(uuid, toDeliver);
         pouchOverflow.remove(uuid);
         if (!savePouchDataWithResult()) {
             // Restore in-memory state on persistence failure and abort claim
+            pouchPendingClaims.remove(uuid);
             pouchOverflow.put(uuid, list);
             return null;
         }
 
         List<ItemStack> delivered = new ArrayList<>();
         List<ItemStack> undelivered = new ArrayList<>();
-
-        for (ItemStack item : toDeliver) {
-            if (item == null || item.getType() == Material.AIR) continue;
-            Map<Integer, ItemStack> leftover = player.getInventory().addItem(item.clone());
-            if (leftover.isEmpty()) {
-                delivered.add(item);
-            } else {
-                boolean droppedAll = true;
-                for (ItemStack drop : leftover.values()) {
-                    if (drop != null && drop.getType() != Material.AIR) {
-                        if (player.getWorld() != null) {
-                            player.getWorld().dropItemNaturally(player.getLocation(), drop);
-                        } else {
-                            undelivered.add(drop);
-                            droppedAll = false;
+        int i = 0;
+        try {
+            for (; i < toDeliver.size(); i++) {
+                ItemStack item = toDeliver.get(i);
+                if (item == null || item.getType() == Material.AIR) continue;
+                Map<Integer, ItemStack> leftover = player.getInventory().addItem(item.clone());
+                if (leftover.isEmpty()) {
+                    delivered.add(item);
+                } else {
+                    boolean droppedAll = true;
+                    for (ItemStack drop : leftover.values()) {
+                        if (drop != null && drop.getType() != Material.AIR) {
+                            if (player.getWorld() != null) {
+                                player.getWorld().dropItemNaturally(player.getLocation(), drop);
+                            } else {
+                                undelivered.add(drop);
+                                droppedAll = false;
+                            }
                         }
                     }
-                }
-                if (droppedAll) {
-                    delivered.add(item);
+                    if (droppedAll) {
+                        delivered.add(item);
+                    }
                 }
             }
-        }
-
-        if (!undelivered.isEmpty()) {
-            pouchOverflow.computeIfAbsent(uuid, k -> new ArrayList<>()).addAll(undelivered);
+        } catch (Throwable t) {
+            for (int j = i; j < toDeliver.size(); j++) {
+                ItemStack unreached = toDeliver.get(j);
+                if (unreached != null && unreached.getType() != Material.AIR) {
+                    undelivered.add(unreached);
+                }
+            }
+            throw t;
+        } finally {
+            pouchPendingClaims.remove(uuid);
+            if (!undelivered.isEmpty()) {
+                pouchOverflow.computeIfAbsent(uuid, k -> new ArrayList<>()).addAll(undelivered);
+            }
             savePouchDataWithResult();
         }
 
@@ -318,6 +369,13 @@ public class ArtifactManager {
         for (Map.Entry<UUID, List<ItemStack>> entry : pouchOverflow.entrySet()) {
             if (entry.getKey() != null && entry.getValue() != null && !entry.getValue().isEmpty()) {
                 artifactsConfig.set("pouch-overflow." + entry.getKey(), entry.getValue());
+            }
+        }
+
+        artifactsConfig.set("pouch-pending-claim", null);
+        for (Map.Entry<UUID, List<ItemStack>> entry : pouchPendingClaims.entrySet()) {
+            if (entry.getKey() != null && entry.getValue() != null && !entry.getValue().isEmpty()) {
+                artifactsConfig.set("pouch-pending-claim." + entry.getKey(), entry.getValue());
             }
         }
 
