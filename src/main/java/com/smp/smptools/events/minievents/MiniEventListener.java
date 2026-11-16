@@ -13,6 +13,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityTransformEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
@@ -47,7 +48,7 @@ public class MiniEventListener implements Listener {
     public MiniEventListener(SMPTools plugin, EventManager eventManager) {
         this.plugin = plugin;
         this.eventManager = eventManager;
-        this.spawnerMobKey = new NamespacedKey(plugin, "spawner_mob");
+        this.spawnerMobKey = plugin != null ? new NamespacedKey(plugin, "spawner_mob") : NamespacedKey.fromString("smptools:spawner_mob");
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -244,6 +245,21 @@ public class MiniEventListener implements Listener {
         if (event.getSpawnReason() == org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.SPAWNER) {
             event.getEntity().getPersistentDataContainer().set(spawnerMobKey, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
             event.getEntity().setMetadata("spawner_mob", new org.bukkit.metadata.FixedMetadataValue(plugin, true));
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onEntityTransform(EntityTransformEvent event) {
+        Entity original = event.getEntity();
+        boolean isSpawnerMob = original.hasMetadata("spawner_mob") ||
+                original.getPersistentDataContainer().has(spawnerMobKey, org.bukkit.persistence.PersistentDataType.BYTE);
+        if (isSpawnerMob) {
+            for (Entity transformed : event.getTransformedEntities()) {
+                transformed.getPersistentDataContainer().set(spawnerMobKey, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+                if (plugin != null) {
+                    transformed.setMetadata("spawner_mob", new org.bukkit.metadata.FixedMetadataValue(plugin, true));
+                }
+            }
         }
     }
 

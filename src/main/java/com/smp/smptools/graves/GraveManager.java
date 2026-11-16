@@ -247,7 +247,7 @@ public class GraveManager implements Listener {
 
     @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
     public void onBlockExplode(org.bukkit.event.block.BlockExplodeEvent event) {
-        event.blockList().removeIf(graves::containsKey);
+        event.blockList().removeIf(b -> graves.containsKey(b.getLocation()));
     }
 
     @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)

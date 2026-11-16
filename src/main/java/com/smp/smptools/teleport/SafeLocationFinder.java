@@ -2,6 +2,7 @@ package com.smp.smptools.teleport;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Tag;
 import org.bukkit.World;
 import org.bukkit.WorldBorder;
 import org.bukkit.block.Block;
@@ -88,7 +89,9 @@ public final class SafeLocationFinder {
                         target.getYaw(),
                         target.getPitch()
                 );
-                return Optional.of(safeLoc);
+                if (border.isInside(safeLoc)) {
+                    return Optional.of(safeLoc);
+                }
             }
         }
 
@@ -130,6 +133,7 @@ public final class SafeLocationFinder {
         if (block == null) return false;
         Material type = block.getType();
         if (UNSAFE_GROUND.contains(type)) return false;
+        if (Tag.FENCES.isTagged(type) || Tag.WALLS.isTagged(type)) return false;
         if (block.isLiquid()) return false;
         return type.isSolid();
     }

@@ -4,6 +4,7 @@ import com.smp.smptools.SMPTools;
 import com.smp.smptools.chunkloaders.ChunkLoaderManager;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -106,23 +107,25 @@ public class ChunkLoaderListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockExplode(BlockExplodeEvent event) {
         for (Block block : event.blockList()) {
             Location loc = block.getLocation();
             if (chunkLoaderManager.isChunkLoader(loc)) {
                 chunkLoaderManager.removeChunkLoader(loc);
+                block.setType(Material.AIR, false);
                 loc.getWorld().dropItemNaturally(loc.clone().add(0.5, 0.5, 0.5), ChunkLoaderManager.getChunkLoaderItem());
             }
         }
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onEntityExplode(EntityExplodeEvent event) {
         for (Block block : event.blockList()) {
             Location loc = block.getLocation();
             if (chunkLoaderManager.isChunkLoader(loc)) {
                 chunkLoaderManager.removeChunkLoader(loc);
+                block.setType(Material.AIR, false);
                 loc.getWorld().dropItemNaturally(loc.clone().add(0.5, 0.5, 0.5), ChunkLoaderManager.getChunkLoaderItem());
             }
         }

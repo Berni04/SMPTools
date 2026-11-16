@@ -137,7 +137,7 @@ public class FestiveMobsListener implements Listener {
         }
     }
 
-    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH, ignoreCancelled = true)
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGH)
     public void onPlayerInteract(org.bukkit.event.player.PlayerInteractEvent event) {
         if (event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND) {
             return;
@@ -146,22 +146,33 @@ public class FestiveMobsListener implements Listener {
         if (christmasConfig == null || !christmasConfig.getBoolean("festive-mobs.enabled"))
             return;
 
-        if (event.getAction() == org.bukkit.event.block.Action.RIGHT_CLICK_AIR
-                || event.getAction() == org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) {
-            ItemStack item = event.getItem();
-            if (item != null && item.getType() == Material.SUGAR && item.hasItemMeta()) {
-                if (item.getItemMeta().getPersistentDataContainer().has(CANDY_CANE_KEY, org.bukkit.persistence.PersistentDataType.BYTE)) {
-                    event.setCancelled(true); // Prevent normal interaction if any
+        if (event.getAction() != org.bukkit.event.block.Action.RIGHT_CLICK_AIR
+                && event.getAction() != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) {
+            return;
+        }
 
-                    // Consume item
-                    item.setAmount(item.getAmount() - 1);
+        if (event.getAction() == org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK
+                && event.useInteractedBlock() == org.bukkit.event.Event.Result.DENY) {
+            return;
+        }
 
-                    // Apply effects
-                    event.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 200, 1)); // Speed II for 10 seconds
-                    event.getPlayer().getWorld().playSound(event.getPlayer().getLocation(),
-                            org.bukkit.Sound.ENTITY_PLAYER_BURP, 1f, 1f);
-                    event.getPlayer().sendMessage(SMPTools.getInstance().getMessageManager().getMessage("christmas.sweet"));
-                }
+        if (event.useItemInHand() == org.bukkit.event.Event.Result.DENY) {
+            return;
+        }
+
+        ItemStack item = event.getItem();
+        if (item != null && item.getType() == Material.SUGAR && item.hasItemMeta()) {
+            if (item.getItemMeta().getPersistentDataContainer().has(CANDY_CANE_KEY, org.bukkit.persistence.PersistentDataType.BYTE)) {
+                event.setCancelled(true); // Prevent normal interaction if any
+
+                // Consume item
+                item.setAmount(item.getAmount() - 1);
+
+                // Apply effects
+                event.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 200, 1)); // Speed II for 10 seconds
+                event.getPlayer().getWorld().playSound(event.getPlayer().getLocation(),
+                        org.bukkit.Sound.ENTITY_PLAYER_BURP, 1f, 1f);
+                event.getPlayer().sendMessage(SMPTools.getInstance().getMessageManager().getMessage("christmas.sweet"));
             }
         }
     }

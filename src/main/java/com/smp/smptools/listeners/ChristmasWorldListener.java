@@ -98,18 +98,20 @@ public class ChristmasWorldListener implements Listener {
                     Location spawn = player.getWorld().getSpawnLocation();
                     java.util.Optional<Location> safeSpawn = com.smp.smptools.teleport.SafeLocationFinder.findSafeLocation(spawn);
                     if (safeSpawn.isPresent()) {
-                        player.teleport(safeSpawn.get());
-                        player.setFallDistance(0);
-                        return;
+                        if (player.teleport(safeSpawn.get())) {
+                            player.setFallDistance(0);
+                            return;
+                        }
                     }
 
                     for (World w : Bukkit.getWorlds()) {
                         if (w.getEnvironment() == World.Environment.NORMAL && !w.getName().equalsIgnoreCase(WORLD_NAME)) {
                             java.util.Optional<Location> normalSafe = com.smp.smptools.teleport.SafeLocationFinder.findSafeLocation(w.getSpawnLocation());
                             if (normalSafe.isPresent()) {
-                                player.teleport(normalSafe.get());
-                                player.setFallDistance(0);
-                                return;
+                                if (player.teleport(normalSafe.get())) {
+                                    player.setFallDistance(0);
+                                    return;
+                                }
                             }
                         }
                     }
@@ -120,8 +122,11 @@ public class ChristmasWorldListener implements Listener {
                             .orElse(Bukkit.getWorlds().get(0));
                     int highestY = primaryWorld.getHighestBlockYAt(primaryWorld.getSpawnLocation());
                     Location highSpawn = new Location(primaryWorld, primaryWorld.getSpawnLocation().getX(), highestY + 1, primaryWorld.getSpawnLocation().getZ());
-                    com.smp.smptools.teleport.SafeLocationFinder.findSafeLocation(highSpawn).ifPresent(player::teleport);
-                    player.setFallDistance(0);
+                    com.smp.smptools.teleport.SafeLocationFinder.findSafeLocation(highSpawn).ifPresent(loc -> {
+                        if (player.teleport(loc)) {
+                            player.setFallDistance(0);
+                        }
+                    });
                 }
             }
         }

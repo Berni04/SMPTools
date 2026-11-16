@@ -233,7 +233,9 @@ public class ArtifactListener implements Listener {
                                     org.bukkit.event.block.BlockBreakEvent breakEvent = new org.bukkit.event.block.BlockBreakEvent(crop, player);
                                     Bukkit.getPluginManager().callEvent(breakEvent);
                                     if (!breakEvent.isCancelled()) {
-                                        crop.breakNaturally(main);
+                                        if (breakEvent.isDropItems()) {
+                                            crop.breakNaturally(main);
+                                        }
                                         ageable.setAge(0);
                                         crop.setBlockData(ageable);
                                         harvested++;

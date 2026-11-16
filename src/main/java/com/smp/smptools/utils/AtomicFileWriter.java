@@ -30,14 +30,15 @@ public final class AtomicFileWriter {
      * @throws IOException if an I/O error occurs
      */
     public static void write(Path target, byte[] data) throws IOException {
-        Path parent = target.getParent();
+        Path absTarget = target.toAbsolutePath();
+        Path parent = absTarget.getParent();
         if (parent != null) {
             Files.createDirectories(parent);
         }
 
         Path tmp = parent != null
-                ? parent.resolve(target.getFileName() + "." + UUID.randomUUID() + ".tmp")
-                : Files.createTempFile("smptools-atomic-", ".tmp");
+                ? parent.resolve(absTarget.getFileName() + "." + UUID.randomUUID() + ".tmp")
+                : Files.createTempFile(absTarget.getFileName().toString(), ".tmp");
 
         try {
             Files.write(tmp, data,
@@ -46,16 +47,7 @@ public final class AtomicFileWriter {
                     StandardOpenOption.WRITE,
                     StandardOpenOption.SYNC);
 
-            try {
-                Files.move(tmp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-            } catch (IOException atomicEx) {
-                try {
-                    Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
-                } catch (IOException fallbackEx) {
-                    fallbackEx.addSuppressed(atomicEx);
-                    throw fallbackEx;
-                }
-            }
+            Files.move(tmp, absTarget, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
         } finally {
             Files.deleteIfExists(tmp);
         }

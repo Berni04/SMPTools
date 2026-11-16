@@ -2,6 +2,7 @@ package com.smp.smptools.listeners;
 
 import com.smp.smptools.SMPTools;
 import com.smp.smptools.sleep.SleepManager;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -58,12 +59,12 @@ public class SleepListener implements Listener {
     }
 
     private void handleInitiatorLeave(Player player) {
-        org.bukkit.World world = player.getWorld();
-        if (world != null && sleepManager.isVoteInProgress(world)) {
-            Player initiator = sleepManager.getVoteInitiator(world);
-            if (player.equals(initiator)) {
-                sleepManager.endVote(world);
-                world.sendMessage(plugin.getMessageManager().getMessage("sleep.vote-cancelled-initiator-left"));
+        if (player == null) return;
+        for (com.smp.smptools.sleep.SleepManager.WorldVoteState state : sleepManager.getVotesByInitiator(player.getUniqueId())) {
+            World voteWorld = state.getWorld();
+            sleepManager.endVote(voteWorld);
+            if (voteWorld != null) {
+                voteWorld.sendMessage(plugin.getMessageManager().getMessage("sleep.vote-cancelled-initiator-left"));
             }
         }
     }

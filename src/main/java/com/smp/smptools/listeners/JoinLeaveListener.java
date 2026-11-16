@@ -35,8 +35,13 @@ public class JoinLeaveListener implements Listener {
         if (plugin.getConfig().getBoolean("stats.save-on-quit", true)) {
             if (plugin.getStorageManager() != null && plugin.getStorageManager().getProvider() != null) {
                 plugin.getStorageManager().getProvider().saveStat(player.getUniqueId(), "playtime_minutes", totalMinutes);
+                if (plugin.getStorageManager().getType() != com.smp.smptools.storage.StorageType.FLATFILE
+                        && !(plugin.getStorageManager().getProvider() instanceof com.smp.smptools.storage.FlatFileStorageProvider)) {
+                    plugin.saveStatsConfig();
+                }
+            } else {
+                plugin.saveStatsConfig();
             }
-            plugin.saveStatsConfig();
         }
         if (plugin.getChatManager() != null) {
             plugin.getChatManager().removePlayer(player.getUniqueId());

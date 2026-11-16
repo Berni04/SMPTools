@@ -153,28 +153,34 @@ public class LockManager {
         return canonicalKey;
     }
 
+    private void consolidateHalfRecord(String canonicalKey, String halfKey) {
+        if (canonicalKey == null || halfKey == null || canonicalKey.equals(halfKey)) return;
+        UUID oldOwner = containerOwners.remove(halfKey);
+        Set<UUID> oldTrusted = containerTrusted.remove(halfKey);
+        if (oldOwner != null) {
+            if (!containerOwners.containsKey(canonicalKey)) {
+                containerOwners.put(canonicalKey, oldOwner);
+            } else {
+                UUID existingOwner = containerOwners.get(canonicalKey);
+                if (!existingOwner.equals(oldOwner)) {
+                    containerTrusted.computeIfAbsent(canonicalKey, k -> ConcurrentHashMap.newKeySet()).add(oldOwner);
+                }
+            }
+            if (oldTrusted != null && !oldTrusted.isEmpty()) {
+                containerTrusted.computeIfAbsent(canonicalKey, k -> ConcurrentHashMap.newKeySet()).addAll(oldTrusted);
+            }
+        }
+    }
+
     public void migrateToDoubleChest(Block existingBlock, Block newBlock) {
         if (existingBlock == null) return;
         String singleKey = getLocationKey(existingBlock.getLocation());
         String canonicalKey = getBlockKey(existingBlock);
-        if (canonicalKey != null && singleKey != null && !canonicalKey.equals(singleKey)) {
-            UUID owner = containerOwners.remove(singleKey);
-            Set<UUID> trusted = containerTrusted.remove(singleKey);
-            if (owner != null) {
-                if (!containerOwners.containsKey(canonicalKey)) {
-                    containerOwners.put(canonicalKey, owner);
-                } else {
-                    UUID existingOwner = containerOwners.get(canonicalKey);
-                    if (!existingOwner.equals(owner)) {
-                        containerTrusted.computeIfAbsent(canonicalKey, k -> ConcurrentHashMap.newKeySet()).add(owner);
-                    }
-                }
-                if (trusted != null && !trusted.isEmpty()) {
-                    containerTrusted.computeIfAbsent(canonicalKey, k -> ConcurrentHashMap.newKeySet()).addAll(trusted);
-                }
-                saveLocks();
-            }
+        consolidateHalfRecord(canonicalKey, singleKey);
+        if (newBlock != null) {
+            consolidateHalfRecord(canonicalKey, getLocationKey(newBlock.getLocation()));
         }
+        saveLocks();
     }
 
     public Block getSurvivingDoubleChestHalf(Block brokenBlock) {
@@ -292,6 +298,18 @@ public class LockManager {
             if (currentOwner != null && !currentOwner.equals(owner.getUniqueId()) && !owner.hasPermission("smptools.locks.admin")) {
                 return false;
             }
+        }
+
+        String directKey = getLocationKey(block.getLocation());
+        consolidateHalfRecord(key, directKey);
+        Block otherHalf = getSurvivingDoubleChestHalf(block);
+        if (otherHalf != null) {
+            consolidateHalfRecord(key, getLocationKey(otherHalf.getLocation()));
+        }
+
+        UUID prevOwner = containerOwners.get(key);
+        if (prevOwner != null && !prevOwner.equals(owner.getUniqueId())) {
+            containerTrusted.computeIfAbsent(key, k -> ConcurrentHashMap.newKeySet()).add(prevOwner);
         }
 
         containerOwners.put(key, owner.getUniqueId());

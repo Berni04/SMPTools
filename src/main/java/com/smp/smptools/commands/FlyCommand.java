@@ -6,6 +6,7 @@ import org.bukkit.GameMode;
 import org.bukkit.command.Command;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
@@ -50,7 +51,7 @@ public class FlyCommand extends AbstractPlayerCommand implements Listener {
         return true;
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player player = event.getPlayer();
         if (pluginFlyingPlayers.remove(player.getUniqueId())) {

@@ -8,6 +8,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.util.io.BukkitObjectInputStream;
 import org.bukkit.util.io.BukkitObjectOutputStream;
 
@@ -84,6 +85,11 @@ public class PrivateVaultCommand extends AbstractPlayerCommand {
             holder.setInventory(vault);
 
             YamlConfiguration vaultsConfig = getVaultsConfig(plugin);
+            if (isVaultsConfigLoadFailed()) {
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to load vaults configuration safely. Please contact an administrator.</red>"));
+                return true;
+            }
+
             String encodedInventory = vaultsConfig.getString("vaults." + playerUUID);
             // Backwards compatibility migration check in main config
             if (encodedInventory == null) {
@@ -96,11 +102,16 @@ public class PrivateVaultCommand extends AbstractPlayerCommand {
                 } catch (IOException | ClassNotFoundException e) {
                     holder.setDecodeFailed(true);
                     plugin.getLogger().warning("Failed to decode vault for player " + player.getName() + ": " + e.getMessage());
-                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Warning: Some items in your vault failed to decode properly.</red>"));
+                    player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to decode vault contents safely. Vault will not open to prevent item loss.</red>"));
                 } catch (IllegalArgumentException e) {
                     holder.setDecodeFailed(true);
                     plugin.getLogger().warning("Invalid Base64 string for player " + player.getName() + ": " + e.getMessage());
+                    player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to decode vault contents safely. Vault will not open to prevent item loss.</red>"));
                 }
+            }
+
+            if (holder.isDecodeFailed()) {
+                return true;
             }
 
             player.openInventory(vault);

@@ -238,11 +238,18 @@ public class KrampusManager implements Listener {
         buildCage(player.getUniqueId(), cageLoc);
 
         // Teleport
+        boolean teleported;
         try {
             allowedTeleports.add(player.getUniqueId());
-            player.teleport(cageLoc.clone().add(0.5, 1, 0.5));
+            teleported = player.teleport(cageLoc.clone().add(0.5, 1, 0.5));
         } finally {
             allowedTeleports.remove(player.getUniqueId());
+        }
+        if (!teleported) {
+            removeCage(player.getUniqueId(), cageLoc);
+            kidnappedPlayers.remove(player.getUniqueId());
+            playerCages.remove(player.getUniqueId());
+            return;
         }
         player.sendMessage(SMPTools.getInstance().getMessageManager().getMessage("krampus.kidnapped"));
 

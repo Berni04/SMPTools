@@ -23,22 +23,40 @@ public class FlatFileStorageProvider implements StorageProvider {
             if (isShutdown) {
                 return; // Reject late writes after shutdown to prevent off-thread mutation
             }
-            if (Bukkit.getServer() == null || Bukkit.isPrimaryThread() || plugin == null || !plugin.isEnabled()) {
+            if (Bukkit.getServer() == null || plugin == null || !plugin.isEnabled()) {
+                drainQueueLocked();
                 task.run();
                 return;
             }
             pendingTasks.add(task);
-            try {
-                Bukkit.getScheduler().runTask(plugin, () -> {
-                    synchronized (taskLock) {
-                        pendingTasks.remove(task);
+            if (Bukkit.isPrimaryThread()) {
+                drainQueueLocked();
+            } else {
+                try {
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        synchronized (taskLock) {
+                            if (!isShutdown) {
+                                drainQueueLocked();
+                            }
+                        }
+                    });
+                } catch (Exception e) {
+                    if (!isShutdown) {
+                        drainQueueLocked();
                     }
-                    task.run();
-                });
+                }
+            }
+        }
+    }
+
+    private void drainQueueLocked() {
+        while (!pendingTasks.isEmpty()) {
+            Runnable task = pendingTasks.remove(0);
+            try {
+                task.run();
             } catch (Exception e) {
-                pendingTasks.remove(task);
-                if (!isShutdown) {
-                    task.run();
+                if (plugin != null) {
+                    plugin.getLogger().warning("Error executing pending flat-file task: " + e.getMessage());
                 }
             }
         }
@@ -53,16 +71,7 @@ public class FlatFileStorageProvider implements StorageProvider {
     public void shutdown() {
         synchronized (taskLock) {
             isShutdown = true;
-            for (Runnable task : pendingTasks) {
-                try {
-                    task.run();
-                } catch (Exception e) {
-                    if (plugin != null) {
-                        plugin.getLogger().warning("Error executing pending flat-file task during shutdown: " + e.getMessage());
-                    }
-                }
-            }
-            pendingTasks.clear();
+            drainQueueLocked();
         }
         plugin.saveStatsConfig();
         plugin.saveTagsConfig();

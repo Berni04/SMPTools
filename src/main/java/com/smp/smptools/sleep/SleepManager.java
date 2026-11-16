@@ -7,6 +7,8 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -154,5 +156,16 @@ public class SleepManager {
         if (world == null) return null;
         WorldVoteState state = activeVotes.get(world.getUID());
         return state != null ? org.bukkit.Bukkit.getPlayer(state.getInitiatorUuid()) : null;
+    }
+
+    public List<WorldVoteState> getVotesByInitiator(UUID initiatorUuid) {
+        List<WorldVoteState> matches = new ArrayList<>();
+        if (initiatorUuid == null) return matches;
+        for (WorldVoteState state : activeVotes.values()) {
+            if (initiatorUuid.equals(state.getInitiatorUuid())) {
+                matches.add(state);
+            }
+        }
+        return matches;
     }
 }

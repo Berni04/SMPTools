@@ -133,6 +133,11 @@ public class EnchantmentListener implements Listener {
     }
 
     private boolean isLog(Material material) {
+        if (material == null) return false;
+        if (material == Material.MELON_STEM || material == Material.ATTACHED_MELON_STEM ||
+            material == Material.PUMPKIN_STEM || material == Material.ATTACHED_PUMPKIN_STEM) {
+            return false;
+        }
         String name = material.name();
         return name.endsWith("_LOG") || name.endsWith("_STEM") || name.endsWith("_WOOD") || name.endsWith("_HYPHAE");
     }
