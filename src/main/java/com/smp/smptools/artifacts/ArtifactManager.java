@@ -178,9 +178,10 @@ public class ArtifactManager {
         artifactsConfig.set("pouch", null);
 
         for (Map.Entry<UUID, Map<Integer, ItemStack>> entry : equippedPouchMap.entrySet()) {
+            if (entry.getKey() == null || entry.getValue() == null) continue;
             String uuidStr = entry.getKey().toString();
             for (Map.Entry<Integer, ItemStack> slotEntry : entry.getValue().entrySet()) {
-                if (isAllowedPouchSlot(slotEntry.getKey())) {
+                if (slotEntry != null && slotEntry.getKey() != null && isAllowedPouchSlot(slotEntry.getKey())) {
                     artifactsConfig.set("pouch." + uuidStr + "." + slotEntry.getKey(), slotEntry.getValue());
                 }
             }

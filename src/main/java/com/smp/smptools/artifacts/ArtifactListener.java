@@ -235,6 +235,8 @@ public class ArtifactListener implements Listener {
                                     if (!breakEvent.isCancelled()) {
                                         if (breakEvent.isDropItems()) {
                                             crop.breakNaturally(main);
+                                        } else {
+                                            crop.setType(Material.AIR);
                                         }
                                         ageable.setAge(0);
                                         crop.setBlockData(ageable);

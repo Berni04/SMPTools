@@ -176,10 +176,18 @@ public class MissionManager {
                 }
                 droppedCount++;
                 data.getPendingRewards().remove(reward);
+                saveSinglePlayerData(player.getUniqueId());
                 continue;
             }
 
             data.getPendingRewards().remove(reward);
+            if (!saveSinglePlayerData(player.getUniqueId())) {
+                if (plugin != null) {
+                    plugin.getLogger().severe("Failed to persist pending reward removal for " + player.getName() + ", aborting remaining queue.");
+                }
+                data.getPendingRewards().add(reward);
+                break;
+            }
 
             boolean delivered = false;
             try {
@@ -205,10 +213,9 @@ public class MissionManager {
                         plugin.getLogger().warning("Transient delivery failure for pending mission reward '" + baseReward + "' for " + player.getName() + " (attempt " + nextRetry + "/3), retaining for retry.");
                     }
                 }
+                saveSinglePlayerData(player.getUniqueId());
             }
         }
-
-        saveSinglePlayerData(player.getUniqueId());
 
         if (anyDelivered) {
             player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()

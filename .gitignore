@@ -15,6 +15,9 @@ target/
 Thumbs.db
 
 # Documentation & Audit plans
-*PLAN*.md
-AUDIT_*.md
+AUDIT_FINDINGS.md
+BUG_REPORT_FIX_PLAN.md
+BUG_REPORT_FIX_PLAN_PASS2.md
+FINAL_FIX_PLAN.md
+FIX_PLAN.md
 
