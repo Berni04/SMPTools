@@ -160,10 +160,16 @@ public class ChunkLoaderManager {
     }
 
     public void removeChunkLoader(Location loc) {
+        removeChunkLoader(loc, true);
+    }
+
+    public void removeChunkLoader(Location loc, boolean save) {
         if (activeChunkLoaders.remove(loc)) {
             loaderOwners.remove(loc);
             unforceLoadChunk(loc);
-            saveChunkLoaders();
+            if (save) {
+                saveChunkLoaders();
+            }
         }
     }
 
@@ -191,9 +197,26 @@ public class ChunkLoaderManager {
     }
 
     private void unforceLoadChunk(Location loc) {
+        if (loc.getWorld() == null) return;
         Chunk chunk = loc.getChunk();
-        chunk.setForceLoaded(false);
-        plugin.getLogger().info("Unforce loaded chunk: " + chunk.getX() + ", " + chunk.getZ() + " in world " + Objects.requireNonNull(chunk.getWorld()).getName());
+        int cx = chunk.getX();
+        int cz = chunk.getZ();
+        String worldName = loc.getWorld().getName();
+
+        // Check if any other active loader shares this chunk
+        boolean hasOther = false;
+        for (Location other : activeChunkLoaders) {
+            if (other.getWorld() != null && other.getWorld().getName().equals(worldName)
+                    && (other.getBlockX() >> 4) == cx && (other.getBlockZ() >> 4) == cz) {
+                hasOther = true;
+                break;
+            }
+        }
+
+        if (!hasOther) {
+            chunk.setForceLoaded(false);
+            plugin.getLogger().info("Unforce loaded chunk: " + chunk.getX() + ", " + chunk.getZ() + " in world " + Objects.requireNonNull(chunk.getWorld()).getName());
+        }
     }
 
     public void unloadAllChunks() {

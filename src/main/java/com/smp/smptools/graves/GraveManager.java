@@ -63,9 +63,26 @@ public class GraveManager implements Listener {
                     expired.add(entry.getKey());
                 }
             }
+
+            List<Map.Entry<Location, Grave>> toDrop = new ArrayList<>();
             for (Location loc : expired) {
-                Grave g = graves.get(loc);
+                if (loc == null || loc.getWorld() == null) {
+                    continue; // Skip unloaded/invalid world to prevent NPE and preserve record
+                }
+                Grave g = graves.remove(loc);
                 if (g != null) {
+                    toDrop.add(Map.entry(loc, g));
+                }
+            }
+
+            if (!toDrop.isEmpty()) {
+                // Persist the removal to disk before releasing items to prevent duplicate drops on crash
+                saveGraves();
+
+                for (Map.Entry<Location, Grave> entry : toDrop) {
+                    Location loc = entry.getKey();
+                    Grave g = entry.getValue();
+
                     // Expire grave: drop items and clear holograms
                     for (ItemStack item : g.getItems()) {
                         if (item != null && item.getType() != Material.AIR) {
@@ -89,11 +106,7 @@ public class GraveManager implements Listener {
                         }
                     }
                     removeHolograms(loc);
-                    graves.remove(loc);
                 }
-            }
-            if (!expired.isEmpty()) {
-                saveGraves();
             }
         }, 1200L, 1200L); // Check every minute
     }

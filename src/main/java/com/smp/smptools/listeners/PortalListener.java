@@ -51,10 +51,15 @@ public class PortalListener implements Listener {
                 // Teleport logic
                 if (player.getWorld().getName().equals("christmas")) {
                     org.bukkit.World overworld = Bukkit.getWorlds().stream()
-                            .filter(w -> w.getEnvironment() == org.bukkit.World.Environment.NORMAL)
+                            .filter(w -> !w.getName().equalsIgnoreCase("christmas") && w.getEnvironment() == org.bukkit.World.Environment.NORMAL)
                             .findFirst()
-                            .orElse(Bukkit.getWorlds().get(0));
-                    player.teleport(overworld.getSpawnLocation());
+                            .orElseGet(() -> Bukkit.getWorlds().stream()
+                                    .filter(w -> !w.getName().equalsIgnoreCase("christmas"))
+                                    .findFirst()
+                                    .orElse(player.getWorld()));
+                    if (!overworld.getName().equalsIgnoreCase("christmas")) {
+                        player.teleport(overworld.getSpawnLocation());
+                    }
                 } else {
                     // Teleport to Christmas world
                     Location target = plugin.getPortalManager().getChristmasSpawn();

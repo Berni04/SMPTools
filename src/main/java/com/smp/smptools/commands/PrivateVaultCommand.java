@@ -139,7 +139,7 @@ public class PrivateVaultCommand extends AbstractPlayerCommand {
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(Base64.getDecoder().decode(data));
              BukkitObjectInputStream dataInput = new BukkitObjectInputStream(inputStream)) {
             int length = dataInput.readInt();
-            if (length < 0 || length > 216) {
+            if (length < 0 || length > 54) {
                 throw new IOException("Invalid vault item array length: " + length);
             }
             ItemStack[] items = new ItemStack[length];

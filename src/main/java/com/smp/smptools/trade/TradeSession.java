@@ -45,6 +45,23 @@ public class TradeSession {
     public static final int P2_READY_SLOT = 53;
     public static final int CANCEL_SLOT = 49;
 
+    public static class TradeHolder implements org.bukkit.inventory.InventoryHolder {
+        private final TradeSession session;
+
+        public TradeHolder(TradeSession session) {
+            this.session = session;
+        }
+
+        public TradeSession getSession() {
+            return session;
+        }
+
+        @Override
+        public Inventory getInventory() {
+            return session != null ? session.getInventory() : null;
+        }
+    }
+
     private org.bukkit.scheduler.BukkitTask timeoutTask;
 
     public TradeSession(SMPTools plugin, Player player1, Player player2) {
@@ -55,7 +72,8 @@ public class TradeSession {
         Component title = MiniMessage.miniMessage().deserialize(
                 "<blue>" + player1.getName() + "</blue> <gray>⇄</gray> <green>" + player2.getName() + "</green>"
         );
-        this.inventory = Bukkit.createInventory(null, 54, title);
+        TradeHolder holder = new TradeHolder(this);
+        this.inventory = Bukkit.createInventory(holder, 54, title);
         setupInitialUI();
     }
 

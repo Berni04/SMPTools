@@ -100,11 +100,20 @@ public class ArtifactManager {
     }
 
 
+    public static final Set<Integer> ALLOWED_POUCH_SLOTS = Set.of(10, 11, 12, 13, 14, 15, 16);
+
+    public static boolean isAllowedPouchSlot(int slot) {
+        return ALLOWED_POUCH_SLOTS.contains(slot);
+    }
+
     public void setEquippedPouch(UUID uuid, Map<Integer, ItemStack> slots) {
         Map<Integer, ItemStack> pouch = getEquippedPouch(uuid);
         pouch.clear();
         if (slots != null) {
             for (Map.Entry<Integer, ItemStack> entry : slots.entrySet()) {
+                if (entry.getKey() == null || !isAllowedPouchSlot(entry.getKey())) {
+                    continue;
+                }
                 ItemStack item = entry.getValue();
                 if (item != null && !item.getType().isAir()) {
                     ArtifactType type = getArtifactType(item);
@@ -140,7 +149,7 @@ public class ArtifactManager {
                             for (String slotStr : userSec.getKeys(false)) {
                                 try {
                                     int slot = Integer.parseInt(slotStr);
-                                    if (slot < 0 || slot >= 54) {
+                                    if (!isAllowedPouchSlot(slot)) {
                                         continue;
                                     }
                                     ItemStack item = artifactsConfig.getItemStack("pouch." + uuidStr + "." + slotStr);
@@ -171,7 +180,7 @@ public class ArtifactManager {
         for (Map.Entry<UUID, Map<Integer, ItemStack>> entry : equippedPouchMap.entrySet()) {
             String uuidStr = entry.getKey().toString();
             for (Map.Entry<Integer, ItemStack> slotEntry : entry.getValue().entrySet()) {
-                if (slotEntry.getKey() >= 0 && slotEntry.getKey() < 54) {
+                if (isAllowedPouchSlot(slotEntry.getKey())) {
                     artifactsConfig.set("pouch." + uuidStr + "." + slotEntry.getKey(), slotEntry.getValue());
                 }
             }

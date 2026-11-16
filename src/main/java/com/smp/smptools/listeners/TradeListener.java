@@ -33,8 +33,14 @@ public class TradeListener implements Listener {
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
 
+        boolean isTradeHolder = event.getView().getTopInventory().getHolder() instanceof TradeSession.TradeHolder;
         TradeSession session = tradeManager.getSession(player);
-        if (session == null) return;
+        if (session == null) {
+            if (isTradeHolder) {
+                event.setCancelled(true);
+            }
+            return;
+        }
 
         if (session.getState() != TradeSession.State.ACTIVE) {
             event.setCancelled(true);
@@ -151,8 +157,14 @@ public class TradeListener implements Listener {
     public void onInventoryDrag(InventoryDragEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
 
+        boolean isTradeHolder = event.getView().getTopInventory().getHolder() instanceof TradeSession.TradeHolder;
         TradeSession session = tradeManager.getSession(player);
-        if (session == null) return;
+        if (session == null) {
+            if (isTradeHolder) {
+                event.setCancelled(true);
+            }
+            return;
+        }
 
         if (session.getState() != TradeSession.State.ACTIVE) {
             event.setCancelled(true);

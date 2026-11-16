@@ -37,10 +37,23 @@ public class BlackFridayListener implements Listener {
             org.bukkit.entity.Entity entity = Bukkit.getEntity(entry.getKey());
             if (entity instanceof Merchant merchant) {
                 restoreOriginalRecipes(merchant, entry.getValue());
+                originalRecipes.remove(entry.getKey());
             }
         }
-        originalRecipes.clear();
         activeViewers.clear();
+    }
+
+    @EventHandler
+    public void onChunkLoad(org.bukkit.event.world.ChunkLoadEvent event) {
+        if (originalRecipes.isEmpty()) return;
+        for (org.bukkit.entity.Entity entity : event.getChunk().getEntities()) {
+            if (entity instanceof Merchant merchant) {
+                List<MerchantRecipe> original = originalRecipes.remove(entity.getUniqueId());
+                if (original != null) {
+                    restoreOriginalRecipes(merchant, original);
+                }
+            }
+        }
     }
 
     @EventHandler

@@ -17,6 +17,8 @@ import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 public class ChunkLoaderListener implements Listener {
@@ -109,25 +111,37 @@ public class ChunkLoaderListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockExplode(BlockExplodeEvent event) {
-        for (Block block : event.blockList()) {
+        boolean removedAny = false;
+        for (Block block : new ArrayList<>(event.blockList())) {
             Location loc = block.getLocation();
             if (chunkLoaderManager.isChunkLoader(loc)) {
-                chunkLoaderManager.removeChunkLoader(loc);
+                chunkLoaderManager.removeChunkLoader(loc, false);
+                removedAny = true;
+                event.blockList().remove(block);
                 block.setType(Material.AIR, false);
                 loc.getWorld().dropItemNaturally(loc.clone().add(0.5, 0.5, 0.5), ChunkLoaderManager.getChunkLoaderItem());
             }
+        }
+        if (removedAny) {
+            chunkLoaderManager.saveChunkLoaders();
         }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onEntityExplode(EntityExplodeEvent event) {
-        for (Block block : event.blockList()) {
+        boolean removedAny = false;
+        for (Block block : new ArrayList<>(event.blockList())) {
             Location loc = block.getLocation();
             if (chunkLoaderManager.isChunkLoader(loc)) {
-                chunkLoaderManager.removeChunkLoader(loc);
+                chunkLoaderManager.removeChunkLoader(loc, false);
+                removedAny = true;
+                event.blockList().remove(block);
                 block.setType(Material.AIR, false);
                 loc.getWorld().dropItemNaturally(loc.clone().add(0.5, 0.5, 0.5), ChunkLoaderManager.getChunkLoaderItem());
             }
+        }
+        if (removedAny) {
+            chunkLoaderManager.saveChunkLoaders();
         }
     }
 

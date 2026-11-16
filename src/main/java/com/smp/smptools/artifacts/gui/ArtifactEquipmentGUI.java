@@ -31,7 +31,7 @@ import java.util.Set;
 public class ArtifactEquipmentGUI implements Listener {
 
     private static final Component TITLE = Component.text("🎒 Artifact Equipment Pouch", NamedTextColor.LIGHT_PURPLE, TextDecoration.BOLD);
-    private static final Set<Integer> ALLOWED_SLOTS = Set.of(10, 11, 12, 13, 14, 15, 16);
+    private static final Set<Integer> ALLOWED_SLOTS = ArtifactManager.ALLOWED_POUCH_SLOTS;
 
     private final SMPTools plugin;
     private final ArtifactManager artifactManager;
