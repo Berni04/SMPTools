@@ -343,4 +343,52 @@ public class ArtifactPouchOverflowTest {
         // Pending claim section must be cleared from config
         assertNull(config.getConfigurationSection("pouch-pending-claim"));
     }
+
+    @Test
+    public void testLoadPouchDataMergesLegacyMigrationAndPersistedOverflow() throws Exception {
+        org.bukkit.configuration.file.YamlConfiguration config = new org.bukkit.configuration.file.YamlConfiguration();
+
+        UUID playerUuid = UUID.randomUUID();
+        // Fill all allowed pouch slots (10..16) so legacy cannot find a free slot
+        for (int slot : ArtifactManager.ALLOWED_POUCH_SLOTS) {
+            config.set("pouch." + playerUuid + "." + slot, new DummyItemStack(Material.FEATHER, 1));
+        }
+        // Legacy slot 0 with another passive item
+        config.set("pouch." + playerUuid + ".0", new DummyItemStack(Material.FEATHER, 1));
+
+        // Existing persisted overflow with an emerald
+        config.set("pouch-overflow." + playerUuid, List.of(new DummyItemStack(Material.EMERALD, 1)));
+
+        ArtifactManager manager = new ArtifactManager(null) {
+            @Override
+            public ArtifactType getArtifactType(ItemStack item) {
+                if (item != null && item.getType() == Material.FEATHER) {
+                    return ArtifactType.FEATHER_GLIDER_RING;
+                }
+                return null;
+            }
+
+            @Override
+            public boolean savePouchDataWithResult() {
+                return true;
+            }
+        };
+
+        java.lang.reflect.Field configField = ArtifactManager.class.getDeclaredField("artifactsConfig");
+        configField.setAccessible(true);
+        configField.set(manager, config);
+
+        java.lang.reflect.Method loadMethod = ArtifactManager.class.getDeclaredMethod("loadPouchData");
+        loadMethod.setAccessible(true);
+        loadMethod.invoke(manager);
+
+        assertTrue(manager.hasPouchOverflow(playerUuid));
+        List<ItemStack> overflow = manager.getPouchOverflow(playerUuid);
+        // Must contain both the legacy migrated artifact and the persisted overflow emerald
+        assertEquals(2, overflow.size());
+        boolean hasFeather = overflow.stream().anyMatch(i -> i.getType() == Material.FEATHER);
+        boolean hasEmerald = overflow.stream().anyMatch(i -> i.getType() == Material.EMERALD);
+        assertTrue(hasFeather, "Must retain legacy migrated artifact");
+        assertTrue(hasEmerald, "Must retain persisted overflow artifact");
+    }
 }

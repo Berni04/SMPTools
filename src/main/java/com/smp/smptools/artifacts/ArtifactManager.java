@@ -244,7 +244,7 @@ public class ArtifactManager {
                                 if (obj instanceof ItemStack is && is.getType() != Material.AIR) items.add(is);
                             }
                             if (!items.isEmpty()) {
-                                pouchOverflow.put(uuid, items);
+                                pouchOverflow.computeIfAbsent(uuid, k -> new ArrayList<>()).addAll(items);
                             }
                         }
                     } catch (Exception ex) {
