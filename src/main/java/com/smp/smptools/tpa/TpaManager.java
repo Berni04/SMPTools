@@ -65,8 +65,13 @@ public class TpaManager {
                 return;
             }
         }
-        if (requester.isDead() || target.isDead()) {
+        if (requester.isDead()) {
             requester.sendMessage(plugin.getMessageManager().getMessage("common.player-dead", requester));
+            return;
+        }
+        if (target.isDead()) {
+            requester.sendMessage(plugin.getMessageManager().getMessage("tpa.target-dead", requester,
+                    Map.of("target", target.getName())));
             return;
         }
 

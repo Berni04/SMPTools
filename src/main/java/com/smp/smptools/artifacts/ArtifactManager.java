@@ -146,6 +146,7 @@ public class ArtifactManager {
                         Map<Integer, ItemStack> map = new HashMap<>();
                         org.bukkit.configuration.ConfigurationSection userSec = artifactsConfig.getConfigurationSection("pouch." + uuidStr);
                         if (userSec != null) {
+                            List<Map.Entry<Integer, ItemStack>> legacyEntries = new ArrayList<>();
                             for (String slotStr : userSec.getKeys(false)) {
                                 try {
                                     int slot = Integer.parseInt(slotStr);
@@ -153,29 +154,34 @@ public class ArtifactManager {
                                     if (item != null) {
                                         ArtifactType type = getArtifactType(item);
                                         if (type != null && type.getSlotType() == ArtifactType.ArtifactSlotType.PASSIVE) {
-                                            if (isAllowedPouchSlot(slot) && !map.containsKey(slot)) {
+                                            if (isAllowedPouchSlot(slot)) {
                                                 map.put(slot, item);
                                             } else {
-                                                Integer freeSlot = null;
-                                                for (int allowed : ALLOWED_POUCH_SLOTS.stream().sorted().toList()) {
-                                                    if (!map.containsKey(allowed)) {
-                                                        freeSlot = allowed;
-                                                        break;
-                                                    }
-                                                }
-                                                if (freeSlot != null) {
-                                                    map.put(freeSlot, item);
-                                                    if (plugin != null) {
-                                                        plugin.getLogger().info("Migrated pouch artifact for " + uuidStr + " from legacy slot " + slot + " to slot " + freeSlot);
-                                                    }
-                                                } else if (plugin != null) {
-                                                    plugin.getLogger().warning("No free pouch slot for " + uuidStr + " to migrate legacy slot " + slot);
-                                                }
+                                                legacyEntries.add(Map.entry(slot, item));
                                             }
                                         }
                                     }
                                 } catch (Exception ex) {
                                     plugin.getLogger().warning("Failed to load pouch slot '" + slotStr + "' for " + uuidStr + ": " + ex.getMessage());
+                                }
+                            }
+                            for (Map.Entry<Integer, ItemStack> legacy : legacyEntries) {
+                                int legacySlot = legacy.getKey();
+                                ItemStack item = legacy.getValue();
+                                Integer freeSlot = null;
+                                for (int allowed : ALLOWED_POUCH_SLOTS.stream().sorted().toList()) {
+                                    if (!map.containsKey(allowed)) {
+                                        freeSlot = allowed;
+                                        break;
+                                    }
+                                }
+                                if (freeSlot != null) {
+                                    map.put(freeSlot, item);
+                                    if (plugin != null) {
+                                        plugin.getLogger().info("Migrated pouch artifact for " + uuidStr + " from legacy slot " + legacySlot + " to slot " + freeSlot);
+                                    }
+                                } else if (plugin != null) {
+                                    plugin.getLogger().warning("No free pouch slot for " + uuidStr + " to migrate legacy slot " + legacySlot);
                                 }
                             }
                         }

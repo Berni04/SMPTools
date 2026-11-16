@@ -215,6 +215,7 @@ public class LockManager {
     }
 
     public void removeOrMigrateLock(Block brokenBlock, Block survivingBlock) {
+        if (brokenBlock == null) return;
         String oldKey = getLockKey(brokenBlock);
         String brokenDirectKey = getLocationKey(brokenBlock.getLocation());
 

@@ -696,10 +696,13 @@ public class SMPTools extends JavaPlugin {
             saveResource("events.yml", false);
         }
         eventsConfig = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(eventsFile);
-        java.io.InputStream defEventsStream = getResource("events.yml");
-        if (defEventsStream != null) {
-            eventsConfig.setDefaults(org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
-                    new java.io.InputStreamReader(defEventsStream, java.nio.charset.StandardCharsets.UTF_8)));
+        try (java.io.InputStream defEventsStream = getResource("events.yml")) {
+            if (defEventsStream != null) {
+                try (java.io.InputStreamReader reader = new java.io.InputStreamReader(defEventsStream, java.nio.charset.StandardCharsets.UTF_8)) {
+                    eventsConfig.setDefaults(org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(reader));
+                }
+            }
+        } catch (java.io.IOException ignored) {
         }
     }
 

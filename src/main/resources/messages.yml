@@ -82,6 +82,7 @@ tpa:
   target-toggled-off: "<red>{target} is not accepting teleport requests at this time.</red>"
   caged: "<red>You cannot teleport while trapped in Krampus's cage!</red>"
   target-caged: "<red>The player cannot teleport while trapped in Krampus's cage!</red>"
+  target-dead: "<red>{target} is currently dead!</red>"
   expired-other: "<red>Teleport request from {target} has expired.</red>"
 
 # Teleport
@@ -174,7 +175,6 @@ sleep:
   voted-yes: "<player_name_color> has voted to skip the night."
   voted-no: "<player_name_color> has voted against skipping the night."
   vote-cancelled-initiator-left: "<red>The sleep vote was cancelled because the initiator left the game.</red>"
-  combat-blocked: "<red>You can't sleep while in combat!</red>"
   not-overworld: "<red>You can't sleep in this world!</red>"
 
 # Music
