@@ -83,7 +83,45 @@ public class ArtifactCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        sender.sendMessage(MiniMessage.miniMessage().deserialize("<red>Unknown subcommand. Use /artifacts or /artifacts give <player> <type>.</red>"));
+        if (args[0].equalsIgnoreCase("claim")) {
+            if (!(sender instanceof Player player)) {
+                sender.sendMessage(MiniMessage.miniMessage().deserialize("<red>Only players can claim overflow artifacts.</red>"));
+                return true;
+            }
+            List<ItemStack> recovered = artifactManager.claimPouchOverflow(player);
+            if (recovered.isEmpty()) {
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>No overflow artifacts to claim.</yellow>"));
+            } else {
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<green>Successfully claimed " + recovered.size() + " recovered artifact(s)!</green>"));
+            }
+            return true;
+        }
+
+        if (args[0].equalsIgnoreCase("recover")) {
+            if (!sender.hasPermission("smptools.artifacts.admin")) {
+                sender.sendMessage(MiniMessage.miniMessage().deserialize("<red>You don't have permission to recover artifacts.</red>"));
+                return true;
+            }
+            if (args.length < 2) {
+                sender.sendMessage(MiniMessage.miniMessage().deserialize("<red>Usage: /artifacts recover <player></red>"));
+                return true;
+            }
+            Player target = Bukkit.getPlayer(args[1]);
+            if (target == null) {
+                sender.sendMessage(MiniMessage.miniMessage().deserialize("<red>Player not found: " + args[1] + "</red>"));
+                return true;
+            }
+            List<ItemStack> recovered = artifactManager.claimPouchOverflow(target);
+            if (recovered.isEmpty()) {
+                sender.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>No overflow artifacts found for " + target.getName() + ".</yellow>"));
+            } else {
+                sender.sendMessage(MiniMessage.miniMessage().deserialize("<green>Recovered and delivered " + recovered.size() + " artifact(s) to " + target.getName() + ".</green>"));
+                target.sendMessage(MiniMessage.miniMessage().deserialize("<green>An administrator recovered " + recovered.size() + " artifact(s) to your inventory!</green>"));
+            }
+            return true;
+        }
+
+        sender.sendMessage(MiniMessage.miniMessage().deserialize("<red>Unknown subcommand. Use /artifacts, /artifacts claim, /artifacts give <player> <type>, or /artifacts recover <player>.</red>"));
         return true;
     }
 
@@ -91,8 +129,12 @@ public class ArtifactCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
         List<String> completions = new ArrayList<>();
         if (args.length == 1) {
-            completions.add("give");
-        } else if (args.length == 2 && args[0].equalsIgnoreCase("give")) {
+            completions.add("claim");
+            if (sender.hasPermission("smptools.artifacts.admin")) {
+                completions.add("give");
+                completions.add("recover");
+            }
+        } else if (args.length == 2 && (args[0].equalsIgnoreCase("give") || args[0].equalsIgnoreCase("recover"))) {
             for (Player p : Bukkit.getOnlinePlayers()) {
                 completions.add(p.getName());
             }

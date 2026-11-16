@@ -400,27 +400,42 @@ public class LockManager {
         return removed;
     }
 
-    public boolean trustPlayer(Block block, Player owner, OfflinePlayer target) {
+    /**
+     * Resolves the canonical key for a double chest and consolidates any legacy half-records,
+     * immediately persisting changes to disk if consolidation occurred.
+     */
+    private String canonicalizeAndConsolidateDoubleChestKey(Block block) {
+        if (block == null) return null;
         String key = getLockKey(block);
-        if (key == null || !containerOwners.containsKey(key)) return false;
-        if (!containerOwners.get(key).equals(owner.getUniqueId()) && !owner.hasPermission("smptools.locks.admin")) {
-            return false;
-        }
-
         Block otherHalf = getSurvivingDoubleChestHalf(block);
         if (otherHalf != null) {
             String canonicalKey = getBlockKey(block);
             String directKey = getLocationKey(block.getLocation());
             String otherKey = getLocationKey(otherHalf.getLocation());
+            boolean consolidated = false;
             if (canonicalKey != null) {
-                if (directKey != null && !directKey.equals(canonicalKey)) {
+                if (directKey != null && !directKey.equals(canonicalKey) && containerOwners.containsKey(directKey)) {
                     consolidateHalfRecord(canonicalKey, directKey);
+                    consolidated = true;
                 }
-                if (otherKey != null && !otherKey.equals(canonicalKey)) {
+                if (otherKey != null && !otherKey.equals(canonicalKey) && containerOwners.containsKey(otherKey)) {
                     consolidateHalfRecord(canonicalKey, otherKey);
+                    consolidated = true;
                 }
                 key = canonicalKey;
             }
+            if (consolidated) {
+                saveLocks();
+            }
+        }
+        return key;
+    }
+
+    public boolean trustPlayer(Block block, Player owner, OfflinePlayer target) {
+        String key = canonicalizeAndConsolidateDoubleChestKey(block);
+        if (key == null || !containerOwners.containsKey(key)) return false;
+        if (!containerOwners.get(key).equals(owner.getUniqueId()) && !owner.hasPermission("smptools.locks.admin")) {
+            return false;
         }
 
         containerTrusted.computeIfAbsent(key, k -> ConcurrentHashMap.newKeySet()).add(target.getUniqueId());
@@ -429,26 +444,10 @@ public class LockManager {
     }
 
     public boolean untrustPlayer(Block block, Player owner, OfflinePlayer target) {
-        String key = getLockKey(block);
+        String key = canonicalizeAndConsolidateDoubleChestKey(block);
         if (key == null || !containerOwners.containsKey(key)) return false;
         if (!containerOwners.get(key).equals(owner.getUniqueId()) && !owner.hasPermission("smptools.locks.admin")) {
             return false;
-        }
-
-        Block otherHalf = getSurvivingDoubleChestHalf(block);
-        if (otherHalf != null) {
-            String canonicalKey = getBlockKey(block);
-            String directKey = getLocationKey(block.getLocation());
-            String otherKey = getLocationKey(otherHalf.getLocation());
-            if (canonicalKey != null) {
-                if (directKey != null && !directKey.equals(canonicalKey)) {
-                    consolidateHalfRecord(canonicalKey, directKey);
-                }
-                if (otherKey != null && !otherKey.equals(canonicalKey)) {
-                    consolidateHalfRecord(canonicalKey, otherKey);
-                }
-                key = canonicalKey;
-            }
         }
 
         boolean removed = false;
@@ -465,6 +464,7 @@ public class LockManager {
             }
         }
 
+        Block otherHalf = getSurvivingDoubleChestHalf(block);
         if (otherHalf != null) {
             String otherKey = getLocationKey(otherHalf.getLocation());
             if (otherKey != null && !otherKey.equals(key)) {
@@ -477,9 +477,8 @@ public class LockManager {
 
         if (removed) {
             saveLocks();
-            return true;
         }
-        return false;
+        return removed;
     }
 
     public String getOwnerName(Block block) {

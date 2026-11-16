@@ -3,6 +3,7 @@ package com.smp.smptools.artifacts;
 import com.smp.smptools.SMPTools;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -30,7 +31,7 @@ public class ArtifactManager {
 
     public ArtifactManager(SMPTools plugin) {
         this.plugin = plugin;
-        this.artifactKey = new NamespacedKey(plugin, "artifact_type");
+        this.artifactKey = plugin != null ? new NamespacedKey(plugin, "artifact_type") : new NamespacedKey("smptools", "artifact_type");
         loadPouchData();
     }
 
@@ -128,6 +129,7 @@ public class ArtifactManager {
     }
 
     private void loadPouchData() {
+        if (plugin == null) return;
         artifactsFile = new File(plugin.getDataFolder(), "artifacts.yml");
         if (!artifactsFile.exists()) {
             try {
@@ -222,10 +224,66 @@ public class ArtifactManager {
         }
     }
 
+    public boolean hasPouchOverflow(UUID uuid) {
+        if (uuid == null) return false;
+        List<ItemStack> list = pouchOverflow.get(uuid);
+        return list != null && !list.isEmpty();
+    }
+
     public List<ItemStack> getPouchOverflow(UUID uuid) {
         if (uuid == null) return Collections.emptyList();
         List<ItemStack> list = pouchOverflow.get(uuid);
         return list != null ? Collections.unmodifiableList(list) : Collections.emptyList();
+    }
+
+    /**
+     * Claims and delivers any overflow artifacts to the player.
+     * Delivered items are removed from pouchOverflow and persisted.
+     *
+     * @param player the player receiving the overflow items
+     * @return the list of delivered ItemStacks
+     */
+    public List<ItemStack> claimPouchOverflow(Player player) {
+        if (player == null) return Collections.emptyList();
+        UUID uuid = player.getUniqueId();
+        List<ItemStack> list = pouchOverflow.get(uuid);
+        if (list == null || list.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<ItemStack> delivered = new ArrayList<>();
+        List<ItemStack> remaining = new ArrayList<>();
+
+        for (ItemStack item : list) {
+            if (item == null || item.getType() == Material.AIR) continue;
+            Map<Integer, ItemStack> leftover = player.getInventory().addItem(item.clone());
+            if (leftover.isEmpty()) {
+                delivered.add(item);
+            } else {
+                boolean droppedAll = true;
+                for (ItemStack drop : leftover.values()) {
+                    if (drop != null && drop.getType() != Material.AIR) {
+                        if (player.getWorld() != null) {
+                            player.getWorld().dropItemNaturally(player.getLocation(), drop);
+                        } else {
+                            remaining.add(drop);
+                            droppedAll = false;
+                        }
+                    }
+                }
+                if (droppedAll) {
+                    delivered.add(item);
+                }
+            }
+        }
+
+        if (remaining.isEmpty()) {
+            pouchOverflow.remove(uuid);
+        } else {
+            pouchOverflow.put(uuid, remaining);
+        }
+        savePouchData();
+        return delivered;
     }
 
     public void savePouchData() {

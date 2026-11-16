@@ -93,6 +93,7 @@ public class GraveManager implements Listener {
                 for (Map.Entry<Location, Grave> entry : toDrop) {
                     Location loc = entry.getKey();
                     Grave g = entry.getValue();
+                    legacyGraveLocations.remove(loc);
 
                     // Expire grave: drop items and clear holograms
                     for (ItemStack item : g.getItems()) {

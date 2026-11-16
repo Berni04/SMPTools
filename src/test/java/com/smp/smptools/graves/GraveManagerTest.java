@@ -44,9 +44,15 @@ public class GraveManagerTest {
         Grave legacyGrave = new Grave(owner, "Player1", graveLoc, Collections.emptyList(), 1000L, "fall");
         Grave modernGrave = new Grave(owner, "Player1", graveLoc, Collections.emptyList(), System.currentTimeMillis() + 100_000L, "fall");
 
-        // 1. Unmarked legacy skull at correct location -> matches
+        // 1. Unmarked legacy skull at correct location with matching owner -> matches
         Block legacySkullAtLoc = createMockSkullBlock(Material.PLAYER_HEAD, graveLoc, null, owner);
         assertTrue(manager.isMatchingGraveBlock(legacySkullAtLoc, legacyGrave));
+
+        // 1b. Unmarked legacy skull at correct location with different owner -> rejects
+        UUID differentOwner = UUID.randomUUID();
+        Block legacySkullDifferentOwner = createMockSkullBlock(Material.PLAYER_HEAD, graveLoc, null, differentOwner);
+        assertFalse(manager.isMatchingGraveBlock(legacySkullDifferentOwner, legacyGrave),
+                "Legacy skull with different owner UUID must be rejected");
 
         // 2. Unmarked legacy skull at wrong location -> rejects
         Block legacySkullAtWrongLoc = createMockSkullBlock(Material.PLAYER_HEAD, otherLoc, null, owner);

@@ -13,7 +13,13 @@ public final class ConfigDefaults {
     }
 
     public static void applyDefaults(JavaPlugin plugin) {
-        FileConfiguration config = plugin.getConfig();
+        if (plugin == null) return;
+        applyDefaults(plugin.getConfig());
+        plugin.saveConfig();
+    }
+
+    public static void applyDefaults(FileConfiguration config) {
+        if (config == null) return;
 
         // Feature toggles
         config.addDefault("features.fly.enabled", true);
@@ -57,7 +63,7 @@ public final class ConfigDefaults {
         config.addDefault("features.events.enabled", true);
         config.addDefault("features.artifacts.enabled", true);
         config.addDefault("features.seasonal.enabled", true);
-        if (!config.contains("stats.save-on-quit") && config.contains("features.stats.save-on-quit")) {
+        if (!config.isSet("stats.save-on-quit") && config.isSet("features.stats.save-on-quit")) {
             config.set("stats.save-on-quit", config.getBoolean("features.stats.save-on-quit"));
         }
         config.addDefault("stats.save-on-quit", true);
@@ -109,7 +115,6 @@ public final class ConfigDefaults {
         applyStorageDefaults(config);
 
         config.options().copyDefaults(true);
-        plugin.saveConfig();
     }
 
     private static void applyStorageDefaults(FileConfiguration config) {

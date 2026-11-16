@@ -208,7 +208,7 @@ public class MessageManager {
         return list == null ? java.util.Collections.emptyList() : list;
     }
 
-    public void setConfigForTesting(FileConfiguration config) {
+    void setConfigForTesting(FileConfiguration config) {
         this.messagesConfig = config;
     }
 

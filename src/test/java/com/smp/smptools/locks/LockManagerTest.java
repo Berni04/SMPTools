@@ -189,6 +189,40 @@ public class LockManagerTest {
         assertTrue(manager.canAccess(rightBlock, createPlayerProxy(ownerLeft)), "Displaced owner must be preserved as trusted on surviving block.");
     }
 
+    @Test
+    public void testUntrustPlayerConsolidatesAndSavesEvenWhenTargetNotFound() {
+        World world = createWorldProxy("world");
+        Block leftBlock = createBlockProxy(world, 40, 64, 40);
+        Block rightBlock = createBlockProxy(world, 41, 64, 40);
+
+        setSingleChest(leftBlock);
+        setSingleChest(rightBlock);
+
+        final int[] saveCount = {0};
+        LockManager manager = new LockManager(null) {
+            @Override
+            public void saveLocks() {
+                saveCount[0]++;
+            }
+        };
+
+        java.util.UUID owner = java.util.UUID.randomUUID();
+        java.util.UUID unTargetedUser = java.util.UUID.randomUUID();
+
+        String leftKey = manager.getLocationKey(leftBlock.getLocation());
+        String rightKey = manager.getLocationKey(rightBlock.getLocation());
+
+        manager.getContainerOwners().put(leftKey, owner);
+        manager.getContainerOwners().put(rightKey, owner);
+
+        createDoubleChestPair(leftBlock, rightBlock);
+
+        // untrustPlayer for someone who is not trusted
+        boolean removed = manager.untrustPlayer(leftBlock, createPlayerProxy(owner), createOfflinePlayerProxy(unTargetedUser));
+        assertFalse(removed, "Should return false when user is not trusted.");
+        assertTrue(saveCount[0] > 0, "saveLocks must be called due to consolidation even when removed is false.");
+    }
+
     private LockManager createTestLockManager() {
         return new LockManager(null) {
             @Override

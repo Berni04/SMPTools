@@ -62,6 +62,12 @@ public class ArtifactEquipmentGUI implements Listener {
 
         player.openInventory(gui);
         player.playSound(player.getLocation(), Sound.ITEM_ARMOR_EQUIP_GOLD, 1.0f, 1.0f);
+
+        if (artifactManager.hasPouchOverflow(player.getUniqueId())) {
+            int count = artifactManager.getPouchOverflow(player.getUniqueId()).size();
+            player.sendMessage(MiniMessage.miniMessage().deserialize(
+                    "<gold>[SMPTools] You have " + count + " overflow artifact(s) from migration! Type <yellow>/artifacts claim</yellow> to receive them.</gold>"));
+        }
     }
 
     private ItemStack createItem(Material mat, String name, List<String> lore) {
