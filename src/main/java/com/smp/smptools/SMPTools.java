@@ -125,6 +125,7 @@ public class SMPTools extends JavaPlugin {
     private HalloweenGUI halloweenGUI;
     private EasterGUI easterGUI;
     private com.smp.smptools.christmas.KrampusManager krampusManager;
+    private com.smp.smptools.music.MusicCommand musicCommand;
 
 
     @Override
@@ -399,6 +400,10 @@ public class SMPTools extends JavaPlugin {
         if (bountyManager != null) {
             bountyManager.shutdown();
         }
+        if (musicCommand != null) {
+            musicCommand.cleanup();
+        }
+        com.smp.smptools.commands.PrivateVaultCommand.invalidateCache();
         // Save configs
         saveStatsConfig();
         saveTagsConfig();
@@ -691,6 +696,11 @@ public class SMPTools extends JavaPlugin {
             saveResource("events.yml", false);
         }
         eventsConfig = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(eventsFile);
+        java.io.InputStream defEventsStream = getResource("events.yml");
+        if (defEventsStream != null) {
+            eventsConfig.setDefaults(org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                    new java.io.InputStreamReader(defEventsStream, java.nio.charset.StandardCharsets.UTF_8)));
+        }
     }
 
     public FileConfiguration getEventsConfig() {
@@ -698,6 +708,14 @@ public class SMPTools extends JavaPlugin {
             setupEventsConfig();
         }
         return eventsConfig;
+    }
+
+    public com.smp.smptools.music.MusicCommand getMusicCommand() {
+        return musicCommand;
+    }
+
+    public void setMusicCommand(com.smp.smptools.music.MusicCommand musicCommand) {
+        this.musicCommand = musicCommand;
     }
 
     public EventManager getEventManager() {

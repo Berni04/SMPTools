@@ -109,7 +109,7 @@ commands:
     usage: /missions
   sudo:
     description: Force a player to execute a command or chat message.
-    usage: /sudo <player> <command>
+    usage: /sudo <player> [--confirm] <command>
     permission: smptools.sudo
   customitem:
     description: Gives a custom item with specified CustomModelData.

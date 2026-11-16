@@ -26,7 +26,8 @@ public final class SafeLocationFinder {
             Material.POWDER_SNOW,
             Material.WITHER_ROSE,
             Material.CAMPFIRE,
-            Material.SOUL_CAMPFIRE
+            Material.SOUL_CAMPFIRE,
+            Material.POINTED_DRIPSTONE
     );
 
     private static final Set<Material> UNSAFE_GROUND = Set.of(
@@ -39,7 +40,8 @@ public final class SafeLocationFinder {
             Material.POWDER_SNOW,
             Material.WITHER_ROSE,
             Material.CAMPFIRE,
-            Material.SOUL_CAMPFIRE
+            Material.SOUL_CAMPFIRE,
+            Material.POINTED_DRIPSTONE
     );
 
     private SafeLocationFinder() {

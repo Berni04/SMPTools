@@ -116,7 +116,7 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
                 }
                 if (args.length > 1 && args[1].equalsIgnoreCase("start")) {
                     if (manager.hasAnyGiftsDeposited()) {
-                        player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Cannot start Secret Santa: deposited gifts already exist from a previous round! Run <yellow>/secretsanta admin clear</yellow> first.</red>"));
+                        player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.admin-start-has-gifts"));
                         return true;
                     }
                     manager.generateMatches();
@@ -129,12 +129,12 @@ public class SecretSantaCommand extends AbstractPlayerCommand implements Listene
                     }
                     boolean cleared = manager.clearAllData();
                     if (cleared) {
-                        player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<green>Cleared all Secret Santa participants, matches, and gifts.</green>"));
+                        player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.admin-cleared"));
                     } else {
-                        player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<red>Failed to clear Secret Santa data from disk.</red>"));
+                        player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.admin-clear-failed"));
                     }
                 } else {
-                    player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize("<yellow>Usage: /secretsanta admin <start|clear></yellow>"));
+                    player.sendMessage(plugin.getMessageManager().getMessage("secret-santa.admin-usage"));
                 }
                 break;
 

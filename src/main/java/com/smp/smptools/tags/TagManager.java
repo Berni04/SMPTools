@@ -372,7 +372,7 @@ public class TagManager implements Listener {
             }
 
             if (playerValue >= requiredValue && !hasUnlockedTitle(player, title)) {
-                if (unlockTitle(player, title)) {
+                if (tryUnlockTitle(player, title)) {
                     Component formattedPlayerName = plugin.getChatManager().getFormattedDisplayName(player);
                     plugin.getServer().broadcast(formattedPlayerName.append(Component.text(" has unlocked the title: " + title, NamedTextColor.GREEN)));
                 }
@@ -437,7 +437,7 @@ public class TagManager implements Listener {
      * @param title the title to unlock
      * @return true if the title was newly unlocked, false if already possessed
      */
-    public synchronized boolean unlockTitle(@NotNull Player player, @NotNull String title) {
+    public synchronized boolean tryUnlockTitle(@NotNull Player player, @NotNull String title) {
         List<String> unlockedTitles = new java.util.ArrayList<>(plugin.getTagsConfig().getStringList("unlocked-titles." + player.getUniqueId().toString()));
         if (!unlockedTitles.contains(title)) {
             unlockedTitles.add(title);
@@ -446,6 +446,17 @@ public class TagManager implements Listener {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Unlocks a title for a player if they don't already have it.
+     * Preserved with void return type for binary compatibility with external plugins.
+     *
+     * @param player the player to unlock the title for
+     * @param title the title to unlock
+     */
+    public synchronized void unlockTitle(@NotNull Player player, @NotNull String title) {
+        tryUnlockTitle(player, title);
     }
 
     /**

@@ -7,17 +7,31 @@ import org.bukkit.command.Command;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerQuitEvent;
+
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class SoundCommand extends AbstractPlayerCommand {
+public class SoundCommand extends AbstractPlayerCommand implements Listener {
 
     private final Map<UUID, Long> cooldowns = new ConcurrentHashMap<>();
     private static final long COOLDOWN_MS = 5000L;
 
     public SoundCommand(SMPTools plugin) {
         super(plugin);
+        if (plugin != null && org.bukkit.Bukkit.getServer() != null) {
+            try {
+                org.bukkit.Bukkit.getPluginManager().registerEvents(this, plugin);
+            } catch (Exception ignored) {}
+        }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        cooldowns.remove(event.getPlayer().getUniqueId());
     }
 
     @Override
@@ -33,6 +47,9 @@ public class SoundCommand extends AbstractPlayerCommand {
         }
 
         long now = System.currentTimeMillis();
+        if (cooldowns.size() > 50) {
+            cooldowns.entrySet().removeIf(entry -> now - entry.getValue() >= COOLDOWN_MS);
+        }
         Long last = cooldowns.get(player.getUniqueId());
         if (last != null && now - last < COOLDOWN_MS && !player.hasPermission("smptools.sound.bypass")) {
             long remaining = (COOLDOWN_MS - (now - last)) / 1000L + 1;

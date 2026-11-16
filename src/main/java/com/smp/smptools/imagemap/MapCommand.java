@@ -65,6 +65,7 @@ public class MapCommand extends AbstractPlayerCommand {
 
         player.sendMessage(plugin.getMessageManager().getMessage("map.downloading", player));
 
+        String playerName = player.getName();
         int finalWidthGrid = widthGrid;
         int finalHeightGrid = heightGrid;
 
@@ -132,7 +133,7 @@ public class MapCommand extends AbstractPlayerCommand {
                 } catch (Exception ignored) {
                     sanitizedUrl = "[invalid-url]";
                 }
-                plugin.getLogger().log(java.util.logging.Level.WARNING, "Failed to create map for " + player.getName() + " from " + sanitizedUrl + ": " + e.getClass().getSimpleName());
+                plugin.getLogger().log(java.util.logging.Level.WARNING, "Failed to create map for " + playerName + " from " + sanitizedUrl, e);
             }
         });
 

@@ -72,7 +72,7 @@ SMPTools is a comprehensive Minecraft Paper plugin designed to enhance the survi
 *   **Chunk Loaders**: **/givechunkloader <player>**: Gives a chunk loader item that force-loads chunks even when no players are online.
 *   **Inventory Viewer**: **/invsee <player>**: View another player's inventory with a death-screen-like layout showing armor and off-hand.
 *   **Troll Commands**: **/troll <player>**: Opens a GUI with 20+ troll options including Chat Scramble, Fake Lag, Fake Join/Leave, and more.
-*   **Force Execute**: **/sudo <player> <command>**: Forces a player to execute a command or send a chat message.
+*   **Force Execute**: **/sudo <player> [--confirm] <command>**: Forces a player to execute a command or send a chat message (requires `--confirm` if target is OP or has `smptools.sudo`).
 *   **Custom Items (WIP)**: **/customitem <type> <data>**: Gives custom items with specified CustomModelData (work in progress).
 
 ### NPC & Dialogue System
@@ -271,7 +271,7 @@ Common placeholders:
 | `/troll <player>` | Troll GUI | `smptools.troll` |
 | `/missions` | Missions GUI | Default |
 | `/missions resetquestline` | Reset questline | Default |
-| `/sudo <player> <cmd>` | Force player action | `smptools.sudo` |
+| `/sudo <player> [--confirm] <cmd>` | Force player action | `smptools.sudo` |
 | `/customitem <type> <data>` | Give custom item (WIP) | `smptools.customitem` |
 | `/advent` (alias `/xmas`) | Advent calendar | Default |
 | `/secretsanta <cmd>` (alias `/ss`) | Secret Santa | Default |

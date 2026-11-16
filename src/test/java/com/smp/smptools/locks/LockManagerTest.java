@@ -108,6 +108,8 @@ public class LockManagerTest {
         // Explicit migration moves rightKey to canonical key safely
         manager.migrateToDoubleChest(rightBlock, leftBlock);
 
+        assertFalse(manager.getContainerOwners().containsKey(rightKey), "Right key must be removed after migration.");
+
         // Verify primary owner is ownerA
         assertEquals(ownerA, manager.getContainerOwners().get(doubleKey));
 

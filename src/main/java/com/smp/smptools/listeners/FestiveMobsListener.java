@@ -52,10 +52,11 @@ public class FestiveMobsListener implements Listener {
         if (christmasConfig == null || !christmasConfig.getBoolean("festive-mobs.enabled", false))
             return;
 
-        // Limit to NATURAL spawns or christmas world
-        String worldName = event.getEntity().getWorld().getName();
-        boolean isChristmasWorld = "christmas".equalsIgnoreCase(worldName);
-        if (event.getSpawnReason() != org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.NATURAL && !isChristmasWorld) {
+        // Limit to NATURAL spawns in overworld or christmas world
+        org.bukkit.World world = event.getEntity().getWorld();
+        boolean isChristmasWorld = "christmas".equalsIgnoreCase(world.getName());
+        boolean isOverworld = world.getEnvironment() == org.bukkit.World.Environment.NORMAL && !isChristmasWorld;
+        if (!isChristmasWorld && (!isOverworld || event.getSpawnReason() != org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.NATURAL)) {
             return;
         }
 
@@ -137,9 +138,19 @@ public class FestiveMobsListener implements Listener {
         }
     }
 
+    private boolean isCandyCane(ItemStack item) {
+        return item != null && item.getType() == Material.SUGAR && item.hasItemMeta()
+                && item.getItemMeta().getPersistentDataContainer().has(CANDY_CANE_KEY, org.bukkit.persistence.PersistentDataType.BYTE);
+    }
+
     @EventHandler(priority = org.bukkit.event.EventPriority.HIGH)
     public void onPlayerInteract(org.bukkit.event.player.PlayerInteractEvent event) {
-        if (event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND) {
+        if (event.getHand() == org.bukkit.inventory.EquipmentSlot.OFF_HAND) {
+            ItemStack mainHand = event.getPlayer().getInventory().getItemInMainHand();
+            if (isCandyCane(mainHand)) {
+                return; // Handled during main hand interaction
+            }
+        } else if (event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND) {
             return;
         }
 
@@ -161,19 +172,17 @@ public class FestiveMobsListener implements Listener {
         }
 
         ItemStack item = event.getItem();
-        if (item != null && item.getType() == Material.SUGAR && item.hasItemMeta()) {
-            if (item.getItemMeta().getPersistentDataContainer().has(CANDY_CANE_KEY, org.bukkit.persistence.PersistentDataType.BYTE)) {
-                event.setCancelled(true); // Prevent normal interaction if any
+        if (isCandyCane(item)) {
+            event.setCancelled(true); // Prevent normal interaction if any
 
-                // Consume item
-                item.setAmount(item.getAmount() - 1);
+            // Consume item
+            item.setAmount(item.getAmount() - 1);
 
-                // Apply effects
-                event.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 200, 1)); // Speed II for 10 seconds
-                event.getPlayer().getWorld().playSound(event.getPlayer().getLocation(),
-                        org.bukkit.Sound.ENTITY_PLAYER_BURP, 1f, 1f);
-                event.getPlayer().sendMessage(SMPTools.getInstance().getMessageManager().getMessage("christmas.sweet"));
-            }
+            // Apply effects
+            event.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 200, 1)); // Speed II for 10 seconds
+            event.getPlayer().getWorld().playSound(event.getPlayer().getLocation(),
+                    org.bukkit.Sound.ENTITY_PLAYER_BURP, 1f, 1f);
+            event.getPlayer().sendMessage(SMPTools.getInstance().getMessageManager().getMessage("christmas.sweet"));
         }
     }
 }

@@ -134,11 +134,12 @@ public class EnchantmentListener implements Listener {
 
     private boolean isLog(Material material) {
         if (material == null) return false;
-        if (material == Material.MELON_STEM || material == Material.ATTACHED_MELON_STEM ||
-            material == Material.PUMPKIN_STEM || material == Material.ATTACHED_PUMPKIN_STEM) {
-            return false;
+        if (org.bukkit.Tag.LOGS.isTagged(material)) {
+            return true;
         }
         String name = material.name();
-        return name.endsWith("_LOG") || name.endsWith("_STEM") || name.endsWith("_WOOD") || name.endsWith("_HYPHAE");
+        return name.endsWith("_LOG") || name.endsWith("_WOOD") || name.endsWith("_HYPHAE")
+                || material == Material.CRIMSON_STEM || material == Material.WARPED_STEM
+                || material == Material.STRIPPED_CRIMSON_STEM || material == Material.STRIPPED_WARPED_STEM;
     }
 }

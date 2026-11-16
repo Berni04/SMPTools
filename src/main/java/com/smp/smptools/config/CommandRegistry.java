@@ -165,7 +165,9 @@ public final class CommandRegistry {
 
         // Music player
         if (plugin.getConfig().getBoolean("features.music-player.enabled")) {
-            plugin.getCommand("music").setExecutor(new com.smp.smptools.music.MusicCommand(plugin));
+            com.smp.smptools.music.MusicCommand musicCmd = new com.smp.smptools.music.MusicCommand(plugin);
+            plugin.setMusicCommand(musicCmd);
+            plugin.getCommand("music").setExecutor(musicCmd);
         }
 
         // Ride command

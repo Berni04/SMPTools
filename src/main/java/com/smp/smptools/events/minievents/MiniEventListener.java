@@ -283,10 +283,11 @@ public class MiniEventListener implements Listener {
 
         FileConfiguration cfg = plugin.getEventsConfig();
 
-        boolean isSpawnerMob = entity.hasMetadata("spawner_mob") ||
-                entity.getPersistentDataContainer().has(spawnerMobKey, org.bukkit.persistence.PersistentDataType.BYTE);
+        boolean isSpawnerMob = entity.getPersistentDataContainer().has(spawnerMobKey, org.bukkit.persistence.PersistentDataType.BYTE)
+                || (entity.hasMetadata("spawner_mob") && entity.getMetadata("spawner_mob").stream().anyMatch(m -> m.getOwningPlugin() == plugin));
         if (isSpawnerMob) {
-            boolean allowSpawner = cfg.getBoolean("events.types.mob_frenzy.allow-spawner-mobs", false);
+            boolean allowSpawner = cfg.getBoolean("events.types.mob_frenzy.allow-spawner-mobs",
+                    cfg.getBoolean("events.types.mob_frenzy.buffs.allow-spawner-mobs", false));
             if (!allowSpawner) {
                 return;
             }

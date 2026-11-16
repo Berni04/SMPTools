@@ -54,7 +54,8 @@ public class GraveManager implements Listener {
         long expireHours = plugin.getConfig().getLong("features.player-graves.expire-hours", 72);
         if (expireHours <= 0) return;
 
-        long expireMillis = expireHours * 3600_000L;
+        long cappedHours = Math.min(expireHours, 876_000L); // Bound to ~100 years to prevent long overflow
+        long expireMillis = cappedHours * 3600_000L;
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             long now = System.currentTimeMillis();
             List<Location> expired = new ArrayList<>();
@@ -228,8 +229,15 @@ public class GraveManager implements Listener {
             return;
         }
 
-        event.setCancelled(true); // Prevent normal interaction
         Grave grave = graves.get(location);
+        if (!isMatchingGraveBlock(block, grave)) {
+            graves.remove(location);
+            removeHolograms(location);
+            saveGraves();
+            return;
+        }
+
+        event.setCancelled(true); // Prevent normal interaction
         Player player = event.getPlayer();
 
         if (!player.getUniqueId().equals(grave.getOwner()) && !player.hasPermission("smptools.graves.admin")) {
@@ -247,6 +255,13 @@ public class GraveManager implements Listener {
         if (!graves.containsKey(loc)) return;
 
         Grave grave = graves.get(loc);
+        if (!isMatchingGraveBlock(event.getBlock(), grave)) {
+            graves.remove(loc);
+            removeHolograms(loc);
+            saveGraves();
+            return;
+        }
+
         Player player = event.getPlayer();
         if (!player.getUniqueId().equals(grave.getOwner()) && !player.hasPermission("smptools.graves.admin")) {
             event.setCancelled(true);
@@ -352,8 +367,24 @@ public class GraveManager implements Listener {
         as.addScoreboardTag(graveTag);
     }
 
+    private boolean isMatchingGraveBlock(Block block, Grave grave) {
+        if (block == null || grave == null) return false;
+        if (block.getType() != Material.PLAYER_HEAD && block.getType() != Material.PLAYER_WALL_HEAD) {
+            return false;
+        }
+        if (block.getState() instanceof Skull skull) {
+            String ownerKey = skull.getPersistentDataContainer().get(GRAVE_OWNER_KEY, org.bukkit.persistence.PersistentDataType.STRING);
+            return ownerKey != null && ownerKey.equals(grave.getOwner().toString());
+        }
+        return false;
+    }
+
     private void lootGrave(Grave grave, Player looter) {
         Location loc = grave.getLocation();
+        if (loc.getWorld() == null) return;
+
+        Block block = loc.getBlock();
+        boolean isGraveBlock = isMatchingGraveBlock(block, grave);
 
         // Drop items
         for (ItemStack item : grave.getItems()) {
@@ -362,8 +393,10 @@ public class GraveManager implements Listener {
             }
         }
 
-        // Remove block
-        loc.getBlock().setType(Material.AIR);
+        // Only remove block if it is indeed the original grave skull
+        if (isGraveBlock) {
+            block.setType(Material.AIR);
+        }
 
         // Remove holograms
         removeHolograms(loc);

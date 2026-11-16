@@ -380,11 +380,15 @@ public final class URLValidator {
                 this.socket = s;
 
                 String hostHeader = url.getHost() + (url.getPort() != -1 && url.getPort() != 80 ? ":" + url.getPort() : "");
-                String file = url.getFile();
-                if (file == null || file.isEmpty()) file = "/";
+                String path = url.getPath();
+                if (path == null || path.isEmpty()) {
+                    path = "/";
+                }
+                String query = url.getQuery();
+                String target = (query != null && !query.isEmpty()) ? path + "?" + query : path;
 
                 OutputStream os = socket.getOutputStream();
-                String request = "GET " + file + " HTTP/1.1\r\n" +
+                String request = "GET " + target + " HTTP/1.1\r\n" +
                                  "Host: " + hostHeader + "\r\n" +
                                  "User-Agent: SMPTools\r\n" +
                                  "Connection: close\r\n\r\n";
@@ -431,16 +435,16 @@ public final class URLValidator {
                     this.inputStream = bis;
                 }
                 this.connected = true;
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 if (s != null && !s.isClosed()) {
                     try {
                         s.close();
                     } catch (IOException ignored) {}
                 }
-                if (t instanceof IOException ioe) {
+                if (e instanceof IOException ioe) {
                     throw ioe;
                 }
-                throw new IOException("Failed to connect or process HTTP request", t);
+                throw new IOException("Failed to connect or process HTTP request", e);
             }
         }
 

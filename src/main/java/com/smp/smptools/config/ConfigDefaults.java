@@ -57,6 +57,8 @@ public final class ConfigDefaults {
         config.addDefault("features.events.enabled", true);
         config.addDefault("features.artifacts.enabled", true);
         config.addDefault("features.seasonal.enabled", true);
+        config.addDefault("stats.save-on-quit", true);
+        config.addDefault("features.stats.save-on-quit", true);
 
         // Daily Rewards
         config.addDefault("features.daily-rewards.cooldown-hours", 22);

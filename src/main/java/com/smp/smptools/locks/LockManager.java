@@ -211,17 +211,40 @@ public class LockManager {
 
     public void removeOrMigrateLock(Block brokenBlock, Block survivingBlock) {
         String oldKey = getLockKey(brokenBlock);
-        if (oldKey == null || !containerOwners.containsKey(oldKey)) return;
+        String brokenDirectKey = getLocationKey(brokenBlock.getLocation());
 
-        UUID owner = containerOwners.remove(oldKey);
-        Set<UUID> trusted = containerTrusted.remove(oldKey);
+        UUID owner = null;
+        Set<UUID> trusted = new HashSet<>();
+
+        if (oldKey != null && containerOwners.containsKey(oldKey)) {
+            owner = containerOwners.remove(oldKey);
+            Set<UUID> t = containerTrusted.remove(oldKey);
+            if (t != null) trusted.addAll(t);
+        }
+        if (brokenDirectKey != null && !brokenDirectKey.equals(oldKey) && containerOwners.containsKey(brokenDirectKey)) {
+            UUID directOwner = containerOwners.remove(brokenDirectKey);
+            if (owner == null) owner = directOwner;
+            Set<UUID> t = containerTrusted.remove(brokenDirectKey);
+            if (t != null) trusted.addAll(t);
+        }
 
         if (survivingBlock != null) {
             String newKey = getLocationKey(survivingBlock.getLocation());
-            if (newKey != null && owner != null) {
-                containerOwners.put(newKey, owner);
-                if (trusted != null && !trusted.isEmpty()) {
-                    containerTrusted.put(newKey, trusted);
+            if (newKey != null) {
+                UUID existingOwner = containerOwners.get(newKey);
+                if (existingOwner != null) {
+                    owner = existingOwner;
+                }
+                Set<UUID> existingTrusted = containerTrusted.get(newKey);
+                if (existingTrusted != null) {
+                    trusted.addAll(existingTrusted);
+                }
+
+                if (owner != null) {
+                    containerOwners.put(newKey, owner);
+                    if (!trusted.isEmpty()) {
+                        containerTrusted.put(newKey, trusted);
+                    }
                 }
             }
         }

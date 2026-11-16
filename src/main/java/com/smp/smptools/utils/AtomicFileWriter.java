@@ -36,9 +36,7 @@ public final class AtomicFileWriter {
             Files.createDirectories(parent);
         }
 
-        Path tmp = parent != null
-                ? parent.resolve(absTarget.getFileName() + "." + UUID.randomUUID() + ".tmp")
-                : Files.createTempFile(absTarget.getFileName().toString(), ".tmp");
+        Path tmp = absTarget.resolveSibling(absTarget.getFileName() + "." + UUID.randomUUID() + ".tmp");
 
         try {
             Files.write(tmp, data,

@@ -59,6 +59,11 @@ public class PrivateVaultCommand extends AbstractPlayerCommand {
         return cachedVaultsConfig;
     }
 
+    public static synchronized void invalidateCache() {
+        cachedVaultsConfig = null;
+        vaultsConfigLoadFailed = false;
+    }
+
     public static boolean isVaultsConfigLoadFailed() {
         return vaultsConfigLoadFailed;
     }

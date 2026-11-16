@@ -16,6 +16,7 @@ common:
   player-only: "<red>Only players can use this command!</red>"
   no-permission: "<red>You don't have permission to use this command.</red>"
   player-not-found: "<red>Player not found.</red>"
+  player-dead: "<red>Cannot perform teleportation while dead!</red>"
   invalid-url: "<red>Invalid URL: {error}</red>"
   usage: "<red>Usage: {usage}</red>"
   unknown-subcommand: "<red>Unknown subcommand. Usage: {usage}</red>"
@@ -173,7 +174,8 @@ sleep:
   voted-yes: "<player_name_color> has voted to skip the night."
   voted-no: "<player_name_color> has voted against skipping the night."
   vote-cancelled-initiator-left: "<red>The sleep vote was cancelled because the initiator left the game.</red>"
-  combat-blocked: "<red>You can't sleep in this world!</red>"
+  combat-blocked: "<red>You can't sleep while in combat!</red>"
+  not-overworld: "<red>You can't sleep in this world!</red>"
 
 # Music
 music:
@@ -380,6 +382,10 @@ secret-santa:
   deposit-save-failed: "<red>Failed to save gift deposit to disk. Please try again.</red>"
   confirm-deposit-button: "<green><b>Confirm Deposit</b></green>"
   confirm-deposit-lore: "<gray>Click to finalize deposit.</gray>"
+  admin-start-has-gifts: "<red>Cannot start Secret Santa: deposited gifts already exist from a previous round! Run <yellow>/secretsanta admin clear</yellow> first.</red>"
+  admin-cleared: "<green>Cleared all Secret Santa participants, matches, and gifts.</green>"
+  admin-clear-failed: "<red>Failed to clear Secret Santa data from disk.</red>"
+  admin-usage: "<yellow>Usage: /secretsanta admin <start|clear></yellow>"
 
 # Krampus
 krampus:
