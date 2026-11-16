@@ -133,6 +133,29 @@ class MessageManagerTest {
                 "homes.delete-confirm-title missing");
     }
 
+    @Test
+    void testFallbackMessageResolution() {
+        MessageManager mm = new MessageManager(null);
+        FileConfiguration legacyConfig = new YamlConfiguration();
+        legacyConfig.set("common.player-dead", "<red>You are dead!</red>");
+        // tpa.target-dead is absent intentionally to simulate older config file
+        mm.setConfigForTesting(legacyConfig);
+
+        assertTrue(mm.hasMessage("common.player-dead"));
+        assertFalse(mm.hasMessage("tpa.target-dead"));
+
+        net.kyori.adventure.text.Component comp = mm.getMessage("tpa.target-dead", "common.player-dead", null, java.util.Map.of("target", "Alex"));
+        assertNotNull(comp);
+        String plain = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(comp);
+        assertEquals("You are dead!", plain);
+
+        // When primary message is set, primary is preferred
+        legacyConfig.set("tpa.target-dead", "<red>{target} is dead!</red>");
+        net.kyori.adventure.text.Component primaryComp = mm.getMessage("tpa.target-dead", "common.player-dead", null, java.util.Map.of("target", "Alex"));
+        String primaryPlain = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(primaryComp);
+        assertEquals("Alex is dead!", primaryPlain);
+    }
+
     /**
      * Loads the shipped {@code messages.yml} from src/main/resources into a
      * temporary file and returns the parsed configuration.

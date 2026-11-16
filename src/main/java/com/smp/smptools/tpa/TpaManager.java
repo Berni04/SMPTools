@@ -70,7 +70,7 @@ public class TpaManager {
             return;
         }
         if (target.isDead()) {
-            requester.sendMessage(plugin.getMessageManager().getMessage("tpa.target-dead", requester,
+            requester.sendMessage(plugin.getMessageManager().getMessage("tpa.target-dead", "common.player-dead", requester,
                     Map.of("target", target.getName())));
             return;
         }
