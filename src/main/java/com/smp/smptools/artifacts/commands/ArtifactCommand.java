@@ -93,8 +93,10 @@ public class ArtifactCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
             List<ItemStack> recovered = artifactManager.claimPouchOverflow(player);
-            if (recovered.isEmpty()) {
+            if (recovered == null) {
                 player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to claim overflow artifacts due to a storage error. Please try again later.</red>"));
+            } else if (recovered.isEmpty()) {
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>No valid overflow artifacts to claim.</yellow>"));
             } else {
                 player.sendMessage(MiniMessage.miniMessage().deserialize("<green>Successfully claimed " + recovered.size() + " recovered artifact(s) (check your inventory or nearby ground)!</green>"));
             }
@@ -120,8 +122,10 @@ public class ArtifactCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
             List<ItemStack> recovered = artifactManager.claimPouchOverflow(target);
-            if (recovered.isEmpty()) {
+            if (recovered == null) {
                 sender.sendMessage(MiniMessage.miniMessage().deserialize("<red>Failed to recover artifacts due to a storage error. Please try again later.</red>"));
+            } else if (recovered.isEmpty()) {
+                sender.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>No valid overflow artifacts found for " + target.getName() + ".</yellow>"));
             } else {
                 sender.sendMessage(MiniMessage.miniMessage().deserialize("<green>Recovered and delivered " + recovered.size() + " artifact(s) to " + target.getName() + " (check inventory or nearby ground).</green>"));
                 target.sendMessage(MiniMessage.miniMessage().deserialize("<green>An administrator recovered " + recovered.size() + " artifact(s) for you; check your inventory or nearby ground.</green>"));

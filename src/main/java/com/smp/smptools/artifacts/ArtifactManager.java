@@ -239,10 +239,10 @@ public class ArtifactManager {
     /**
      * Claims and delivers any overflow artifacts to the player.
      * Delivered items are removed from pouchOverflow and persisted.
-     * If persistence fails, state is rolled back and no items are delivered.
+     * If persistence fails, state is rolled back, no items are delivered, and null is returned.
      *
      * @param player the player receiving the overflow items
-     * @return the list of delivered ItemStacks, or empty if none or persistence failed
+     * @return the list of delivered ItemStacks, or null if persistent storage failed
      */
     public List<ItemStack> claimPouchOverflow(Player player) {
         if (player == null) return Collections.emptyList();
@@ -256,10 +256,10 @@ public class ArtifactManager {
 
         // Stage removal and verify persistence before delivering items
         pouchOverflow.remove(uuid);
-        if (!savePouchData()) {
+        if (!savePouchDataWithResult()) {
             // Restore in-memory state on persistence failure and abort claim
             pouchOverflow.put(uuid, list);
-            return Collections.emptyList();
+            return null;
         }
 
         List<ItemStack> delivered = new ArrayList<>();
@@ -290,13 +290,17 @@ public class ArtifactManager {
 
         if (!undelivered.isEmpty()) {
             pouchOverflow.computeIfAbsent(uuid, k -> new ArrayList<>()).addAll(undelivered);
-            savePouchData();
+            savePouchDataWithResult();
         }
 
         return delivered;
     }
 
-    public boolean savePouchData() {
+    public void savePouchData() {
+        savePouchDataWithResult();
+    }
+
+    public boolean savePouchDataWithResult() {
         if (artifactsConfig == null || artifactsFile == null) return true;
         artifactsConfig.set("pouch", null);
 
